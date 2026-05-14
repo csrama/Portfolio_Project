@@ -57,8 +57,6 @@ The team conducted both individual and collaborative research to identify meanin
 * User pain points within Saudi society  
 * Feasible solutions that could be developed as an MVP
 
-### 
-
 ### **Sources of Inspiration**
 
 The team explored ideas inspired by:
@@ -70,26 +68,6 @@ The team explored ideas inspired by:
 * Existing mobile healthcare platforms
 
 The research phase helped the team understand user needs, technical feasibility, and opportunities for innovation.
-
-### 
-
-### 
-
-### 
-
-### 
-
-### 
-
-### 
-
-### 
-
-### 
-
-### 
-
-### 
 
 ### **Brainstorming Session**
 
@@ -119,18 +97,6 @@ Possible Solutions Generated:
 * Family support notifications (future enhancement)
 
 Result: Mind mapping helped the team narrow the focus toward healthcare-related solutions with strong social impact.
-
-#### 
-
-#### 
-
-#### 
-
-#### 
-
-#### 
-
-#### 
 
 #### **B. SCAMPER Framework**
 
@@ -174,13 +140,7 @@ These questions shifted the team's focus toward:
 | :---- | :---- | :---- |
 | Smart Medication Management App | Helps elderly users manage medications and reminders | Selected |
 | AI Study Planner | Organizes study schedules and assignments | Rejected |
-| Local Event Discovery Platform | Shows nearby activities and events | Rejected |
-
-### 
-
-### 
-
-### 
+| Local Event Discovery Platform | Shows nearby activities and events | Rejected | 
 
 ### **Final Brainstorming Outcome**
 
@@ -201,16 +161,6 @@ The brainstorming phase successfully transformed broad concepts into a focused a
 
 After completing the brainstorming and research phase, the team evaluated each proposed idea using a structured decision-making process. The purpose of this evaluation was to identify the most feasible and impactful MVP while considering the team's technical capabilities, timeline, and project goals. The team created evaluation criteria and used a scoring rubric to compare all proposed ideas objectively.
 
-### 
-
-### 
-
-### 
-
-### 
-
-### 
-
 ### **Evaluation Criteria**
 
 The following criteria were selected to assess each idea:
@@ -223,16 +173,6 @@ The following criteria were selected to assess each idea:
 | Innovation | Originality and uniqueness of the idea |
 | Scalability | Potential for future expansion and additional features |
 | User Demand | Likelihood that users would benefit from and use the solution |
-
-### 
-
-### 
-
-### 
-
-### 
-
-### 
 
 ### **Scoring Rubric**
 
@@ -254,16 +194,6 @@ The team evaluated the following ideas:
 2. AI Study Planner  
 3. Local Event Discovery Platform
 
-### 
-
-### 
-
-### 
-
-### 
-
-### 
-
 ### **Evaluation Table**
 
 | Criteria | Medication App | AI Study Planner | Event Platform |
@@ -276,17 +206,6 @@ The team evaluated the following ideas:
 | User Demand | 5 | 4 | 3 |
 | Total Score | 28/30 | 23/30 | 19/30 |
 
-### 
-
-### 
-
-### 
-
-### 
-
-### 
-
-### 
 
 ### **Ranking and Prioritization**
 
@@ -331,8 +250,6 @@ Weaknesses:
 * Less impactful problem statement  
 * More dependency on APIs and live data
 
-### 
-
 ### **Risk and Constraint Analysis**
 
 #### A. Smart Medication Management App
@@ -372,11 +289,7 @@ Constraints:
 
 * Requires location-based services  
 * More backend complexity for real-time updates
-
-### 
-
-### 
-
+ 
 ### **Final Evaluation Decision**
 
 Based on the scoring results and discussions, the team selected the Smart Medication Management App for Elderly Patients as the final MVP concept. The decision was made because the idea:
@@ -406,10 +319,6 @@ The decision was based on:
 * Alignment with team interests and technical skills  
 * Clear MVP scope suitable for the project timeline  
 * Opportunities for future scalability and innovation
-
-### 
-
-### 
 
 ### **Refinement of the Selected MVP**
 
@@ -499,8 +408,6 @@ The MVP can later evolve to include:
 * Family monitoring features  
 * Cloud-based medical history synchronization
 
-#### 
-
 #### **E. Challenges Identified During Refinement**
 
 During refinement, the team identified several important challenges:
@@ -526,10 +433,6 @@ The refined concept balances:
 This refinement process provided the team with a well-defined project direction and a strong foundation for the planning and development stages.
 
 ---
-
-## 
-
-## 
 
 ## **5\. Idea Development Documentation**
 
@@ -563,8 +466,6 @@ The team agreed to:
 
 This structure helped maintain organization and ensured all members contributed during the idea development process.
 
-### 
-
 ### **B. Research and Brainstorming Process** 
 
 The team conducted individual and group research to identify project opportunities based on:
@@ -580,23 +481,7 @@ Several brainstorming techniques were used, including:
 * SCAMPER Framework  
 * "How Might We" problem-solving questions
 
-These techniques helped generate and refine multiple project ideas before selecting the final MVP.
-
-### 
-
-### 
-
-### 
-
-### 
-
-### 
-
-### 
-
-### 
-
-### 
+These techniques helped generate and refine multiple project ideas before selecting the final MVP. 
 
 ### **C. Ideas Considered** 
 
@@ -684,10 +569,6 @@ The idea was rejected because it lacked uniqueness and had lower social impact c
 
 ---
 
-#### 
-
-#### 
-
 #### **Idea 3: Hidden Gems**
 
 Description:  
@@ -727,10 +608,6 @@ The idea was rejected due to technical dependency challenges and lower overall i
 
 ---
 
-### 
-
-### 
-
 ### **D. Evaluation and Decision-Making Process**
 
 The team evaluated all ideas using the following criteria:
@@ -768,8 +645,6 @@ Many elderly patients struggle with:
 The MVP aims to simplify medication management through a centralized and user-friendly digital platform.
 
 ---
-
-### 
 
 ### **F. Target Audience** 
 
@@ -810,8 +685,6 @@ The design will prioritize simplicity and accessibility for elderly users.
 
 ---
 
-### 
-
 ### **I. Potential Impact** 
 
 The project has the potential to:
@@ -828,23 +701,7 @@ Additionally, the project provides the team with valuable experience in:
 * Healthcare-focused application development  
 * Collaborative software engineering practices
 
----
-
-## 
-
-## 
-
-## 
-
-## 
-
-## 
-
-## 
-
-## 
-
-## 
+--- 
 
 ## **6\. Idea 1: Smart Medication Management App for Elderly Patients** 
 
@@ -872,15 +729,7 @@ Challenges:
 * Ensuring simple accessibility for elderly users  
 * Time constraints for advanced healthcare integrations
 
----
-
-## 
-
-## 
-
-## 
-
-## 
+--- 
 
 ## **7\. Idea 2: Student Study Planner with AI Assistance** Description: An academic productivity platform that helps students organize schedules, assignments, and study sessions using AI-generated recommendations.
 
@@ -902,17 +751,7 @@ Challenges:
 * Similar apps already exist  
 * Lower innovation compared to other ideas
 
----
-
-## 
-
-## 
-
-## 
-
-## 
-
-## 
+--- 
 
 ## **8\. Idea 3: Local Event Discovery Platform (Original Detailed Description)**
 
@@ -936,19 +775,7 @@ Challenges:
 * Requires external event data sources  
 * Less impactful than healthcare-focused ideas
 
----
-
-## 
-
-## 
-
-## 
-
-## 
-
-## 
-
-## 
+--- 
 
 ## **9\. Idea Evaluation** 
 
@@ -968,12 +795,6 @@ After discussions and comparison, the team concluded that the Smart Medication M
 
 ---
 
-## 
-
-## 
-
-## 
-
 ## **10\. Selected MVP Concept** 
 
 ## MVP Title: Smart Medication Management System for Elderly Patients
@@ -990,20 +811,6 @@ The MVP will focus on:
 * Alert notifications for missed doses
 
 ---
-
-## 
-
-## 
-
-## 
-
-## 
-
-## 
-
-## 
-
-## 
 
 ## **11\. Reasons for Selection** 
 
@@ -1031,16 +838,6 @@ The team identified opportunities to localize the application for Saudi users by
 The core features can realistically be developed within the project timeline while still delivering meaningful value.
 
 ---
-
-## 
-
-## 
-
-## 
-
-## 
-
-## 
 
 ## **12\. Potential Challenges and Opportunities Challenges**
 
@@ -1076,15 +873,11 @@ Decision Process:
 * Conducted a team vote  
 * Refined the selected idea into an achievable MVP
 
----
-
-## 
-
-## 
+--- 
 
 ## **14\. Expected Outcome** 
 
-## By the end of Stage 1, the team achieved:
+## By the end of Phase 1, the team achieved:
 
 * A clear and documented MVP concept  
 * Defined communication and collaboration strategies  
@@ -1105,4 +898,3 @@ The completion of Stage 1 established:
 * A refined MVP concept  
 * Clear project direction  
 * A strong foundation for future planning and development stages
-
