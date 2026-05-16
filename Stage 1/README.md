@@ -16,10 +16,10 @@ Although temporary roles were assigned during Stage 1 for better organization an
 | Role | Responsibilities |
 | :---- | :---- |
 | Project Manager Rama \- Raghad | Organizing meetings, tracking tasks, ensuring deadlines are met / full stack |
-| Frontend Lead Amal \- Rama | Researching UI/UX ideas and frontend technologies / full stack |
+| Frontend Lead Amaal \- Rama | Researching UI/UX ideas and frontend technologies / full stack |
 | Backend Lead Raghad \- Jana | Evaluating backend architecture and database feasibility / full stack |
 | Documentation Lead Jana \- Rama | Managing notes, reports, and decision tracking |
-| Research Coordinator Raghad- Amal | Gathering references, competitor analysis, and user needs |
+| Research Coordinator Raghad- Amaal | Gathering references, competitor analysis, and user needs |
 
 ### **Collaboration Strategy**
 
