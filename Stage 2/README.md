@@ -175,7 +175,11 @@ To outline the major development phases, milestones, and deliverables for the Sm
 | Final Testing Completed | Week 11 |
 | Final Presentation and Submission | Week 12 |
 
-### 6.4 Project Planning Approach
+### **6.4 Simple Gantt Chart**
+
+The Gantt chart will be provided in a separate file.
+
+### 6.5 Project Planning Approach
 
 The team adopted a phased development approach to ensure the project remains manageable and achievable within the timeline. The project plan focuses on:
 
