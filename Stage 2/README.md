@@ -303,8 +303,8 @@ The purpose of this high-level project plan is to outline the major development 
 | **Stage 1: Idea Development** | Week 1 – Week 2 | Team formation, brainstorming, research, idea evaluation, MVP selection | Finalized MVP idea, brainstorming documentation, evaluation matrix |
 | **Stage 2: Project Charter Development** | Week 3 – Week 4 | Define project scope, objectives, stakeholders, risks, and project planning | Project Charter document |
 | **Stage 3: Technical Documentation** | Week 5 – Week 6 | Create system requirements, use cases, UML diagrams, database design, UI wireframes | Technical documentation package |
-| **Stage 4: MVP Development** | Week 7 – Week 10 | Frontend and backend development, database implementation, reminder system, testing | Functional MVP prototype |
-| **Stage 5: Project Closure** | Week 11 – Week 12 | Final testing, bug fixing, project presentation, report submission, reflection | Final presentation and completed project |
+| **Stage 4: MVP Development** | Week 7 – Week 10 | Frontend and backend development, database implementation, reminder system, testing, Final testing, bug fixing | Functional MVP prototype |
+| **Stage 5: Project Closure** | Week 11 – Week 12 |  project presentation, report submission, reflection | Final presentation and completed project |
 
  
 
