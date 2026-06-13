@@ -123,6 +123,7 @@ The following features and activities are included in the MVP:
 •       Daily medication dashboard: overview of today's medications and adherence tracking.
 
 **Technical Deliverables:**  
+
 •       Frontend and backend development and integration.
 
 •       Basic testing and quality assurance of core features.
