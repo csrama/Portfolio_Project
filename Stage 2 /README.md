@@ -139,17 +139,21 @@ The following features and activities are included in the MVP:
 
 •       User account management: registration and login.
 
-•    In-app medication search   
-•      Adherence rate calculation (taken / not taken)   
-•      Post-dose prompt asking user if taken   
-•    Add dependents (children, spouse, elderly parents)   
-•      Separate page for each dependent 
+•      In-app medication search.
 
-         •      Pill quantity tracking with low stock alert.
+•      Adherence rate calculation (taken / not taken).
 
-         •       Family or caregiver monitoring dashboard.
+•      Post-dose prompt asking user if taken.  
 
-         •       Full tracking and analytics system for long-term missed medication patterns.
+•      Add dependents (children, spouse, elderly parents).
+
+•      Separate page for each dependent. 
+
+•      Pill quantity tracking with low stock alert.
+
+•       Family or caregiver monitoring dashboard.
+
+•       Full tracking and analytics system for long-term missed medication patterns.
 
 ## **4.2 Out-of-Scope**
 
