@@ -326,7 +326,7 @@ The purpose of this high-level project plan is to outline the major development 
 
 ## **6.4 Simple Gantt Chart**
 
-
+the Gantt Chart will be provided in another file 
 
 ## **6.5 Project Planning Approach**
 
