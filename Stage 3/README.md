@@ -1,58 +1,67 @@
-Table of Contents
-#	Section	Page
-1	User Stories	
-1.1	MUST HAVE	1
-1.2	SHOULD HAVE	4
-1.3	COULD HAVE	5
-1.4	WON'T HAVE	6
-2	UI Mockups	7
-3	System Architecture Diagram	7
-4	Data Flow Diagram	8
-5	Class Diagram	10
-6	ER Diagram	12
-7	SQL Schema	13
-7.1	Enums	13
-7.2	Tables	14
-7.3	Indexes	17
-7.4	Triggers	18
-8	Sample Queries	19
-9	Sequence Diagrams	21
-9.1	User Login & Authentication	21
-9.2	Add New Medication	23
-9.3	Mark Dose as Taken	25
-9.4	Caregiver Managing Dependents	27
-10	External APIs Documentation	30
-10.1	Overview of External APIs	30
-10.2	External API Integration Details	31
-10.3	Flutter Package List	31
-10.4	External API Justification Matrix	32
-10.5	External vs. Internal API Boundary	32
-10.6	Data Privacy & API Key Management	33
-11	SCM Strategy	34
-11.1	GitHub Workflow	34
-11.2	Branching Strategy	35
-11.3	Feature Branch Lifecycle Policy	35
-11.4	Development Branch Structure	36
-11.5	Pull Requests	36
-11.6	Code Reviews	37
-11.7	Commit Rules	37
-11.8	Environment Configuration Management	38
-12	QA Strategy	39
-12.1	Local Testing (Flutter)	39
-12.2	Unit Testing (Flutter Test)	40
-12.3	Code Review via Pull Requests	41
-12.4	Manual Testing	42
-12.5	Merge Policy	43
-12.6	Beta Testing	43
-12.7	Bug Tracking Process	44
-12.8	Continuous Integration	45
-12.9	Accessibility Testing	47
-12.10	Performance Testing	48
-12.11	Rollback Strategy	49
-12.12	QA Summary Checklist	50
-13	References & Resources	51
-14	Document Version History	51
+## 📖 Overview
 
+**دوائي (Doa'i)** is a comprehensive medication management system designed specifically for elderly patients and their caregivers. The application simplifies medication tracking, provides timely reminders, and enables family members to monitor adherence remotely.
+
+---
+
+## 📑 Table of Contents
+
+| # | Section | Page |
+| :---: | :--- | :---: |
+| **1** | **User Stories** | |
+| 1.1 | MUST HAVE | 1 |
+| 1.2 | SHOULD HAVE | 4 |
+| 1.3 | COULD HAVE | 5 |
+| 1.4 | WON'T HAVE | 6 |
+| **2** | **UI Mockups** | 7 |
+| **3** | **System Architecture Diagram** | 7 |
+| **4** | **Data Flow Diagram** | 8 |
+| **5** | **Class Diagram** | 10 |
+| **6** | **ER Diagram** | 12 |
+| **7** | **SQL Schema** | 13 |
+| 7.1 | Enums | 13 |
+| 7.2 | Tables | 14 |
+| 7.3 | Indexes | 17 |
+| 7.4 | Triggers | 18 |
+| **8** | **Sample Queries** | 19 |
+| **9** | **Sequence Diagrams** | 21 |
+| 9.1 | User Login & Authentication | 21 |
+| 9.2 | Add New Medication | 23 |
+| 9.3 | Mark Dose as Taken | 25 |
+| 9.4 | Caregiver Managing Dependents | 27 |
+| **10** | **External APIs Documentation** | 30 |
+| 10.1 | Overview of External APIs | 30 |
+| 10.2 | External API Integration Details | 31 |
+| 10.3 | Flutter Package List | 31 |
+| 10.4 | External API Justification Matrix | 32 |
+| 10.5 | External vs. Internal API Boundary | 32 |
+| 10.6 | Data Privacy & API Key Management | 33 |
+| **11** | **SCM Strategy** | 34 |
+| 11.1 | GitHub Workflow | 34 |
+| 11.2 | Branching Strategy | 35 |
+| 11.3 | Feature Branch Lifecycle Policy | 35 |
+| 11.4 | Development Branch Structure | 36 |
+| 11.5 | Pull Requests | 36 |
+| 11.6 | Code Reviews | 37 |
+| 11.7 | Commit Rules | 37 |
+| 11.8 | Environment Configuration Management | 38 |
+| **12** | **QA Strategy** | 39 |
+| 12.1 | Local Testing (Flutter) | 39 |
+| 12.2 | Unit Testing (Flutter Test) | 40 |
+| 12.3 | Code Review via Pull Requests | 41 |
+| 12.4 | Manual Testing | 42 |
+| 12.5 | Merge Policy | 43 |
+| 12.6 | Beta Testing | 43 |
+| 12.7 | Bug Tracking Process | 44 |
+| 12.8 | Continuous Integration | 45 |
+| 12.9 | Accessibility Testing | 47 |
+| 12.10 | Performance Testing | 48 |
+| 12.11 | Rollback Strategy | 49 |
+| 12.12 | QA Summary Checklist | 50 |
+| **13** | **References & Resources** | 51 |
+| **14** | **Document Version History** | 51 |
+
+---
 
 # 1 User Stories for the Smart Medication app 
 
