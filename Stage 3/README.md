@@ -1,5 +1,4 @@
-Smart Medication Management System
-Technical Documentation
+Table of Contents
 #	Section	Page
 1	User Stories	
 1.1	MUST HAVE	1
@@ -53,9 +52,6 @@ Technical Documentation
 12.12	QA Summary Checklist	50
 13	References & Resources	51
 14	Document Version History	51
-Document Version: 1.0
-Last Updated: June 2026
-Status: Complete
 
 
 # 1 User Stories for the Smart Medication app 
