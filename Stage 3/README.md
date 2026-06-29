@@ -1,6 +1,6 @@
-# User Stories for the Smart Medication app 
+# 1 User Stories for the Smart Medication app 
 
-### MUST HAVE 
+### 1.1 MUST HAVE 
 
 These features are essential for the application to function and provide core value to users.
 
@@ -111,7 +111,7 @@ These features are essential for the application to function and provide core va
 
 ---
 
-### SHOULD HAVE 
+### 1.2 SHOULD HAVE 
 
 These features significantly enhance the user experience but can be added shortly after MVP launch.
 
@@ -165,7 +165,7 @@ These features significantly enhance the user experience but can be added shortl
 
 ---
 
-### COULD HAVE 
+### 1.3 COULD HAVE 
 
 These features add value but are not essential for the initial launch.
 
@@ -219,7 +219,7 @@ These features add value but are not essential for the initial launch.
 
 ---
 
-### WON'T HAVE 
+### 1.4 WON'T HAVE 
 
 These features are important for the future but will not be included in the initial release.
 
@@ -273,13 +273,13 @@ These features are important for the future but will not be included in the init
 
 ---
 
-### 3. UI Mockups for the app 
+### 2 UI Mockups for the app 
 
-
+https://www.figma.com/design/9KPAiOirqriq4lLyaq7Wdt/Untitled?node-id=0-1&t=Ql4tVDjDnCo6SJNU-1
 ---
+## 4 The diagram is shown in details below 
 
-
-this is the System Architecture Diagram
+**4.1 this is the System Architecture Diagram**
 ```mermaid
 graph TD
     subgraph Layer1["PRESENTATION LAYER - Flutter UI"]
@@ -344,7 +344,7 @@ graph TD
     class B1,B2,B3 layer4
     class D1,D2 layer5
 ```
-Data Flow Diagram
+**4.2 Data Flow Diagram**
 ```mermaid
 sequenceDiagram
     participant User as User
@@ -546,7 +546,7 @@ sequenceDiagram
         end
     end
 ```
-this is the class diagram 
+**4.3 this is the class diagram** 
 ```mermaid
 classDiagram
     class User {
@@ -961,7 +961,7 @@ classDiagram
     NotificationService --> NotificationPreference : uses
     NotificationService --> NotificationLog : uses
 ```
-the ER diagram 
+**4.4 the ER diagram**
 ```mermaid
 erDiagram
     USERS ||--o{ USER_MEDICATIONS : "has"
@@ -1096,9 +1096,9 @@ erDiagram
     }
 ```
 
-## SQL Schema
+## 5 SQL Schema
 
-**4.1 Enums**
+**5.1 Enums**
 ```
 -- ==================== ENUMS ====================
 
@@ -1111,7 +1111,7 @@ CREATE TYPE notification_type_enum AS ENUM ('medication_reminder', 'missed_dose'
 CREATE TYPE interaction_severity_enum AS ENUM ('minor', 'moderate', 'major', 'contraindicated');
 ```
 
-**4.2 Tables**
+**5.2 Tables**
 ```
 -- ==================== TABLES ====================
 
@@ -1249,7 +1249,7 @@ CREATE TABLE medication_interactions (
 );
 ```
 
-**4.3 Indexes**
+**5.3 Indexes**
 ```
 -- ==================== INDEXES ====================
 
@@ -1286,7 +1286,7 @@ CREATE INDEX idx_medication_interactions_med1 ON medication_interactions(medicat
 CREATE INDEX idx_medication_interactions_med2 ON medication_interactions(medication_id_2);
 ```
 
-**4.4 Triggers**
+**5.4 Triggers**
 ```
 -- ==================== TRIGGERS ====================
 
@@ -1335,8 +1335,8 @@ CREATE TRIGGER update_notification_preferences_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 ```
 
-## 5 Sample Queries
-**5.1 Get Today's Medications for a User**
+## 6 Sample Queries
+**6.1 Get Today's Medications for a User**
 ```
 SELECT 
     m.name AS medication_name,
@@ -1357,7 +1357,7 @@ WHERE um.user_id = 'user-uuid-here'
     )
 ORDER BY s.time_of_day;
 ```
-**5.2 Calculate Adherence Rate**
+**6.2 Calculate Adherence Rate**
 ```
 SELECT 
     um.id AS user_medication_id,
@@ -1376,7 +1376,7 @@ WHERE um.user_id = 'user-uuid-here'
 GROUP BY um.id, m.name
 ORDER BY adherence_rate DESC;
 ```
-**5.3 Get Missed Doses**
+**6.3 Get Missed Doses**
 ```
 SELECT 
     m.name AS medication_name,
@@ -1396,7 +1396,7 @@ WHERE um.user_id = 'user-uuid-here'
     AND dr.scheduled_time < CURRENT_TIMESTAMP
 ORDER BY dr.scheduled_time ASC;
 ```
-**5.4 Check Medication Interactions**
+**6.4 Check Medication Interactions**
 ```
 SELECT 
     m1.name AS medication_1,
@@ -1421,7 +1421,7 @@ ORDER BY
         WHEN 'minor' THEN 4
     END;
 ```
-**5.5 Get Weekly Adherence Summary**
+**6.5 Get Weekly Adherence Summary**
 ```
 SELECT 
     DATE_TRUNC('week', dr.scheduled_time) AS week_start,
@@ -1439,11 +1439,11 @@ GROUP BY DATE_TRUNC('week', dr.scheduled_time)
 ORDER BY week_start DESC;
 ```
 ---
-## High-Level Sequence Diagrams - Key Use Cases
+## 6 High-Level Sequence Diagrams - Key Use Cases
 
 High-level sequence diagrams for the 3 most critical use cases in your Smart Medication Management System.
 
-**Use Case 1: User Login & Authentication**
+**6.1 Use Case 1: User Login & Authentication**
 ```mermaid
 
 sequenceDiagram
@@ -1635,7 +1635,7 @@ sequenceDiagram
     end
 ```
 
-**Use Case 2: Add New Medication with Schedule**
+**6.2 Use Case 2: Add New Medication with Schedule**
 
 ```mermaid
 sequenceDiagram
@@ -1839,7 +1839,7 @@ sequenceDiagram
         UI->>UI: Navigate to Congratulations Screen
     end
 ```
-**Use Case 3: Mark Dose as Taken & Update Dashboard**
+**6.3 Use Case 3: Mark Dose as Taken & Update Dashboard**
 ```mermaid
 sequenceDiagram
     participant User as User
@@ -2033,7 +2033,7 @@ sequenceDiagram
         UI-->>User: Show Medication Summary
     end
 ```
-**Use Case 4: Caregiver Managing Dependent's Medications**
+**6.4 Use Case 4: Caregiver Managing Dependent's Medications**
 ```mermaid
 sequenceDiagram
     participant Caregiver as Caregiver
@@ -2304,13 +2304,13 @@ sequenceDiagram
 ```
 ---
 
-**External APIs Documentation**
+**7 External APIs Documentation**
 
 *Smart Medication Management System — Stage 3  |  Flutter / Dart \+ Node.js \+ PostgreSQL*
 
  
 
-# **1\. Overview of External APIs**
+# **7.1 Overview of External APIs**
 
 The Smart Medication Management System uses Flutter/Dart on the client, a Node.js/Express REST API on the backend, and PostgreSQL as the database. PostgreSQL and Node.js are internal infrastructure — not external APIs. The external APIs are the third-party services the system calls at runtime, listed below.
 
@@ -2326,7 +2326,7 @@ The Smart Medication Management System uses Flutter/Dart on the client, a Node.j
 
  
 
-# **2\. External API Integration Details**
+# **7.2 External API Integration Details**
 
 This section documents the protocol, authentication mechanism, and exact Flutter/Dart integration point for each external service.
 
@@ -2342,7 +2342,7 @@ This section documents the protocol, authentication mechanism, and exact Flutter
 
  
 
-# **3\. Flutter Package List**
+# **7.3 Flutter Package List**
 
 All external services are consumed through Flutter packages from pub.dev. The table below lists each package, its minimum supported version, and its role.
 
@@ -2360,7 +2360,7 @@ All external services are consumed through Flutter packages from pub.dev. The ta
 
  
 
-# **4\. External API Justification Matrix**
+# **7.4 External API Justification Matrix**
 
 The table below records the alternatives considered and rejected for each external service, with explicit technical reasoning.
 
@@ -2376,7 +2376,7 @@ The table below records the alternatives considered and rejected for each extern
 
  
 
-# **5\. External vs. Internal API Boundary**
+# **7.5 External vs. Internal API Boundary**
 
 The distinction between external APIs (consumed by the system) and the internal API (Node.js REST endpoints this project owns) is summarised below.
 
@@ -2389,7 +2389,7 @@ The distinction between external APIs (consumed by the system) and the internal 
 
  
 
-# **6\. Data Privacy & API Key Management**
+# **7.6 Data Privacy & API Key Management**
 
 The following rules govern how external API credentials are handled throughout the project:
 
@@ -2408,7 +2408,7 @@ The following rules govern how external API credentials are handled throughout t
 •        All Node.js API routes that access dependent data verify the requesting user's JWT and check caregiver\_links before returning any records — no sensitive data is exposed without authorisation.
 
 
-## **SCM & QA Strategy Document (Flutter Edition)**
+## **8 SCM & QA Strategy Document (Flutter Edition)**
 
 ---
 
@@ -2458,7 +2458,7 @@ Individual branches are created from `dev` for each unit of work. Branches follo
 | Documentation | `docs/description` | `docs/api-endpoints` |
 | Testing | `test/description` | `test/unit-medication-service` |
 
-### **Feature Branch Lifecycle Policy**
+### **8.3 Feature Branch Lifecycle Policy**
 
 Feature branches follow a structured lifecycle to prevent staleness and reduce merge conflicts:
 
@@ -2470,7 +2470,7 @@ Feature branches follow a structured lifecycle to prevent staleness and reduce m
 | Stale Branches | Branches with no commits for 7+ days will be flagged for review and potential deletion |
 | Branch Cleanup | All merged and stale branches are deleted weekly |
 
-### **Development Branch Structure**
+### **8.4 Development Branch Structure**
 
 The following diagram illustrates the relationship between the three branch tiers and typical active feature branches during development:
 
@@ -2495,7 +2495,7 @@ The following diagram illustrates the relationship between the three branch tier
 
 ---
 
-## **8.3 Pull Requests**
+## **8.5 Pull Requests**
 
 Pull Requests (PRs) are the primary mechanism through which code changes are proposed, reviewed, and integrated into the codebase. Every change must go through a PR before being merged. All PRs target the `dev` branch; only the sprint-end release PR targets `main`.
 
@@ -2513,7 +2513,7 @@ Each Pull Request must include:
 
 ---
 
-## **8.4 Code Reviews**
+## **8.6 Code Reviews**
 
 Code review is a required step before any Pull Request is merged. The team has established the following guidelines:
 
@@ -2537,7 +2537,7 @@ A feature is considered complete only when:
 
 ---
 
-## **8.5 Commit Rules**
+## **8.7 Commit Rules**
 
 Consistent and descriptive commit messages are essential for maintaining a readable project history. The team follows the Conventional Commits specification:
 
@@ -2563,7 +2563,7 @@ Format: `type(scope): short description`
 
 ---
 
-## **8.6 Environment Configuration Management**
+## **8.8 Environment Configuration Management**
 
 Environment variables and sensitive configuration are managed securely and never committed to the repository.
 
@@ -2633,7 +2633,7 @@ Quality assurance (QA) is a systematic process aimed at ensuring that the softwa
 
 The team's QA strategy combines local testing within Flutter, unit testing with `flutter test`, manual testing on Android/iOS emulators, structured code review via Pull Requests, and a distributed testing phase using Firebase App Distribution or TestFlight. Together, these layers form a defense-in-depth approach to quality that catches defects at multiple stages of development.
 
-| 🔗 QA and SCM Integration |
+| QA and SCM Integration |
 | :---- |
 | No Pull Request may be merged into the `dev` branch unless all unit tests pass and at least one reviewer has granted approval. This policy enforces quality at the point of integration, not after. |
 
@@ -2649,7 +2649,7 @@ Local testing includes:
 * Verifying new features and UI behavior: ensuring that Flutter widgets render correctly, navigation flows work as intended, and user interactions produce the expected results.  
 * Executing unit tests via `flutter test`: running the full test suite and confirming that all existing tests continue to pass alongside any newly added tests.
 
-| 📌 Rationale |
+| Rationale |
 | :---- |
 | Local testing within Flutter ensures that issues are caught by the developer before they reach the team, reducing review friction and preventing avoidable defects from entering the shared codebase. |
 
@@ -2668,7 +2668,7 @@ Unit tests for دوائي focus on:
 
 All developers are required to run and pass the full unit test suite before submitting any Pull Request. A PR that causes existing unit tests to fail will not be approved for merging.
 
-| 📌 Coverage Target |
+| Coverage Target |
 | :---- |
 | The team targets a minimum of 70% unit test coverage for all core ViewModel/Controller and service logic before merging into the `dev` branch. |
 
@@ -2799,7 +2799,7 @@ Manual testing confirms that:
 | Dashboard | View today's doses, View adherence, View missed doses |
 | Settings | Notification preferences, Profile management |
 
-| 📌 Rationale |
+| Rationale |
 | :---- |
 | Given the elderly target audience, usability issues that automated tests cannot detect — such as unclear Arabic labels, confusing navigation, or insufficient touch target size — are critical defects. Manual testing is therefore not optional but a required quality step for every feature. |
 
@@ -2897,7 +2897,7 @@ The beta testing phase will focus on:
 
 `___________________________________`
 
-| 📌 Rationale |
+| Rationale |
 | :---- |
 | Firebase App Distribution and TestFlight provide structured, secure mechanisms for distributing pre-release builds to testers. For دوائي specifically, real-device testing with users from the elderly population is essential to validate that the accessibility design decisions — large text, simplified navigation, clear Arabic labels — achieve their intended effect in practice. |
 
@@ -2962,7 +2962,7 @@ A structured bug tracking process ensures that defects discovered during any pha
 
 `[Any other relevant information]`
 
-| 📌 Rationale |
+| Rationale |
 | :---- |
 | A documented bug lifecycle prevents issues from being forgotten and ensures accountability for resolution. For a health-related application, an untracked bug — particularly one affecting medication reminders or dose logging — could have direct consequences for patient safety. |
 
@@ -3182,7 +3182,7 @@ The CI pipeline will execute the following steps automatically on every Pull Req
 
           `path: frontend/build/ios/iphoneos/*.app`
 
-| 📌 Rationale |
+| Rationale |
 | :---- |
 | Continuous integration is a cornerstone of modern software development practice. By automating the Flutter build and test execution on every PR, the team ensures that quality gates are consistently enforced — removing the risk of human error or oversight in the review process. This is especially important in a team-based project where multiple contributors commit concurrently to the same codebase. |
 
@@ -3491,7 +3491,7 @@ If a critical bug is discovered after deployment, the team follows a structured 
 
    `git branch -d hotfix/critical-bug`
 
-| 📌 Rationale |
+| Rationale |
 | :---- |
 | For a healthcare application like دوائي, where missed medications could have serious consequences, rapid rollback capability is essential. The team must be prepared to revert changes immediately if a critical bug is discovered in production. |
 
