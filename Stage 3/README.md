@@ -2304,13 +2304,13 @@ sequenceDiagram
 ```
 ---
 
-**7 External APIs Documentation**
+# **7 External APIs Documentation**
 
 *Smart Medication Management System — Stage 3  |  Flutter / Dart \+ Node.js \+ PostgreSQL*
 
  
 
-# **7.1 Overview of External APIs**
+## **7.1 Overview of External APIs**
 
 The Smart Medication Management System uses Flutter/Dart on the client, a Node.js/Express REST API on the backend, and PostgreSQL as the database. PostgreSQL and Node.js are internal infrastructure — not external APIs. The external APIs are the third-party services the system calls at runtime, listed below.
 
@@ -2326,7 +2326,7 @@ The Smart Medication Management System uses Flutter/Dart on the client, a Node.j
 
  
 
-# **7.2 External API Integration Details**
+## **7.2 External API Integration Details**
 
 This section documents the protocol, authentication mechanism, and exact Flutter/Dart integration point for each external service.
 
@@ -2342,7 +2342,7 @@ This section documents the protocol, authentication mechanism, and exact Flutter
 
  
 
-# **7.3 Flutter Package List**
+## **7.3 Flutter Package List**
 
 All external services are consumed through Flutter packages from pub.dev. The table below lists each package, its minimum supported version, and its role.
 
@@ -2360,7 +2360,7 @@ All external services are consumed through Flutter packages from pub.dev. The ta
 
  
 
-# **7.4 External API Justification Matrix**
+## **7.4 External API Justification Matrix**
 
 The table below records the alternatives considered and rejected for each external service, with explicit technical reasoning.
 
@@ -2376,7 +2376,7 @@ The table below records the alternatives considered and rejected for each extern
 
  
 
-# **7.5 External vs. Internal API Boundary**
+## **7.5 External vs. Internal API Boundary**
 
 The distinction between external APIs (consumed by the system) and the internal API (Node.js REST endpoints this project owns) is summarised below.
 
@@ -2389,7 +2389,7 @@ The distinction between external APIs (consumed by the system) and the internal 
 
  
 
-# **7.6 Data Privacy & API Key Management**
+## **7.6 Data Privacy & API Key Management**
 
 The following rules govern how external API credentials are handled throughout the project:
 
