@@ -2473,11 +2473,11 @@ The following rules govern how external API credentials are handled throughout t
 •        All Node.js API routes that access dependent data verify the requesting user's JWT and check caregiver\_links before returning any records — no sensitive data is exposed without authorisation.
 
 
-## **8 SCM & QA Strategy Document (Flutter Edition)**
+# **8 SCM & QA Strategy Document (Flutter Edition)**
 
 ---
 
-# **Section 8: Source Control Management Strategy**
+## **Section 8: Source Control Management Strategy**
 
 Source control management is a foundational practice in software engineering that enables teams to track changes, collaborate efficiently, and maintain a reliable history of the codebase. For the دوائي Smart Medication Management System, the team has adopted GitHub as the primary version control platform. The strategy outlined in this section defines the team's workflow, branching model, contribution standards, and review process to ensure codebase integrity and collaborative consistency throughout the development lifecycle.  
 ---
@@ -2523,7 +2523,7 @@ Individual branches are created from `dev` for each unit of work. Branches follo
 | Documentation | `docs/description` | `docs/api-endpoints` |
 | Testing | `test/description` | `test/unit-medication-service` |
 
-### **8.3 Feature Branch Lifecycle Policy**
+## **8.3 Feature Branch Lifecycle Policy**
 
 Feature branches follow a structured lifecycle to prevent staleness and reduce merge conflicts:
 
