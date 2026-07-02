@@ -340,7 +340,7 @@ These features are important for the future but will not be included in the init
 
 ### 2 UI Mockups for the app 
 
-https://www.figma.com/design/9KPAiOirqriq4lLyaq7Wdt/Untitled?node-id=0-1&t=Ql4tVDjDnCo6SJNU-1
+https://www.figma.com/design/sNRVNF8a79hAdIrzYdU0F9/دوائي?node-id=93-2&p=f&t=ghak00QgRNDdfnM1-0
 ---
 ## 4 The diagram is shown in details below 
 
