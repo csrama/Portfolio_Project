@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node src/server.js",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "migrate": "node-pg-migrate up",
+    "migrate-down": "node-pg-migrate down",
+    "migrate-status": "node-pg-migrate status"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -15,5 +18,8 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.2.0"
+  },
+  "devDependencies": {
+    "node-pg-migrate": "^7.0.0"
   }
 }
