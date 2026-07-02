@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   full_name TEXT,
-  user_type user_type NOT NULL DEFAULT 'patient',
+  user_type user_type NOT NULL DEFAULT 'general_user',
   age INTEGER,
   sex TEXT,
   medical_condition TEXT,

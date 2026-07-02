@@ -1,6 +1,14 @@
 const jwt = require('jsonwebtoken');
 const { pool } = require('../db/pool');
 
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.trim() === '') {
+    throw new Error('JWT_SECRET is required');
+  }
+  return secret;
+}
+
 async function authMiddleware(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
@@ -10,8 +18,7 @@ async function authMiddleware(req, res, next) {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret');
-    console.log(decoded);
+    const decoded = jwt.verify(token, getJwtSecret());
     const user = await pool.findUserById(decoded.id);
 
     if (!user) {

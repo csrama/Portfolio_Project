@@ -20,13 +20,20 @@ const memoryStore = {
   notifications: []
 };
 
+function normalizeUserType(userType) {
+  if (!userType) {
+    return 'general_user';
+  }
+  return userType === 'patient' ? 'general_user' : userType;
+}
+
 function normalizeUser(user) {
   if (!user) return null;
   return {
     id: user.id,
     email: user.email,
     full_name: user.full_name,
-    user_type: user.user_type || 'patient',
+    user_type: normalizeUserType(user.user_type),
     age: user.age || null,
     sex: user.sex || null,
     medical_condition: user.medical_condition || null,
@@ -62,10 +69,10 @@ const db = {
     if (useMemoryStore) {
       const user = {
         id: memoryStore.users.length + 1,
-        email: data.email,
+        email: (data.email || '').toLowerCase(),
         password_hash: data.password_hash,
         full_name: data.full_name || null,
-        user_type: data.user_type || 'patient',
+        user_type: normalizeUserType(data.user_type),
         age: data.age || null,
         sex: data.sex || null,
         medical_condition: data.medical_condition || null,
@@ -83,10 +90,10 @@ const db = {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
-        data.email,
+        (data.email || '').toLowerCase(),
         data.password_hash,
         data.full_name || null,
-        data.user_type || 'patient',
+        normalizeUserType(data.user_type),
         data.age || null,
         data.sex || null,
         data.medical_condition || null,
@@ -98,11 +105,12 @@ const db = {
   },
 
   async findUserByEmail(email) {
+    const normalizedEmail = (email || '').toLowerCase();
     if (useMemoryStore) {
-      return memoryStore.users.find((user) => user.email === email) || null;
+      return memoryStore.users.find((user) => user.email === normalizedEmail) || null;
     }
 
-    const { rows } = await queryWithFallback('SELECT * FROM users WHERE email = $1', [email]);
+    const { rows } = await queryWithFallback('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
     return rows[0] || null;
   },
 
