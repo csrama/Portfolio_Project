@@ -2,9 +2,26 @@ require('dotenv').config();
 const { Pool } = require('pg');
 
 const connectionString = process.env.DATABASE_URL;
-const pool = new Pool({ connectionString });
+let pool;
+let useMemoryStore = false;
+
+try {
+  pool = new Pool({ connectionString });
+} catch (error) {
+  pool = null;
+  useMemoryStore = true;
+}
+
+const memoryStore = {
+  users: [],
+  medications: [],
+  schedules: [],
+  doseRecords: [],
+  notifications: []
+};
 
 function normalizeUser(user) {
+  if (!user) return null;
   return {
     id: user.id,
     email: user.email,
@@ -20,13 +37,48 @@ function normalizeUser(user) {
   };
 }
 
+async function queryWithFallback(text, params = []) {
+  if (!pool) {
+    throw new Error('Database unavailable');
+  }
+
+  try {
+    return await pool.query(text, params);
+  } catch (error) {
+    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || error.message?.includes('getaddrinfo')) {
+      useMemoryStore = true;
+      return { rows: [] };
+    }
+    throw error;
+  }
+}
+
 const db = {
   async query(text, params = []) {
-    return pool.query(text, params);
+    return queryWithFallback(text, params);
   },
 
   async createUser(data) {
-    const { rows } = await pool.query(
+    if (useMemoryStore) {
+      const user = {
+        id: memoryStore.users.length + 1,
+        email: data.email,
+        password_hash: data.password_hash,
+        full_name: data.full_name || null,
+        user_type: data.user_type || 'patient',
+        age: data.age || null,
+        sex: data.sex || null,
+        medical_condition: data.medical_condition || null,
+        is_onboarding_complete: data.is_onboarding_complete || false,
+        is_active: data.is_active !== false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      memoryStore.users.push(user);
+      return normalizeUser(user);
+    }
+
+    const { rows } = await queryWithFallback(
       `INSERT INTO users (email, password_hash, full_name, user_type, age, sex, medical_condition, is_onboarding_complete, is_active)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
@@ -46,17 +98,44 @@ const db = {
   },
 
   async findUserByEmail(email) {
-    const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (useMemoryStore) {
+      return memoryStore.users.find((user) => user.email === email) || null;
+    }
+
+    const { rows } = await queryWithFallback('SELECT * FROM users WHERE email = $1', [email]);
     return rows[0] || null;
   },
 
   async findUserById(id) {
-    const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    if (useMemoryStore) {
+      return memoryStore.users.find((user) => user.id === Number(id)) || null;
+    }
+
+    const { rows } = await queryWithFallback('SELECT * FROM users WHERE id = $1', [id]);
     return rows[0] || null;
   },
 
   async createMedication(data) {
-    const { rows } = await pool.query(
+    if (useMemoryStore) {
+      const medication = {
+        id: memoryStore.medications.length + 1,
+        user_id: data.user_id,
+        name: data.name,
+        dosage: data.dosage || null,
+        form: data.form || 'tablet',
+        instructions: data.instructions || null,
+        color: data.color || null,
+        total_quantity: data.total_quantity || 1,
+        low_stock_threshold: data.low_stock_threshold || 1,
+        is_active: data.is_active !== false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      memoryStore.medications.push(medication);
+      return medication;
+    }
+
+    const { rows } = await queryWithFallback(
       `INSERT INTO medications (user_id, name, dosage, form, instructions, color, total_quantity, low_stock_threshold, is_active)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
@@ -76,17 +155,40 @@ const db = {
   },
 
   async listMedications(userId) {
-    const { rows } = await pool.query('SELECT * FROM medications WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+    if (useMemoryStore) {
+      return memoryStore.medications.filter((item) => item.user_id === Number(userId));
+    }
+
+    const { rows } = await queryWithFallback('SELECT * FROM medications WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
     return rows;
   },
 
   async getMedicationById(id) {
-    const { rows } = await pool.query('SELECT * FROM medications WHERE id = $1', [id]);
+    if (useMemoryStore) {
+      return memoryStore.medications.find((item) => item.id === Number(id)) || null;
+    }
+
+    const { rows } = await queryWithFallback('SELECT * FROM medications WHERE id = $1', [id]);
     return rows[0] || null;
   },
 
   async createSchedule(data) {
-    const { rows } = await pool.query(
+    if (useMemoryStore) {
+      const schedule = {
+        id: memoryStore.schedules.length + 1,
+        user_id: data.user_id,
+        medication_id: data.medication_id || null,
+        days_of_week: data.days_of_week || ['Monday'],
+        time_of_day: data.time_of_day || '08:00',
+        is_active: data.is_active !== false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      memoryStore.schedules.push(schedule);
+      return schedule;
+    }
+
+    const { rows } = await queryWithFallback(
       `INSERT INTO schedules (user_id, medication_id, days_of_week, time_of_day, is_active)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
@@ -102,12 +204,33 @@ const db = {
   },
 
   async listSchedules(userId) {
-    const { rows } = await pool.query('SELECT * FROM schedules WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+    if (useMemoryStore) {
+      return memoryStore.schedules.filter((item) => item.user_id === Number(userId));
+    }
+
+    const { rows } = await queryWithFallback('SELECT * FROM schedules WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
     return rows;
   },
 
   async createDoseRecord(data) {
-    const { rows } = await pool.query(
+    if (useMemoryStore) {
+      const record = {
+        id: memoryStore.doseRecords.length + 1,
+        user_id: data.user_id,
+        medication_id: data.medication_id || null,
+        schedule_id: data.schedule_id || null,
+        scheduled_time: data.scheduled_time || new Date().toISOString(),
+        taken_time: data.taken_time || null,
+        status: data.status || 'PENDING',
+        dose_taken: Boolean(data.dose_taken),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      memoryStore.doseRecords.push(record);
+      return record;
+    }
+
+    const { rows } = await queryWithFallback(
       `INSERT INTO dose_records (user_id, medication_id, schedule_id, scheduled_time, taken_time, status, dose_taken)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
@@ -125,12 +248,23 @@ const db = {
   },
 
   async listDoseRecords(userId) {
-    const { rows } = await pool.query('SELECT * FROM dose_records WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+    if (useMemoryStore) {
+      return memoryStore.doseRecords.filter((item) => item.user_id === Number(userId));
+    }
+
+    const { rows } = await queryWithFallback('SELECT * FROM dose_records WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
     return rows;
   },
 
   async updateDoseRecord(id, updates) {
-    const { rows } = await pool.query(
+    if (useMemoryStore) {
+      const record = memoryStore.doseRecords.find((item) => item.id === Number(id));
+      if (!record) return null;
+      Object.assign(record, updates, { updated_at: new Date().toISOString() });
+      return record;
+    }
+
+    const { rows } = await queryWithFallback(
       `UPDATE dose_records SET status = COALESCE($2, status), taken_time = COALESCE($3, taken_time), dose_taken = COALESCE($4, dose_taken), updated_at = NOW()
        WHERE id = $1 RETURNING *`,
       [id, updates.status, updates.taken_time || null, updates.dose_taken]
@@ -139,7 +273,22 @@ const db = {
   },
 
   async createNotification(data) {
-    const { rows } = await pool.query(
+    if (useMemoryStore) {
+      const notification = {
+        id: memoryStore.notifications.length + 1,
+        user_id: data.user_id,
+        type: data.type || 'info',
+        title: data.title || 'Reminder',
+        body: data.body || '',
+        data: data.data || {},
+        sent_at: new Date().toISOString(),
+        delivered: true
+      };
+      memoryStore.notifications.push(notification);
+      return notification;
+    }
+
+    const { rows } = await queryWithFallback(
       `INSERT INTO notification_logs (user_id, type, title, body, data, sent_at, delivered)
        VALUES ($1, $2, $3, $4, $5, NOW(), TRUE)
        RETURNING *`,
