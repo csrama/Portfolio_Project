@@ -1,9 +1,11 @@
+SET search_path TO public;
+
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   full_name TEXT,
-  user_type user_type NOT NULL DEFAULT 'general_user',
+  user_type user_type_enum NOT NULL DEFAULT 'patient',
   age INTEGER,
   sex TEXT,
   medical_condition TEXT,
@@ -46,7 +48,7 @@ CREATE TABLE IF NOT EXISTS dose_records (
   schedule_id INTEGER REFERENCES schedules(id) ON DELETE SET NULL,
   scheduled_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   taken_time TIMESTAMPTZ,
-  status dose_status NOT NULL DEFAULT 'PENDING',
+  status dose_status_enum NOT NULL DEFAULT 'PENDING',
   dose_taken BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -55,11 +57,10 @@ CREATE TABLE IF NOT EXISTS dose_records (
 CREATE TABLE IF NOT EXISTS notification_logs (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  type TEXT NOT NULL DEFAULT 'info',
+  type notification_type_enum NOT NULL DEFAULT 'medication_reminder',
   title TEXT NOT NULL DEFAULT 'Reminder',
   body TEXT NOT NULL DEFAULT '',
   data JSONB NOT NULL DEFAULT '{}'::jsonb,
   sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   delivered BOOLEAN NOT NULL DEFAULT TRUE
 );
-

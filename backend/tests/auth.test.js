@@ -2,6 +2,7 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
 
 const request = require('supertest');
 const app = require('../src/server');
+const { pgPool } = require('../src/db/pool');
 
 describe('auth endpoints', () => {
   const email = `test-user-${Date.now()}@example.com`;
@@ -41,5 +42,10 @@ describe('auth endpoints', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('token');
+  });
+
+  afterAll(async () => {
+    await pgPool.query('DELETE FROM users WHERE email = $1', ['test-user@example.com']);
+    await pgPool.end();
   });
 });

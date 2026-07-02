@@ -312,5 +312,5 @@ const db = {
   }
 };
 
-module.exports = { pool: db, db, normalizeUser };
+module.exports = { pool: db, db, normalizeUser, pgPool: pool };
 

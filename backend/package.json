@@ -6,10 +6,9 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node src/server.js",
-    "test": "jest --runInBand",
-    "migrate": "node-pg-migrate up",
-    "migrate-down": "node-pg-migrate down",
-    "migrate-status": "node-pg-migrate status"
+    "migrate": "node scripts/runSqlMigrations.js",
+    "migrate:reset": "node scripts/runSqlMigrations.js --reset",
+    "test": "npm run migrate:reset && jest --runInBand"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -17,11 +16,12 @@
     "dotenv": "^16.4.0",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "pg": "^8.2.0",
-    "zod": "^3.25.0"
+    "supertest": "^7.2.2",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "node-pg-migrate": "^7.0.0",
-    "supertest": "^7.0.0"
+    "jest": "^30.4.2",
+    "node-pg-migrate": "^8.0.4",
+    "pg": "^8.22.0"
   }
 }

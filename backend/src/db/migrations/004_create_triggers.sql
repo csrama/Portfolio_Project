@@ -1,24 +1,41 @@
-CREATE OR REPLACE FUNCTION touch_updated_at()
+-- Updated-at triggers for the main tables
+CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
+    NEW.updated_at = NOW();
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER users_touch_updated_at
-BEFORE UPDATE ON users
-FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_users_updated_at') THEN
+    CREATE TRIGGER trg_users_updated_at
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION set_updated_at();
+  END IF;
 
-CREATE TRIGGER medications_touch_updated_at
-BEFORE UPDATE ON medications
-FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_medications_updated_at') THEN
+    CREATE TRIGGER trg_medications_updated_at
+    BEFORE UPDATE ON medications
+    FOR EACH ROW
+    EXECUTE FUNCTION set_updated_at();
+  END IF;
 
-CREATE TRIGGER schedules_touch_updated_at
-BEFORE UPDATE ON schedules
-FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_schedules_updated_at') THEN
+    CREATE TRIGGER trg_schedules_updated_at
+    BEFORE UPDATE ON schedules
+    FOR EACH ROW
+    EXECUTE FUNCTION set_updated_at();
+  END IF;
 
-CREATE TRIGGER dose_records_touch_updated_at
-BEFORE UPDATE ON dose_records
-FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_dose_records_updated_at') THEN
+    CREATE TRIGGER trg_dose_records_updated_at
+    BEFORE UPDATE ON dose_records
+    FOR EACH ROW
+    EXECUTE FUNCTION set_updated_at();
+  END IF;
+END;
+$$;
 

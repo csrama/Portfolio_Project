@@ -21,9 +21,11 @@ app.use('/adherence', adherenceRoutes);
 app.use('/notifications', notificationRoutes);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`Backend listening on port ${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Backend listening on port ${PORT}`);
+  });
+}
 
 module.exports = app;
 
