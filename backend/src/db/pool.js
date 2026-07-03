@@ -312,5 +312,13 @@ const db = {
   }
 };
 
-module.exports = { pool: db, db, normalizeUser, pgPool: pool };
+module.exports = {
+  pool: db,
+  db,
+  normalizeUser,
+  pgPool: pool,
+  get useMemoryStore() {
+    return useMemoryStore;
+  }
+};
 
