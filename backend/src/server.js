@@ -1,5 +1,5 @@
-const express = require('express');
-const bodyParser = require('body-parser');
+const { Hono } = require('hono');
+const { serve } = require('@hono/node-server');
 const authRoutes = require('./routes/auth');
 const medicationRoutes = require('./routes/medications');
 const scheduleRoutes = require('./routes/schedules');
@@ -8,24 +8,24 @@ const adherenceRoutes = require('./routes/adherence');
 const notificationRoutes = require('./routes/notifications');
 const { errorHandler } = require('./middleware/errorHandler');
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+const app = new Hono();
+const PORT = Number(process.env.PORT || (require.main === module ? 3000 : 0));
 
-app.use(bodyParser.json());
-app.get('/health', (_req, res) => res.json({ status: 'ok' }));
-app.use('/auth', authRoutes);
-app.use('/medications', medicationRoutes);
-app.use('/schedules', scheduleRoutes);
-app.use('/dose-logs', doseLogRoutes);
-app.use('/adherence', adherenceRoutes);
-app.use('/notifications', notificationRoutes);
-app.use(errorHandler);
+app.get('/health', (c) => c.json({ status: 'ok' }));
+app.route('/auth', authRoutes);
+app.route('/medications', medicationRoutes);
+app.route('/schedules', scheduleRoutes);
+app.route('/dose-logs', doseLogRoutes);
+app.route('/adherence', adherenceRoutes);
+app.route('/notifications', notificationRoutes);
+app.onError((err, c) => errorHandler(err, c));
 
-if (require.main === module) {
-  app.listen(PORT, () => {
+const server = serve({ fetch: app.fetch, port: PORT }, () => {
+  if (require.main === module) {
     console.log(`Backend listening on port ${PORT}`);
-  });
-}
+  }
+});
 
-module.exports = app;
+module.exports = server;
+module.exports.app = app;
 

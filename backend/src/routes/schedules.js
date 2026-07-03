@@ -1,33 +1,36 @@
-const express = require('express');
+const { Hono } = require('hono');
 const { pool } = require('../db/pool');
 const { authMiddleware } = require('../middleware/auth');
-const router = express.Router();
+const router = new Hono();
 
-router.use(authMiddleware);
+router.use('*', authMiddleware);
 
-router.get('/', async (req, res, next) => {
+router.get('/', async (c) => {
   try {
-    const schedules = await pool.listSchedules(req.user.id);
-    res.json(schedules);
+    const user = c.get('user');
+    const schedules = await pool.listSchedules(user.id);
+    return c.json(schedules);
   } catch (error) {
-    next(error);
+    throw error;
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', async (c) => {
   try {
-    const { medication_id, dose_times, start_date, end_date, reminder_enabled } = req.body || {};
+    const user = c.get('user');
+    const body = await c.req.json().catch(() => ({}));
+    const { medication_id, dose_times, start_date, end_date, reminder_enabled } = body;
 
     if (medication_id === undefined || medication_id === null) {
-      return res.status(400).json({ error: 'medication_id is required' });
+      return c.json({ error: 'medication_id is required' }, 400);
     }
 
     if (start_date === undefined || start_date === null || start_date === '') {
-      return res.status(400).json({ error: 'start_date is required' });
+      return c.json({ error: 'start_date is required' }, 400);
     }
 
     if (!Array.isArray(dose_times) || dose_times.length === 0) {
-      return res.status(400).json({ error: 'dose_times must be a non-empty array' });
+      return c.json({ error: 'dose_times must be a non-empty array' }, 400);
     }
 
     const schedule = await pool.createSchedule({
@@ -36,23 +39,26 @@ router.post('/', async (req, res, next) => {
       start_date,
       end_date,
       reminder_enabled: reminder_enabled !== false,
-      user_id: req.user.id
+      user_id: user.id
     });
 
-    res.status(201).json(schedule);
+    return c.json(schedule, 201);
   } catch (error) {
-    next(error);
+    throw error;
   }
 });
 
-router.patch('/:id', async (req, res, next) => {
+router.patch('/:id', async (c) => {
   try {
-    const { dose_times, start_date, end_date, reminder_enabled } = req.body || {};
+    const user = c.get('user');
+    const id = c.req.param('id');
+    const body = await c.req.json().catch(() => ({}));
+    const { dose_times, start_date, end_date, reminder_enabled } = body;
     const updates = {};
 
     if (dose_times !== undefined) {
       if (!Array.isArray(dose_times) || dose_times.length === 0) {
-        return res.status(400).json({ error: 'dose_times must be a non-empty array' });
+        return c.json({ error: 'dose_times must be a non-empty array' }, 400);
       }
       updates.dose_times = dose_times;
     }
@@ -69,27 +75,29 @@ router.patch('/:id', async (req, res, next) => {
       updates.reminder_enabled = reminder_enabled;
     }
 
-    const updated = await pool.updateSchedule(req.params.id, updates, req.user.id);
+    const updated = await pool.updateSchedule(id, updates, user.id);
     if (!updated) {
-      return res.status(404).json({ error: 'Schedule not found' });
+      return c.json({ error: 'Schedule not found' }, 404);
     }
 
-    res.json(updated);
+    return c.json(updated);
   } catch (error) {
-    next(error);
+    throw error;
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', async (c) => {
   try {
-    const deleted = await pool.deleteSchedule(req.params.id, req.user.id);
+    const user = c.get('user');
+    const id = c.req.param('id');
+    const deleted = await pool.deleteSchedule(id, user.id);
     if (!deleted) {
-      return res.status(404).json({ error: 'Schedule not found' });
+      return c.json({ error: 'Schedule not found' }, 404);
     }
 
-    res.json({ message: 'Schedule deleted successfully' });
+    return c.json({ message: 'Schedule deleted successfully' });
   } catch (error) {
-    next(error);
+    throw error;
   }
 });
 

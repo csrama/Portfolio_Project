@@ -1,16 +1,18 @@
-const express = require('express');
+const { Hono } = require('hono');
 const { authMiddleware } = require('../middleware/auth');
 const { sendPushNotification } = require('../services/fcm');
-const router = express.Router();
+const router = new Hono();
 
-router.use(authMiddleware);
+router.use('*', authMiddleware);
 
-router.post('/send', async (req, res, next) => {
+router.post('/send', async (c) => {
   try {
-    const notification = await sendPushNotification(req.user.id, req.body || {});
-    res.status(201).json(notification);
+    const user = c.get('user');
+    const body = await c.req.json().catch(() => ({}));
+    const notification = await sendPushNotification(user.id, body);
+    return c.json(notification, 201);
   } catch (error) {
-    next(error);
+    throw error;
   }
 });
 

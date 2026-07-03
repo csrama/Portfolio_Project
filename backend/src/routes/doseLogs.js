@@ -1,40 +1,45 @@
-const express = require('express');
+const { Hono } = require('hono');
 const { pool } = require('../db/pool');
 const { authMiddleware } = require('../middleware/auth');
-const router = express.Router();
+const router = new Hono();
 
-router.use(authMiddleware);
+router.use('*', authMiddleware);
 
-router.get('/', async (req, res, next) => {
+router.get('/', async (c) => {
   try {
-    const records = await pool.listDoseRecords(req.user.id);
-    res.json(records);
+    const user = c.get('user');
+    const records = await pool.listDoseRecords(user.id);
+    return c.json(records);
   } catch (error) {
-    next(error);
+    throw error;
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', async (c) => {
   try {
+    const user = c.get('user');
+    const body = await c.req.json().catch(() => ({}));
     const record = await pool.createDoseRecord({
-      ...req.body,
-      user_id: req.user.id
+      ...body,
+      user_id: user.id
     });
-    res.status(201).json(record);
+    return c.json(record, 201);
   } catch (error) {
-    next(error);
+    throw error;
   }
 });
 
-router.patch('/:id', async (req, res, next) => {
+router.patch('/:id', async (c) => {
   try {
-    const record = await pool.updateDoseRecord(req.params.id, req.body);
+    const id = c.req.param('id');
+    const body = await c.req.json().catch(() => ({}));
+    const record = await pool.updateDoseRecord(id, body);
     if (!record) {
-      return res.status(404).json({ error: 'Dose record not found' });
+      return c.json({ error: 'Dose record not found' }, 404);
     }
-    res.json(record);
+    return c.json(record);
   } catch (error) {
-    next(error);
+    throw error;
   }
 });
 

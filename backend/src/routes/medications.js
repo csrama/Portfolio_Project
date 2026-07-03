@@ -1,8 +1,8 @@
-const express = require('express');
+const { Hono } = require('hono');
 const { z } = require('zod');
 const { pool } = require('../db/pool');
 const { authMiddleware } = require('../middleware/auth');
-const router = express.Router();
+const router = new Hono();
 
 const medicationSchema = z.object({
   name: z.string().trim().min(1),
@@ -12,31 +12,34 @@ const medicationSchema = z.object({
   total_quantity: z.number().int().positive().optional()
 });
 
-router.use(authMiddleware);
+router.use('*', authMiddleware);
 
-router.get('/', async (req, res, next) => {
+router.get('/', async (c) => {
   try {
-    const medications = await pool.listMedications(req.user.id);
-    res.json(medications);
+    const user = c.get('user');
+    const medications = await pool.listMedications(user.id);
+    return c.json(medications);
   } catch (error) {
-    next(error);
+    throw error;
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', async (c) => {
   try {
-    const parsed = medicationSchema.safeParse(req.body || {});
+    const user = c.get('user');
+    const body = await c.req.json().catch(() => ({}));
+    const parsed = medicationSchema.safeParse(body);
     if (!parsed.success) {
-      return res.status(400).json({ error: parsed.error.issues[0].message });
+      return c.json({ error: parsed.error.issues[0].message }, 400);
     }
 
     const medication = await pool.createMedication({
       ...parsed.data,
-      user_id: req.user.id
+      user_id: user.id
     });
-    res.status(201).json(medication);
+    return c.json(medication, 201);
   } catch (error) {
-    next(error);
+    throw error;
   }
 });
 

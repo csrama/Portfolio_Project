@@ -1,18 +1,19 @@
-const express = require('express');
+const { Hono } = require('hono');
 const { pool } = require('../db/pool');
 const { authMiddleware } = require('../middleware/auth');
-const router = express.Router();
+const router = new Hono();
 
-router.use(authMiddleware);
+router.use('*', authMiddleware);
 
-router.get('/rate', async (req, res, next) => {
+router.get('/rate', async (c) => {
   try {
-    const records = await pool.listDoseRecords(req.user.id);
+    const user = c.get('user');
+    const records = await pool.listDoseRecords(user.id);
     const completed = records.filter((record) => record.status === 'TAKEN').length;
     const rate = records.length ? Math.round((completed / records.length) * 100) : 0;
-    res.json({ adherence_rate: rate, completed, total: records.length });
+    return c.json({ adherence_rate: rate, completed, total: records.length });
   } catch (error) {
-    next(error);
+    throw error;
   }
 });
 

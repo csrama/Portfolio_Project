@@ -9,12 +9,12 @@ function getJwtSecret() {
   return secret;
 }
 
-async function authMiddleware(req, res, next) {
-  const header = req.headers.authorization || '';
+async function authMiddleware(c, next) {
+  const header = c.req.header('authorization') || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
 
   if (!token) {
-    return res.status(401).json({ error: 'Authentication required' });
+    return c.json({ error: 'Authentication required' }, 401);
   }
 
   try {
@@ -22,13 +22,13 @@ async function authMiddleware(req, res, next) {
     const user = await pool.findUserById(decoded.id);
 
     if (!user) {
-      return res.status(401).json({ error: 'Invalid token' });
+      return c.json({ error: 'Invalid token' }, 401);
     }
 
-    req.user = user;
-    next();
+    c.set('user', user);
+    await next();
   } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
+    return c.json({ error: 'Invalid token' }, 401);
   }
 }
 

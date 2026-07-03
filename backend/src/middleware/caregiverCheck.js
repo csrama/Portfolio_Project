@@ -1,8 +1,9 @@
-function caregiverCheck(req, res, next) {
-  if (!req.user || req.user.user_type !== 'caregiver') {
-    return res.status(403).json({ error: 'Caregiver access required' });
+function caregiverCheck(c, next) {
+  const user = c.get('user');
+  if (!user || user.user_type !== 'caregiver') {
+    return c.json({ error: 'Caregiver access required' }, 403);
   }
-  next();
+  return next();
 }
 
 module.exports = { caregiverCheck };
