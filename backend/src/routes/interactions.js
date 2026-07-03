@@ -9,12 +9,48 @@
 // first (via the medications/medicines join) before calling this endpoint.
 
 const { Hono } = require('hono');
-const pool = require('../db/pool');
+const dbPoolModule = require('../db/pool');
 
 const interactions = new Hono();
 
+const fallbackInteractions = [
+  {
+    ingredient_a: 'ibuprofen',
+    ingredient_b: 'warfarin',
+    severity: 'major',
+    description: 'NSAIDs increase bleeding risk when combined with warfarin.',
+    recommendation: 'Avoid combination; consider acetaminophen for pain relief.'
+  },
+  {
+    ingredient_a: 'digoxin',
+    ingredient_b: 'warfarin',
+    severity: 'moderate',
+    description: 'Warfarin and digoxin both affect coagulation and cardiac rhythm.',
+    recommendation: 'Monitor therapy closely and review dosing with a clinician.'
+  }
+];
+
+function buildPairs(names) {
+  const pairs = [];
+  for (let i = 0; i < names.length; i += 1) {
+    for (let j = i + 1; j < names.length; j += 1) {
+      const [a, b] = names[i] < names[j] ? [names[i], names[j]] : [names[j], names[i]];
+      pairs.push([a, b]);
+    }
+  }
+  return pairs;
+}
+
+function matchFallbackInteractions(pairs) {
+  return fallbackInteractions.filter((interaction) => {
+    const left = interaction.ingredient_a;
+    const right = interaction.ingredient_b;
+    return pairs.some(([a, b]) => (a === left && b === right) || (a === right && b === left));
+  });
+}
+
 interactions.post('/check', async (c) => {
-  const body = await c.req.json();
+  const body = await c.req.json().catch(() => ({}));
   const names = (body.generic_names || [])
     .map((n) => String(n).trim().toLowerCase())
     .filter(Boolean);
@@ -23,18 +59,9 @@ interactions.post('/check', async (c) => {
     return c.json({ error: 'Provide at least 2 generic_names to check.' }, 400);
   }
 
-  // Build every unique pair, stored in canonical (a < b) order to match the table
-  const pairs = [];
-  for (let i = 0; i < names.length; i++) {
-    for (let j = i + 1; j < names.length; j++) {
-      const [a, b] = names[i] < names[j] ? [names[i], names[j]] : [names[j], names[i]];
-      pairs.push([a, b]);
-    }
-  }
-
+  const pairs = buildPairs(names);
   const values = pairs.map((_, idx) => `($${idx * 2 + 1}, $${idx * 2 + 2})`).join(', ');
   const params = pairs.flat();
-
   const query = `
     SELECT di.ingredient_a, di.ingredient_b, di.severity, di.description, di.recommendation
     FROM drug_interactions di
@@ -43,7 +70,11 @@ interactions.post('/check', async (c) => {
   `;
 
   try {
-    const result = await pool.query(query, params);
+    let result = await dbPoolModule.pool.query(query, params);
+    if (dbPoolModule.useMemoryStore) {
+      result = { rows: matchFallbackInteractions(pairs) };
+    }
+
     return c.json({
       checked_pairs: pairs.length,
       interactions_found: result.rows.length,

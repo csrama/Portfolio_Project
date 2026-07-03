@@ -6,6 +6,7 @@ const scheduleRoutes = require('./routes/schedules');
 const doseLogRoutes = require('./routes/doseLogs');
 const adherenceRoutes = require('./routes/adherence');
 const notificationRoutes = require('./routes/notifications');
+const interactionRoutes = require('./routes/interactions');
 const { errorHandler } = require('./middleware/errorHandler');
 
 const app = new Hono();
@@ -18,6 +19,7 @@ app.route('/schedules', scheduleRoutes);
 app.route('/dose-logs', doseLogRoutes);
 app.route('/adherence', adherenceRoutes);
 app.route('/notifications', notificationRoutes);
+app.route('/interactions', interactionRoutes);
 app.onError((err, c) => errorHandler(err, c));
 
 const server = serve({ fetch: app.fetch, port: PORT }, () => {
