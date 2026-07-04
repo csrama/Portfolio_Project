@@ -17,11 +17,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
   static final _pages = [
     _SplashPage(
-      child: const Icon(
-        Icons.medication,
-        size: 80,
-        color: Colors.white,
-      ),
+      child: Image.asset(
+  'assets/app_icon.png',
+  width: 120,
+  height: 120,
+),
       title: 'دوائي',
     ),
     _SplashPage(
