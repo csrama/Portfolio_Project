@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../dashboard/home_screen.dart';
+import '../../services/google_auth_service.dart'; //
 
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
@@ -8,6 +9,32 @@ class OnboardingScreen extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('قريباً')),
     );
+  }
+
+  Future<void> _signInWithGoogle(BuildContext context) async {
+    try {
+      final user = await GoogleAuthService().signIn();
+      if (!context.mounted) return;
+
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم إلغاء تسجيل الدخول')),
+        );
+        return;
+      }
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => HomeScreen(userName: user.displayName),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('حدث خطأ أثناء تسجيل الدخول: $e')),
+      );
+    }
   }
 
   @override
@@ -80,7 +107,11 @@ class OnboardingScreen extends StatelessWidget {
                       onPressed: () => _showComingSoon(context),
                       child: const Text(
                         'استمر !',
-                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -109,7 +140,7 @@ class OnboardingScreen extends StatelessWidget {
                         'Sign up with Google',
                         style: TextStyle(color: Colors.black87),
                       ),
-                      onPressed: () => _showComingSoon(context),
+                      onPressed: () => _signInWithGoogle(context),
                     ),
                     const SizedBox(height: 16),
                     OutlinedButton.icon(
