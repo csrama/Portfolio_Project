@@ -104,13 +104,20 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  final List<MedicationItem> _medications = []; // unlimited: just a growing list
+  final List<MedicationItem> _medications =
+      []; // unlimited: just a growing list
 
   late final List<DateTime> _dateStrip;
   late DateTime _selectedDate;
 
   static const List<String> _weekdayAr = [
-    'الجمعه', 'السبت', 'الاحد', 'الاثنين', 'الثلاثاء', 'الاربعاء', 'الخميس',
+    'الجمعه',
+    'السبت',
+    'الاحد',
+    'الاثنين',
+    'الثلاثاء',
+    'الاربعاء',
+    'الخميس',
   ];
 
   @override
@@ -144,8 +151,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ------------------------- Top bar -------------------------
   Widget _buildTopBar() {
-    final hasName = widget.userName != null && widget.userName!.trim().isNotEmpty;
-    final hasPhoto = widget.photoUrl != null && widget.photoUrl!.trim().isNotEmpty;
+    final hasName =
+        widget.userName != null && widget.userName!.trim().isNotEmpty;
+    final hasPhoto =
+        widget.photoUrl != null && widget.photoUrl!.trim().isNotEmpty;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -163,7 +172,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 shape: BoxShape.circle,
                 border: Border.all(color: _Colors.primaryGreen, width: 1.5),
               ),
-              child: const Icon(Icons.add, color: _Colors.primaryGreen, size: 20),
+              child: const Icon(
+                Icons.add,
+                color: _Colors.primaryGreen,
+                size: 20,
+              ),
             ),
           ),
           Expanded(
@@ -176,7 +189,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       _getGreeting(),
                       textAlign: TextAlign.right,
-                      style: const TextStyle(fontSize: 16, color: _Colors.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: _Colors.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -195,7 +211,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 CircleAvatar(
                   radius: 26,
                   backgroundColor: _Colors.darkGreen,
-                  backgroundImage: hasPhoto ? NetworkImage(widget.photoUrl!) : null,
+                  backgroundImage: hasPhoto
+                      ? NetworkImage(widget.photoUrl!)
+                      : null,
                   child: !hasPhoto
                       ? const Icon(Icons.person, color: Colors.white)
                       : null,
@@ -219,7 +237,8 @@ class _HomeScreenState extends State<HomeScreen> {
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final date = _dateStrip[index];
-          final selected = date.year == _selectedDate.year &&
+          final selected =
+              date.year == _selectedDate.year &&
               date.month == _selectedDate.month &&
               date.day == _selectedDate.day;
           return GestureDetector(
@@ -228,7 +247,9 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 48,
               decoration: BoxDecoration(
                 color: selected ? _Colors.lightGreenBg : Colors.transparent,
-                border: selected ? Border.all(color: _Colors.primaryGreen) : null,
+                border: selected
+                    ? Border.all(color: _Colors.primaryGreen)
+                    : null,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -246,7 +267,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     _weekdayAr[date.weekday - 1],
                     style: TextStyle(
                       fontSize: 11,
-                      color: selected ? _Colors.darkGreen : _Colors.textSecondary,
+                      color: selected
+                          ? _Colors.darkGreen
+                          : _Colors.textSecondary,
                     ),
                   ),
                 ],
@@ -272,14 +295,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Text(
                       'لا يوجد أدوية للتذكير!\nأضف أدويتك في خانة أدويتي\nلتبدأ تذكيراتك في الحال.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: _Colors.primaryGreen, fontSize: 18, height: 1.8),
+                      style: TextStyle(
+                        color: _Colors.primaryGreen,
+                        fontSize: 18,
+                        height: 1.8,
+                      ),
                     ),
                   ),
                 )
               : ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: todaysMeds.length, // unlimited
-                  itemBuilder: (context, index) => _MedicationCard(medication: todaysMeds[index]),
+                  itemBuilder: (context, index) =>
+                      _MedicationCard(medication: todaysMeds[index]),
                 ),
         ),
       ],
@@ -295,27 +323,40 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: _Colors.lightGreenBg,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text('نشطة', style: TextStyle(color: _Colors.darkGreen)),
+                child: const Text(
+                  'نشطة',
+                  style: TextStyle(color: _Colors.darkGreen),
+                ),
               ),
               const Spacer(),
-              const Text('الأدوية المحفوظة', style: TextStyle(color: _Colors.textPrimary)),
+              const Text(
+                'الأدوية المحفوظة',
+                style: TextStyle(color: _Colors.textPrimary),
+              ),
             ],
           ),
         ),
         Expanded(
           child: active.isEmpty
               ? const Center(
-                  child: Text('لا يوجد أدوية محفوظة بعد', style: TextStyle(color: _Colors.textSecondary)),
+                  child: Text(
+                    'لا يوجد أدوية محفوظة بعد',
+                    style: TextStyle(color: _Colors.textSecondary),
+                  ),
                 )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: active.length, // unlimited
-                  itemBuilder: (context, index) => _MedicationCard(medication: active[index]),
+                  itemBuilder: (context, index) =>
+                      _MedicationCard(medication: active[index]),
                 ),
         ),
       ],
@@ -324,13 +365,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildRemindersTab() {
     return const Center(
-      child: Text('التذكيرات قريبًا', style: TextStyle(color: _Colors.textSecondary)),
+      child: Text(
+        'التذكيرات قريبًا',
+        style: TextStyle(color: _Colors.textSecondary),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final tabs = [_buildTodayTab(), _buildMedicationsTab(), _buildRemindersTab()];
+    final tabs = [
+      _buildTodayTab(),
+      _buildMedicationsTab(),
+      _buildRemindersTab(),
+    ];
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -413,7 +461,10 @@ class _MedicationCard extends StatelessWidget {
               children: [
                 Text(
                   '${medication.name}${medication.dosage.isNotEmpty ? " ${medication.dosage}" : ""}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -445,9 +496,16 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   MedicationType _selectedType = MedicationType.tablets;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _dosageController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   static const List<String> _allDays = [
-    'الجمعة', 'السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس',
+    'الجمعة',
+    'السبت',
+    'الأحد',
+    'الإثنين',
+    'الثلاثاء',
+    'الأربعاء',
+    'الخميس',
   ];
   final Set<String> _selectedDays = {};
 
@@ -455,11 +513,39 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   TimeOfDay _time = const TimeOfDay(hour: 6, minute: 0);
   int _dosesPerDay = 1;
 
+  static const List<Map<String, String>> _pharmacySuggestions = [
+    {'name': 'Paracetamol', 'dosage': '500mg'},
+    {'name': 'Amoxicillin', 'dosage': '250mg'},
+    {'name': 'Ibuprofen', 'dosage': '400mg'},
+    {'name': 'Metformin', 'dosage': '850mg'},
+    {'name': 'Omeprazole', 'dosage': '20mg'},
+    {'name': 'Vitamin D', 'dosage': '1000IU'},
+  ];
+
   @override
   void dispose() {
     _nameController.dispose();
     _dosageController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  List<Map<String, String>> get _filteredSuggestions {
+    final query = _searchController.text.trim().toLowerCase();
+    if (query.isEmpty) {
+      return _pharmacySuggestions;
+    }
+    return _pharmacySuggestions.where((item) {
+      final name = item['name']!.toLowerCase();
+      return name.contains(query);
+    }).toList();
+  }
+
+  void _selectSuggestion(Map<String, String> suggestion) {
+    _nameController.text = suggestion['name']!;
+    _dosageController.text = suggestion['dosage']!;
+    _searchController.clear();
+    FocusScope.of(context).unfocus();
   }
 
   Future<void> _pickTime() async {
@@ -467,7 +553,8 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
     if (picked != null) setState(() => _time = picked);
   }
 
-  bool get _isValid => _nameController.text.trim().isNotEmpty && _selectedDays.isNotEmpty;
+  bool get _isValid =>
+      _nameController.text.trim().isNotEmpty && _selectedDays.isNotEmpty;
 
   void _save({required bool withReminder}) {
     if (!_isValid) {
@@ -477,17 +564,19 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
       return;
     }
 
-    widget.onSave(MedicationItem(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: _nameController.text.trim(),
-      dosage: _dosageController.text.trim(),
-      type: _selectedType,
-      daysOfWeek: _selectedDays.toList(),
-      period: _period,
-      time: _time,
-      dosesPerDay: _dosesPerDay,
-      reminderEnabled: withReminder,
-    ));
+    widget.onSave(
+      MedicationItem(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: _nameController.text.trim(),
+        dosage: _dosageController.text.trim(),
+        type: _selectedType,
+        daysOfWeek: _selectedDays.toList(),
+        period: _period,
+        time: _time,
+        dosesPerDay: _dosesPerDay,
+        reminderEnabled: withReminder,
+      ),
+    );
     Navigator.of(context).pop();
   }
 
@@ -524,7 +613,11 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                 const Text(
                   'جدول دوائك',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _Colors.textPrimary),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: _Colors.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 const Text(
@@ -551,12 +644,17 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                           decoration: BoxDecoration(
                             color: selected ? _Colors.darkGreen : Colors.white,
                             border: Border.all(
-                              color: selected ? _Colors.darkGreen : _Colors.borderGrey,
+                              color: selected
+                                  ? _Colors.darkGreen
+                                  : _Colors.borderGrey,
                               width: selected ? 2 : 1,
                             ),
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Icon(type.icon, color: selected ? Colors.white : _Colors.darkGreen),
+                          child: Icon(
+                            type.icon,
+                            color: selected ? Colors.white : _Colors.darkGreen,
+                          ),
                         ),
                       );
                     },
@@ -565,9 +663,54 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                 const SizedBox(height: 20),
                 const Align(
                   alignment: Alignment.centerRight,
-                  child: Text('اسم الدواء', style: TextStyle(color: _Colors.textSecondary)),
+                  child: Text(
+                    'اسم الدواء',
+                    style: TextStyle(color: _Colors.textSecondary),
+                  ),
                 ),
                 const SizedBox(height: 6),
+                TextField(
+                  controller: _searchController,
+                  textAlign: TextAlign.right,
+                  decoration: InputDecoration(
+                    hintText: 'ابحث عن الدواء من نفس الصيدلية',
+                    filled: true,
+                    fillColor: const Color(0xFFF6F6F6),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (_filteredSuggestions.isNotEmpty)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FFF9),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _Colors.borderGrey),
+                    ),
+                    child: Column(
+                      children: _filteredSuggestions.map((item) {
+                        return ListTile(
+                          title: Text(
+                            item['name']!,
+                            textAlign: TextAlign.right,
+                          ),
+                          subtitle: Text(
+                            item['dosage']!,
+                            textAlign: TextAlign.right,
+                          ),
+                          trailing: const Icon(
+                            Icons.medical_services_outlined,
+                            color: _Colors.primaryGreen,
+                          ),
+                          onTap: () => _selectSuggestion(item),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
@@ -617,28 +760,43 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                       final selected = _selectedDays.contains(day);
                       return GestureDetector(
                         onTap: () => setState(() {
-                          selected ? _selectedDays.remove(day) : _selectedDays.add(day);
+                          selected
+                              ? _selectedDays.remove(day)
+                              : _selectedDays.add(day);
                         }),
                         child: Container(
                           width: 64,
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
                             color: selected ? _Colors.darkGreen : Colors.white,
-                            border: Border.all(color: selected ? _Colors.darkGreen : _Colors.borderGrey),
+                            border: Border.all(
+                              color: selected
+                                  ? _Colors.darkGreen
+                                  : _Colors.borderGrey,
+                            ),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(day,
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: selected ? Colors.white : _Colors.textPrimary)),
+                              Text(
+                                day,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: selected
+                                      ? Colors.white
+                                      : _Colors.textPrimary,
+                                ),
+                              ),
                               const SizedBox(height: 4),
                               Icon(
-                                selected ? Icons.check_circle : Icons.circle_outlined,
+                                selected
+                                    ? Icons.check_circle
+                                    : Icons.circle_outlined,
                                 size: 14,
-                                color: selected ? Colors.white : _Colors.borderGrey,
+                                color: selected
+                                    ? Colors.white
+                                    : _Colors.borderGrey,
                               ),
                             ],
                           ),
@@ -654,7 +812,10 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text('الفترة', style: TextStyle(color: _Colors.textSecondary)),
+                          const Text(
+                            'الفترة',
+                            style: TextStyle(color: _Colors.textSecondary),
+                          ),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
                             value: _period,
@@ -668,10 +829,17 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                               ),
                             ),
                             items: const [
-                              DropdownMenuItem(value: 'صباحا', child: Text('صباحا')),
-                              DropdownMenuItem(value: 'مساء', child: Text('مساء')),
+                              DropdownMenuItem(
+                                value: 'صباحا',
+                                child: Text('صباحا'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'مساء',
+                                child: Text('مساء'),
+                              ),
                             ],
-                            onChanged: (value) => setState(() => _period = value!),
+                            onChanged: (value) =>
+                                setState(() => _period = value!),
                           ),
                         ],
                       ),
@@ -681,18 +849,27 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text('الوقت', style: TextStyle(color: _Colors.textSecondary)),
+                          const Text(
+                            'الوقت',
+                            style: TextStyle(color: _Colors.textSecondary),
+                          ),
                           const SizedBox(height: 6),
                           InkWell(
                             onTap: _pickTime,
                             borderRadius: BorderRadius.circular(12),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 14,
+                                horizontal: 12,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF6F6F6),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Text(_time.format(context), textAlign: TextAlign.center),
+                              child: Text(
+                                _time.format(context),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
                         ],
@@ -703,7 +880,10 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                 const SizedBox(height: 20),
                 const Align(
                   alignment: Alignment.centerRight,
-                  child: Text('عدد الجرعات في اليوم', style: TextStyle(color: _Colors.textSecondary)),
+                  child: Text(
+                    'عدد الجرعات في اليوم',
+                    style: TextStyle(color: _Colors.textSecondary),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -718,12 +898,19 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
-                              color: selected ? _Colors.mutedGreen : _Colors.darkGreen,
+                              color: selected
+                                  ? _Colors.mutedGreen
+                                  : _Colors.darkGreen,
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text('x$value',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            child: Text(
+                              'x$value',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -738,9 +925,14 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _Colors.darkGreen,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
-                    child: const Text('حفظ', style: TextStyle(color: Colors.white, fontSize: 16)),
+                    child: const Text(
+                      'حفظ',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -751,10 +943,14 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: _Colors.darkGreen),
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
-                    child: const Text('حفظ الدواء بدون التنبيه',
-                        style: TextStyle(color: _Colors.darkGreen, fontSize: 15)),
+                    child: const Text(
+                      'حفظ الدواء بدون التنبيه',
+                      style: TextStyle(color: _Colors.darkGreen, fontSize: 15),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
