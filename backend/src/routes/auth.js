@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { z } = require('zod');
 const { pool } = require('../db/pool');
 const router = new Hono();
+const { OAuth2Client } = require('google-auth-library');
 
 const registerSchema = z.object({
   email: z.string().trim().email().transform((value) => value.toLowerCase()),
@@ -28,6 +29,7 @@ function getJwtSecret() {
   }
   return secret;
 }
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 function normalizeUserType(userType) {
   if (!userType) {
@@ -118,5 +120,59 @@ router.post('/login', loginRateLimiter, async (c) => {
   }
 });
 
+router.post('/google', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const { idToken } = body;
+
+    if (!idToken) {
+      return c.json({ error: 'Missing Google ID token' }, 400);
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    if (!payload) {
+      return c.json({ error: 'Invalid Google token' }, 401);
+    }
+
+    const email = payload.email.toLowerCase();
+    const full_name = payload.name;
+
+    let user = await pool.findUserByEmail(email);
+
+    if (!user) {
+      user = await pool.createUser({
+        email,
+        full_name,
+        password_hash: '',
+        user_type: 'general_user',
+      });
+    }
+
+    const { password_hash, ...safeUser } = user;
+
+    const token = jwt.sign(
+      { id: safeUser.id },
+      getJwtSecret(),
+      { expiresIn: '7d' }
+    );
+
+    return c.json({
+      user: safeUser,
+      token,
+    });
+  } catch (err) {
+    console.error(err);
+    return c.json(
+      { error: 'Google authentication failed' },
+      401
+    );
+  }
+});
 module.exports = router;
 
