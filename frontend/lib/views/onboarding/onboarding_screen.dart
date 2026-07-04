@@ -22,13 +22,15 @@ class OnboardingScreen extends StatelessWidget {
         );
         return;
       }
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => HomeScreen(userName: user.displayName),
-        ),
-      );
+Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(
+    builder: (_) => HomeScreen(
+      userName: user.displayName,
+      photoUrl: user.photoUrl,
+    ),
+  ),
+);
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
