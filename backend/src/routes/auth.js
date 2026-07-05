@@ -5,6 +5,7 @@ const { z } = require('zod');
 const { pool } = require('../db/pool');
 const router = new Hono();
 const { OAuth2Client } = require('google-auth-library');
+const { createChallenge, verifyChallenge, createOrGetUser, issueTokenForUser } = require('../auth/offline');
 
 const registerSchema = z.object({
   email: z.string().trim().email().transform((value) => value.toLowerCase()),
@@ -143,29 +144,8 @@ router.post('/google', async (c) => {
     const email = payload.email.toLowerCase();
     const full_name = payload.name;
 
-    let user = await pool.findUserByEmail(email);
-
-    if (!user) {
-      user = await pool.createUser({
-        email,
-        full_name,
-        password_hash: '',
-        user_type: 'general_user',
-      });
-    }
-
-    const { password_hash, ...safeUser } = user;
-
-    const token = jwt.sign(
-      { id: safeUser.id },
-      getJwtSecret(),
-      { expiresIn: '7d' }
-    );
-
-    return c.json({
-      user: safeUser,
-      token,
-    });
+    const user = await createOrGetUser({ email, full_name, provider: 'google' });
+    return c.json(await issueTokenForUser(user));
   } catch (err) {
     console.error(err);
     return c.json(
@@ -174,5 +154,57 @@ router.post('/google', async (c) => {
     );
   }
 });
+
+router.post('/offline/challenge', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const { provider = 'otp', identifier } = body;
+
+    if (!identifier) {
+      return c.json({ error: 'identifier is required' }, 400);
+    }
+
+    const challenge = createChallenge(provider, identifier);
+    return c.json({
+      provider,
+      identifier,
+      challengeId: challenge.challengeId,
+      code: challenge.code,
+      mode: 'offline'
+    });
+  } catch (error) {
+    console.error(error);
+    return c.json({ error: 'Unable to create offline challenge' }, 500);
+  }
+});
+
+router.post('/offline/verify', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const { provider = 'otp', identifier, challengeId, code } = body;
+
+    if (!identifier || !challengeId || !code) {
+      return c.json({ error: 'identifier, challengeId, and code are required' }, 400);
+    }
+
+    const challenge = verifyChallenge(challengeId, provider, identifier, code);
+    if (!challenge) {
+      return c.json({ error: 'Invalid or expired offline challenge' }, 401);
+    }
+
+    const email = `${identifier}`.toLowerCase();
+    const user = await createOrGetUser({
+      email,
+      full_name: identifier.split('@')[0] || 'Offline User',
+      provider
+    });
+
+    return c.json(await issueTokenForUser(user));
+  } catch (error) {
+    console.error(error);
+    return c.json({ error: 'Offline authentication failed' }, 500);
+  }
+});
+
 module.exports = router;
 
