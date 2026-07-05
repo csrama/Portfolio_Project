@@ -33,9 +33,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (email.isEmpty || name.isEmpty || password.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'أدخل اسمًا صالحًا وبريدًا وكلمة مرور 6 أحرف على الأقل',
-          ),
+          content: Text('أدخل اسمًا صالحًا وبريدًا وكلمة مرور 6 أحرف على الأقل'),
         ),
       );
       return;
@@ -56,9 +54,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'تم إنشاء الحساب بنجاح: ${result['user']['full_name']}',
-          ),
+          content: Text('تم إنشاء الحساب بنجاح: ${result['user']['full_name']}'),
         ),
       );
 
@@ -76,9 +72,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final message = e.toString().contains('409')
           ? 'هذا البريد مستخدم بالفعل'
           : 'فشل إنشاء الحساب. تأكد من الاتصال بالإنترنت أو جرّب بريدًا آخر';
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -91,9 +85,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('أدخل البريد وكلمة المرور')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('أدخل البريد وكلمة المرور')),
+      );
       return;
     }
 
@@ -105,9 +99,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('تم تسجيل الدخول بنجاح')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم تسجيل الدخول بنجاح')),
+      );
 
       Navigator.pushReplacement(
         context,
@@ -123,9 +117,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final message = e.toString().contains('401')
           ? 'البريد أو كلمة المرور غير صحيحة'
           : 'فشل تسجيل الدخول. تأكد من الاتصال بالإنترنت';
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -134,9 +126,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('قريباً')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('قريباً')),
+    );
   }
 
   Future<void> _signInWithGoogle(BuildContext context) async {
@@ -145,23 +137,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (!context.mounted) return;
 
       if (user == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('تم إلغاء تسجيل الدخول')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم إلغاء تسجيل الدخول')),
+        );
         return;
       }
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              HomeScreen(userName: user.displayName, photoUrl: user.photoUrl),
+          builder: (_) => HomeScreen(userName: user.displayName, photoUrl: user.photoUrl),
         ),
       );
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('حدث خطأ أثناء تسجيل الدخول: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('حدث خطأ أثناء تسجيل الدخول: $e')),
+      );
     }
   }
 
@@ -169,141 +160,121 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [Color(0xFFE8F6EE), Color(0xFFD9F2E7)],
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFFB8DFC8),
+                Color(0xFF9DD4B0),
+                Color(0xFFCEE8CF),
+                Color(0xFFD9EDD5),
+              ],
+              stops: [0.0, 0.3, 0.7, 1.0],
+            ),
           ),
-        ),
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          extendBody: true,
-          extendBodyBehindAppBar: true,
-          body: SafeArea(
+          child: SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 40,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Title
                     Text(
-                      _isSignUp ? 'انشاء حساب جديد' : 'تسجيل الدخول',
+                      _isSignUp ? 'انشاء حساب جديد' : 'انشاء حساب جديد',
                       textAlign: TextAlign.right,
                       style: const TextStyle(
-                        fontSize: 28,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF0E3C30),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 6),
                     Text(
-                      _isSignUp ? 'ادخل بياناتك لإنشاء حساب جديد' : 'ادخل بريدك الالكتروني لتسجيل الدخول',
+                      _isSignUp
+                          ? 'ادخل بياناتك لإنشاء حساب جديد'
+                          : 'أدخل بريدك الالكتروني لتسجيل الدخول',
                       textAlign: TextAlign.right,
-                      style: const TextStyle(fontSize: 16, color: Colors.black87),
+                      style: const TextStyle(fontSize: 14, color: Color(0xFF2D6A4F)),
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 24),
+
+                    // Name field (sign up only)
                     if (_isSignUp) ...[
-                      TextField(
+                      _buildTextField(
                         controller: _nameController,
-                        textAlign: TextAlign.right,
-                        decoration: InputDecoration(
-                          hintText: 'الاسم الكامل',
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 18,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
+                        hint: 'الاسم الكامل',
+                        keyboardType: TextInputType.name,
                       ),
                       const SizedBox(height: 12),
                     ],
-                    TextField(
+
+                    // Email field
+                    _buildTextField(
                       controller: _emailController,
+                      hint: 'email@gmail.com',
                       keyboardType: TextInputType.emailAddress,
-                      textAlign: TextAlign.right,
-                      decoration: InputDecoration(
-                        hintText: 'email@gmail.com',
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 18,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
                     ),
                     const SizedBox(height: 12),
-                    TextField(
+
+                    // Password field
+                    _buildTextField(
                       controller: _passwordController,
-                      obscureText: true,
-                      textAlign: TextAlign.right,
-                      decoration: InputDecoration(
-                        hintText: 'كلمة المرور',
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 18,
+                      hint: 'كلمة المرور',
+                      obscure: true,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Main button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF085041),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 0,
                         ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
-                        ),
+                        onPressed: _isLoading
+                            ? null
+                            : () {
+                                if (_isSignUp) {
+                                  _signUpWithEmail(context);
+                                } else {
+                                  _signInWithEmail(context);
+                                }
+                              },
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(
+                                _isSignUp ? 'إنشاء حساب' : 'استمر',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF085041),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      onPressed: _isLoading
-                          ? null
-                          : () {
-                              if (_isSignUp) {
-                                _signUpWithEmail(context);
-                              } else {
-                                _signInWithEmail(context);
-                              }
-                            },
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              _isSignUp ? 'إنشاء حساب جديد' : 'تسجيل الدخول',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                    ),
-                    const SizedBox(height: 16),
+
+                    // Toggle login/signup
+                    const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -313,75 +284,60 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             _isSignUp ? 'تسجيل الدخول' : 'إنشاء حساب جديد',
                             style: const TextStyle(
                               color: Color(0xFF085041),
-                              fontSize: 16,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                         Text(
-                          _isSignUp ? 'لديك حساب بالفعل؟' : 'ليس لديك حساب؟',
-                          style: const TextStyle(color: Colors.black54, fontSize: 16),
+                          _isSignUp ? 'لديك حساب؟' : 'ليس لديك حساب؟',
+                          style: const TextStyle(color: Color(0xFF2D6A4F), fontSize: 14),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+
+                    // Divider
+                    const SizedBox(height: 16),
                     Row(
                       children: const [
-                        Expanded(child: Divider(color: Colors.black26)),
+                        Expanded(child: Divider(color: Color(0xFF2D6A4F), thickness: 0.5)),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
                             'أو',
-                            style: TextStyle(color: Colors.black54),
+                            style: TextStyle(color: Color(0xFF2D6A4F), fontSize: 14),
                           ),
                         ),
-                        Expanded(child: Divider(color: Colors.black26)),
+                        Expanded(child: Divider(color: Color(0xFF2D6A4F), thickness: 0.5)),
                       ],
                     ),
-                    const SizedBox(height: 24),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.black26),
-                        backgroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      icon: const Icon(
-                        Icons.g_mobiledata,
-                        color: Colors.black87,
-                      ),
-                      label: const Text(
-                        'Sign up with Google',
-                        style: TextStyle(color: Colors.black87),
-                      ),
+                    const SizedBox(height: 16),
+
+                    // Google button
+                    _buildSocialButton(
+                      label: 'Sign up with Google',
+                      icon: const Icon(Icons.g_mobiledata, size: 24, color: Colors.black87),
                       onPressed: () => _signInWithGoogle(context),
                     ),
-                    const SizedBox(height: 16),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.black26),
-                        backgroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      icon: const Icon(Icons.apple, color: Colors.black87),
-                      label: const Text(
-                        'Sign up with Apple',
-                        style: TextStyle(color: Colors.black87),
-                      ),
+                    const SizedBox(height: 10),
+
+                    // Apple button
+                    _buildSocialButton(
+                      label: 'Sign up with Apple',
+                      icon: const Icon(Icons.apple, size: 22, color: Colors.black87),
                       onPressed: () => _showComingSoon(context),
                     ),
-                    const SizedBox(height: 24),
+
+                    // Terms
+                    const SizedBox(height: 20),
                     const Text(
                       'عند الضغط على متابعة، أنت توافق على شروط الخدمة وسياسة الخصوصية',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.black54, fontSize: 13),
+                      style: TextStyle(color: Color(0xFF2D6A4F), fontSize: 12),
                     ),
-                    const SizedBox(height: 32),
+
+                    // Guest
+                    const SizedBox(height: 16),
                     TextButton(
                       onPressed: () {
                         Navigator.pushReplacement(
@@ -395,7 +351,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         'الاستمرار كضيف',
                         style: TextStyle(
                           color: Color(0xFF085041),
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -406,6 +362,67 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    TextInputType keyboardType = TextInputType.text,
+    bool obscure = false,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscure,
+      textAlign: TextAlign.right,
+      style: const TextStyle(color: Color(0xFF0E3C30)),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Color(0xFF7AAE95), fontSize: 14),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.85),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFF085041), width: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSocialButton({
+    required String label,
+    required Widget icon,
+    required VoidCallback onPressed,
+  }) {
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        side: const BorderSide(color: Colors.white54, width: 1),
+        backgroundColor: Colors.white.withOpacity(0.75),
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      onPressed: onPressed,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          icon,
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.black87, fontSize: 15),
+          ),
+        ],
       ),
     );
   }

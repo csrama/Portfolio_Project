@@ -925,25 +925,11 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                     );
                   }),
                 ),
-                const SizedBox(height: 16),
-                SwitchListTile.adaptive(
-                  activeColor: _Colors.darkGreen,
-                  title: const Text(
-                    'تفعيل التنبيه لهذا الدواء',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: _Colors.textPrimary,
-                    ),
-                  ),
-                  value: _reminderEnabled,
-                  onChanged: (value) => setState(() => _reminderEnabled = value),
-                ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => _save(withReminder: _reminderEnabled),
+                    onPressed: () => _save(withReminder: true),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _Colors.darkGreen,
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -953,7 +939,25 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                     ),
                     child: const Text(
                       'حفظ',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
+                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => _save(withReminder: false),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: _Colors.darkGreen, width: 1.5),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(
+                      'حفظ الدواء بدون التنبيه',
+                      style: TextStyle(color: _Colors.darkGreen, fontSize: 15),
                     ),
                   ),
                 ),
