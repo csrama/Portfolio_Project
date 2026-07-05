@@ -162,7 +162,53 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // "+" add button on the far side (top bar, always available)
+          // Greeting + Profile avatar (rendered on the right in RTL)
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                // Profile avatar - dark green
+                CircleAvatar(
+                  radius: 26,
+                  backgroundColor: _Colors.darkGreen,
+                  backgroundImage: hasPhoto
+                      ? NetworkImage(widget.photoUrl!)
+                      : null,
+                  child: !hasPhoto
+                      ? const Icon(Icons.person, color: Colors.white)
+                      : null,
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      hasName ? '${_getGreeting()}،' : _getGreeting(),
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        fontSize: hasName ? 16 : 22,
+                        fontWeight: hasName ? FontWeight.normal : FontWeight.bold,
+                        color: hasName ? _Colors.textSecondary : _Colors.textPrimary,
+                      ),
+                    ),
+                    if (hasName) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.userName!,
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: _Colors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // "+" add button on the left side (rendered on the left in RTL)
           GestureDetector(
             onTap: _openAddMedicationSheet,
             child: Container(
@@ -177,48 +223,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: _Colors.primaryGreen,
                 size: 20,
               ),
-            ),
-          ),
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      _getGreeting(),
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: _Colors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      hasName ? widget.userName! : 'ضيف',
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: _Colors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 12),
-                // Profile avatar - dark green
-                CircleAvatar(
-                  radius: 26,
-                  backgroundColor: _Colors.darkGreen,
-                  backgroundImage: hasPhoto
-                      ? NetworkImage(widget.photoUrl!)
-                      : null,
-                  child: !hasPhoto
-                      ? const Icon(Icons.person, color: Colors.white)
-                      : null,
-                ),
-              ],
             ),
           ),
         ],
@@ -497,6 +501,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _dosageController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
+  bool _reminderEnabled = true;
 
   static const List<String> _allDays = [
     'الجمعة',
@@ -533,7 +538,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   List<Map<String, String>> get _filteredSuggestions {
     final query = _searchController.text.trim().toLowerCase();
     if (query.isEmpty) {
-      return _pharmacySuggestions;
+      return [];
     }
     return _pharmacySuggestions.where((item) {
       final name = item['name']!.toLowerCase();
@@ -542,9 +547,11 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   }
 
   void _selectSuggestion(Map<String, String> suggestion) {
-    _nameController.text = suggestion['name']!;
-    _dosageController.text = suggestion['dosage']!;
-    _searchController.clear();
+    setState(() {
+      _nameController.text = suggestion['name']!;
+      _dosageController.text = suggestion['dosage']!;
+      _searchController.clear();
+    });
     FocusScope.of(context).unfocus();
   }
 
@@ -671,6 +678,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                 const SizedBox(height: 6),
                 TextField(
                   controller: _searchController,
+                  onChanged: (value) => setState(() {}),
                   textAlign: TextAlign.right,
                   decoration: InputDecoration(
                     hintText: 'ابحث عن الدواء من نفس الصيدلية',
@@ -917,11 +925,25 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                     );
                   }),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+                SwitchListTile.adaptive(
+                  activeColor: _Colors.darkGreen,
+                  title: const Text(
+                    'تفعيل التنبيه لهذا الدواء',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: _Colors.textPrimary,
+                    ),
+                  ),
+                  value: _reminderEnabled,
+                  onChanged: (value) => setState(() => _reminderEnabled = value),
+                ),
+                const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => _save(withReminder: true),
+                    onPressed: () => _save(withReminder: _reminderEnabled),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _Colors.darkGreen,
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -932,24 +954,6 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                     child: const Text(
                       'حفظ',
                       style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => _save(withReminder: false),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: _Colors.darkGreen),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(
-                      'حفظ الدواء بدون التنبيه',
-                      style: TextStyle(color: _Colors.darkGreen, fontSize: 15),
                     ),
                   ),
                 ),

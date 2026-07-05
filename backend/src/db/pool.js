@@ -27,6 +27,13 @@ function normalizeUserType(userType) {
   return userType === 'patient' ? 'general_user' : userType;
 }
 
+function denormalizeUserType(userType) {
+  if (userType === 'general_user' || !userType) {
+    return 'patient';
+  }
+  return userType;
+}
+
 function normalizeUser(user) {
   if (!user) return null;
   return {
@@ -93,7 +100,7 @@ const db = {
         (data.email || '').toLowerCase(),
         data.password_hash,
         data.full_name || null,
-        normalizeUserType(data.user_type),
+        denormalizeUserType(data.user_type),
         data.age || null,
         data.sex || null,
         data.medical_condition || null,

@@ -15,6 +15,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isSignUp = false;
 
   @override
   void dispose() {
@@ -193,40 +194,42 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text(
-                      'انشاء حساب جديد',
+                    Text(
+                      _isSignUp ? 'انشاء حساب جديد' : 'تسجيل الدخول',
                       textAlign: TextAlign.right,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF0E3C30),
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      'ادخل بريدك الالكتروني لتسجيل الدخول',
+                    Text(
+                      _isSignUp ? 'ادخل بياناتك لإنشاء حساب جديد' : 'ادخل بريدك الالكتروني لتسجيل الدخول',
                       textAlign: TextAlign.right,
-                      style: TextStyle(fontSize: 16, color: Colors.black87),
+                      style: const TextStyle(fontSize: 16, color: Colors.black87),
                     ),
                     const SizedBox(height: 28),
-                    TextField(
-                      controller: _nameController,
-                      textAlign: TextAlign.right,
-                      decoration: InputDecoration(
-                        hintText: 'الاسم الكامل',
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 18,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
+                    if (_isSignUp) ...[
+                      TextField(
+                        controller: _nameController,
+                        textAlign: TextAlign.right,
+                        decoration: InputDecoration(
+                          hintText: 'الاسم الكامل',
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 18,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
+                      const SizedBox(height: 12),
+                    ],
                     TextField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -275,7 +278,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                       onPressed: _isLoading
                           ? null
-                          : () => _signInWithEmail(context),
+                          : () {
+                              if (_isSignUp) {
+                                _signUpWithEmail(context);
+                              } else {
+                                _signInWithEmail(context);
+                              }
+                            },
                       child: _isLoading
                           ? const SizedBox(
                               width: 20,
@@ -285,35 +294,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text(
-                              'تسجيل الدخول',
-                              style: TextStyle(
+                          : Text(
+                              _isSignUp ? 'إنشاء حساب جديد' : 'تسجيل الدخول',
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                     ),
-                    const SizedBox(height: 12),
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFF085041)),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TextButton(
+                          onPressed: () => setState(() => _isSignUp = !_isSignUp),
+                          child: Text(
+                            _isSignUp ? 'تسجيل الدخول' : 'إنشاء حساب جديد',
+                            style: const TextStyle(
+                              color: Color(0xFF085041),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
-                      onPressed: _isLoading
-                          ? null
-                          : () => _signUpWithEmail(context),
-                      child: const Text(
-                        'إنشاء حساب جديد',
-                        style: TextStyle(
-                          color: Color(0xFF085041),
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                        Text(
+                          _isSignUp ? 'لديك حساب بالفعل؟' : 'ليس لديك حساب؟',
+                          style: const TextStyle(color: Colors.black54, fontSize: 16),
                         ),
-                      ),
+                      ],
                     ),
                     const SizedBox(height: 24),
                     Row(

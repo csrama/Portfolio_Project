@@ -1,4 +1,5 @@
 const { Hono } = require('hono');
+const { cors } = require('hono/cors');
 const { serve } = require('@hono/node-server');
 const authRoutes = require('./routes/auth');
 const medicationRoutes = require('./routes/medications');
@@ -12,6 +13,7 @@ const { errorHandler } = require('./middleware/errorHandler');
 const app = new Hono();
 const PORT = Number(process.env.PORT || (require.main === module ? 3000 : 0));
 
+app.use('*', cors());
 app.get('/health', (c) => c.json({ status: 'ok' }));
 app.route('/auth', authRoutes);
 app.route('/medications', medicationRoutes);
