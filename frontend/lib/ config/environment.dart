@@ -1,4 +1,5 @@
 
 class Environment {
-  static const String baseUrl = 'http://localhost:47071.api';
+  // Backend API URL - run backend with: cd backend && node src/server.js
+  static const String baseUrl = 'http://localhost:3000';
 }
