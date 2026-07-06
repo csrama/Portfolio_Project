@@ -169,14 +169,13 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 // Profile avatar - dark green
                 CircleAvatar(
-                  radius: 26,
-                  backgroundColor: _Colors.darkGreen,
-                  backgroundImage: hasPhoto
-                      ? NetworkImage(widget.photoUrl!)
-                      : null,
-                  child: !hasPhoto
-                      ? const Icon(Icons.person, color: Colors.white)
-                      : null,
+                   radius: 26, 
+                   backgroundColor: _Colors.darkGreen,
+                    child: const Icon(
+                       Icons.person,
+                       color: Colors.white,
+                       size: 38,
+                       ),
                 ),
                 const SizedBox(width: 12),
                 Column(
