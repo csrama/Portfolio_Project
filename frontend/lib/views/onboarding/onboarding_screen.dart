@@ -188,7 +188,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   children: [
                     // Title
                     Text(
-                      _isSignUp ? 'انشاء حساب جديد' : 'انشاء حساب جديد',
+                      _isSignUp ? 'انشاء حساب جديد' : 'تسجيل الدخول',
                       textAlign: TextAlign.right,
                       style: const TextStyle(
                         fontSize: 22,
