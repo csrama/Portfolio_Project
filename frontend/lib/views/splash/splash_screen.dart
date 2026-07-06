@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../onboarding/onboarding_screen.dart';
+import '../dashboard/home_screen.dart';
+import '../../repositories/auth_repository.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -61,14 +63,35 @@ class _SplashScreenState extends State<SplashScreen> {
         );
       } else {
         timer.cancel();
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const OnboardingScreen(),
-          ),
-        );
+        _goToNextScreen();
       }
     });
+  }
+
+  Future<void> _goToNextScreen() async {
+    final authRepository = AuthRepository();
+    final loggedIn = await authRepository.isLoggedIn();
+    if (!mounted) return;
+
+    if (loggedIn) {
+      final userName = await authRepository.getUserName();
+      final photoUrl = await authRepository.getPhotoUrl();
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => HomeScreen(userName: userName, photoUrl: photoUrl),
+        ),
+      );
+      return;
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const OnboardingScreen(),
+      ),
+    );
   }
 
   @override

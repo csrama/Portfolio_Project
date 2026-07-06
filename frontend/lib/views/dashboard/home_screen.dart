@@ -19,6 +19,9 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import '../onboarding/onboarding_screen.dart';
+import '../../repositories/auth_repository.dart';
+import '../../services/google_auth_service.dart';
 
 // ---------------------------------------------------------------------
 // Colors (inlined here to keep this a single self-contained file)
@@ -149,6 +152,53 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showAccountMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.redAccent),
+                  title: const Text(
+                    'تسجيل الخروج',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(sheetContext); // close the sheet first
+                    await _signOut(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _signOut(BuildContext context) async {
+    // Clear whatever kind of session is active (email token or Google).
+    await AuthRepository().clearSession();
+    await GoogleAuthService().signOut();
+
+    if (!context.mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      (route) => false,
+    );
+  }
+
   // ------------------------- Top bar -------------------------
   Widget _buildTopBar() {
     final hasName =
@@ -167,15 +217,19 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                // Profile avatar - dark green
-                CircleAvatar(
-                   radius: 26, 
-                   backgroundColor: _Colors.darkGreen,
-                    child: const Icon(
-                       Icons.person,
-                       color: Colors.white,
-                       size: 38,
-                       ),
+                // Profile avatar - dark green. Tap opens the account menu
+                // (currently just "تسجيل الخروج" / sign out).
+                GestureDetector(
+                  onTap: () => _showAccountMenu(context),
+                  child: CircleAvatar(
+                     radius: 26,
+                     backgroundColor: _Colors.darkGreen,
+                      child: const Icon(
+                         Icons.person,
+                         color: Colors.white,
+                         size: 38,
+                         ),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Column(

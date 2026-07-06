@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../dashboard/home_screen.dart';
 import '../../services/api_service.dart';
 import '../../services/google_auth_service.dart';
+import '../../repositories/auth_repository.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -51,6 +52,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         },
       );
 
+      await AuthRepository().saveSession(
+        token: result['token']?.toString(),
+        userName: result['user']?['full_name']?.toString(),
+        provider: 'email',
+      );
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -98,6 +105,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         body: {'email': email, 'password': password},
       );
 
+      await AuthRepository().saveSession(
+        token: result['token']?.toString(),
+        userName: result['user']?['full_name']?.toString(),
+        provider: 'email',
+      );
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تم تسجيل الدخول بنجاح')),
@@ -142,6 +155,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         );
         return;
       }
+
+      await AuthRepository().saveSession(
+        userName: user.displayName,
+        photoUrl: user.photoUrl,
+        provider: 'google',
+      );
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
