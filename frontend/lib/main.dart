@@ -36,33 +36,53 @@ class DawaiApp extends StatelessWidget {
           primarySwatch: Colors.blue,
           fontFamily: 'Cairo',
         ),
-        home: Consumer<AuthProvider>(
-          builder: (context, authProvider, child) {
-            return FutureBuilder<bool>(
-              future: authProvider.checkLoginStatus(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  );
-                }
-                // If there was any error while reading storage, just show login.
-                if (snapshot.hasError) {
-                  return const LoginScreen();
-                }
-                if (snapshot.data == true) {
-                  final user = authProvider.user;
-                  return HomeScreen(
-                    userName: user?['name'] as String? ?? 'مستخدم',
-                    photoUrl: user?['photo'] as String?,
-                  );
-                }
-                return const LoginScreen();
-              },
-            );
-          },
-        ),
+        home: const _AuthGate(),
       ),
+    );
+  }
+}
+
+/// Runs checkLoginStatus ONCE (not on every rebuild) and switches between
+/// LoginScreen / HomeScreen based on the result. Previously main.dart called
+/// authProvider.checkLoginStatus() directly inside FutureBuilder, which
+/// created a new Future on every rebuild -> notifyListeners caused rebuild
+/// -> new Future -> infinite loop (blank spinner forever).
+class _AuthGate extends StatefulWidget {
+  const _AuthGate();
+
+  @override
+  State<_AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<_AuthGate> {
+  late final Future<bool> _initFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Call once, cache the Future.
+    _initFuture = context.read<AuthProvider>().checkLoginStatus();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _initFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError || snapshot.data != true) {
+          return const LoginScreen();
+        }
+        final user = context.read<AuthProvider>().user;
+        return HomeScreen(
+          userName: user?['name'] as String? ?? 'مستخدم',
+          photoUrl: user?['photo'] as String?,
+        );
+      },
     );
   }
 }
