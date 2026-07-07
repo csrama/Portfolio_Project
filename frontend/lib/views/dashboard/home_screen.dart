@@ -17,8 +17,11 @@
 // and _handleSaveMedication with real API calls once the backend
 // schedules endpoint is confirmed working.
 
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../../repositories/auth_repository.dart';
 import '../../services/google_auth_service.dart';
@@ -109,18 +112,19 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final List<MedicationItem> _medications =
       []; // unlimited: just a growing list
+  final Set<String> _takenMedications = {}; // medication name + date key
 
   late final List<DateTime> _dateStrip;
   late DateTime _selectedDate;
 
   static const List<String> _weekdayAr = [
-    'الجمعه',
-    'السبت',
-    'الاحد',
     'الاثنين',
     'الثلاثاء',
-    'الاربعاء',
+    'الأربعاء',
     'الخميس',
+    'الجمعة',
+    'السبت',
+    'الأحد',
   ];
 
   @override
@@ -131,6 +135,8 @@ class _HomeScreenState extends State<HomeScreen> {
     // 7-day rolling strip centered on today, oldest first so it reads
     // naturally left-to-right even inside an RTL Directionality.
     _dateStrip = List.generate(7, (i) => today.add(Duration(days: i - 3)));
+    _loadMedications();
+    _loadTakenMedications();
   }
 
   String _getGreeting() {
@@ -141,13 +147,165 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'مساء الخير';
   }
 
+  String _weekdayNameFromDate(DateTime date) {
+    return _weekdayAr[date.weekday - 1];
+  }
+
+  String _arabicDigits(String input) {
+    const western = '0123456789';
+    const arabic = '٠١٢٣٤٥٦٧٨٩';
+    return input.split('').map((char) {
+      final index = western.indexOf(char);
+      return index >= 0 ? arabic[index] : char;
+    }).join();
+  }
+
+  String _formatMedicationInfo(MedicationItem medication) {
+    final timeLabel = _arabicDigits(medication.timeLabel);
+    final count = _arabicDigits(medication.dosesPerDay.toString());
+    return '$timeLabel. في اليوم/x$count';
+  }
+
+  List<MedicationItem> _medicationsForDate(DateTime date) {
+    final dayName = _weekdayNameFromDate(date);
+    return _medications.where((med) {
+      final scheduledEveryDay = med.daysOfWeek.isEmpty;
+      return med.isActive &&
+          (scheduledEveryDay || med.daysOfWeek.contains(dayName));
+    }).toList();
+  }
+
+  bool _hasAnyMedicationOnDate(DateTime date) {
+    return _medicationsForDate(date).isNotEmpty;
+  }
+
+  String _medicationDoseKey(
+      MedicationItem medication, DateTime date, int doseIndex) {
+    final iso = '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+    return '${medication.name}_${iso}_$doseIndex';
+  }
+
+  bool _isTaken(MedicationItem medication, DateTime date, int doseIndex) {
+    return _takenMedications.contains(
+      _medicationDoseKey(medication, date, doseIndex),
+    );
+  }
+
+  void _toggleTaken(MedicationItem medication, DateTime date, int doseIndex) {
+    final key = _medicationDoseKey(medication, date, doseIndex);
+    setState(() {
+      if (_takenMedications.contains(key)) {
+        _takenMedications.remove(key);
+      } else {
+        _takenMedications.add(key);
+      }
+    });
+    _saveTakenMedications();
+  }
+
+  Future<void> _saveMedications() async {
+    final prefs = await SharedPreferences.getInstance();
+    final data = _medications.map((m) {
+      return {
+        'id': m.id,
+        'name': m.name,
+        'dosage': m.dosage,
+        'type': m.type.index,
+        'daysOfWeek': m.daysOfWeek,
+        'period': m.period,
+        'time': {
+          'hour': m.time.hour,
+          'minute': m.time.minute,
+        },
+        'dosesPerDay': m.dosesPerDay,
+        'reminderEnabled': m.reminderEnabled,
+        'isActive': m.isActive,
+      };
+    }).toList();
+    await prefs.setString('medications', jsonEncode(data));
+  }
+
+  Future<void> _loadMedications() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? raw = prefs.getString('medications');
+    if (raw == null) return;
+    final List decoded = jsonDecode(raw) as List;
+    setState(() {
+      _medications.clear();
+      _medications.addAll(decoded.map((m) {
+        final timeMap = Map<String, dynamic>.from(m['time'] as Map);
+        return MedicationItem(
+          id: m['id'] as String,
+          name: m['name'] as String,
+          dosage: m['dosage'] as String,
+          type: MedicationType.values[m['type'] as int],
+          daysOfWeek: List<String>.from(m['daysOfWeek'] as List),
+          period: m['period'] as String,
+          time: TimeOfDay(
+            hour: timeMap['hour'] as int,
+            minute: timeMap['minute'] as int,
+          ),
+          dosesPerDay: m['dosesPerDay'] as int,
+          reminderEnabled: m['reminderEnabled'] as bool,
+          isActive: m['isActive'] as bool,
+        );
+      }));
+    });
+  }
+
+  Future<void> _saveTakenMedications() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('takenMedications', _takenMedications.toList());
+  }
+
+  Future<void> _loadTakenMedications() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String>? saved = prefs.getStringList('takenMedications');
+    if (saved != null) {
+      setState(() {
+        _takenMedications
+          ..clear()
+          ..addAll(saved);
+      });
+    }
+  }
+
+  String _doseTimeLabel(MedicationItem medication, int doseIndex) {
+    final intervalHours = medication.dosesPerDay > 1
+        ? 24 ~/ medication.dosesPerDay
+        : 0;
+    final baseHour = medication.time.hour;
+    final baseMinute = medication.time.minute;
+    final doseHour = (baseHour + intervalHours * doseIndex) % 24;
+    final doseTime = TimeOfDay(hour: doseHour, minute: baseMinute);
+
+    final hour = doseTime.hour.toString().padLeft(2, '0');
+    final minute = doseTime.minute.toString().padLeft(2, '0');
+    final label = _dosePeriodLabel(doseTime);
+    return '$hour:$minute $label';
+  }
+
+  String _dosePeriodLabel(TimeOfDay time) {
+    final hour = time.hour;
+    if (hour == 0) return 'منتصف الليل';
+    if (hour < 12) return 'صباحاً';
+    if (hour == 12) return 'ظهراً';
+    if (hour < 18) return 'مساءً';
+    return 'مساءً';
+  }
+
   void _openAddMedicationSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _AddMedicationSheet(
-        onSave: (med) => setState(() => _medications.add(med)),
+        onSave: (med) {
+          setState(() => _medications.add(med));
+          _saveMedications();
+        },
       ),
     );
   }
@@ -262,22 +420,23 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           // "+" add button on the left side (rendered on the left in RTL)
-          GestureDetector(
-            onTap: _openAddMedicationSheet,
-            child: Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: _Colors.primaryGreen, width: 1.5),
-              ),
-              child: const Icon(
-                Icons.add,
-                color: _Colors.primaryGreen,
-                size: 20,
+          if (_selectedIndex == 1)
+            GestureDetector(
+              onTap: _openAddMedicationSheet,
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: _Colors.primaryGreen, width: 1.5),
+                ),
+                child: const Icon(
+                  Icons.add,
+                  color: _Colors.primaryGreen,
+                  size: 20,
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -286,10 +445,10 @@ class _HomeScreenState extends State<HomeScreen> {
   // ------------------------- Day strip (fixed) -------------------------
   Widget _buildDateStrip() {
     return SizedBox(
-      height: 76,
+      height: 100,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         itemCount: _dateStrip.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
@@ -298,37 +457,49 @@ class _HomeScreenState extends State<HomeScreen> {
               date.year == _selectedDate.year &&
               date.month == _selectedDate.month &&
               date.day == _selectedDate.day;
+          final hasMed = _hasAnyMedicationOnDate(date);
           return GestureDetector(
             onTap: () => setState(() => _selectedDate = date),
             child: Container(
-              width: 48,
+              width: 64,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
               decoration: BoxDecoration(
-                color: selected ? _Colors.lightGreenBg : Colors.transparent,
-                border: selected
-                    ? Border.all(color: _Colors.primaryGreen)
-                    : null,
-                borderRadius: BorderRadius.circular(16),
+                color: selected ? _Colors.darkGreen : Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: selected ? _Colors.darkGreen : _Colors.borderGrey,
+                ),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    date.day.toString(),
+                    _arabicDigits(date.day.toString()),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: selected ? _Colors.darkGreen : _Colors.textPrimary,
+                      fontSize: 16,
+                      color: selected ? Colors.white : _Colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _weekdayAr[date.weekday - 1],
+                    _weekdayNameFromDate(date),
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 11,
-                      color: selected
-                          ? _Colors.darkGreen
-                          : _Colors.textSecondary,
+                      fontSize: 12,
+                      color: selected ? Colors.white : _Colors.textSecondary,
                     ),
                   ),
+                  const SizedBox(height: 6),
+                  if (hasMed)
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF1D9E75),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -340,31 +511,94 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ------------------------- Tabs -------------------------
   Widget _buildTodayTab() {
-    final todaysMeds = _medications.where((m) => m.isActive).toList();
+    final todaysMeds = _medicationsForDate(_selectedDate);
     return Column(
       children: [
         _buildDateStrip(),
+        const SizedBox(height: 24),
         Expanded(
           child: todaysMeds.isEmpty
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 40),
-                    child: Text(
-                      'لا يوجد أدوية للتذكير!\nأضف أدويتك في خانة أدويتي\nلتبدأ تذكيراتك في الحال.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: _Colors.primaryGreen,
-                        fontSize: 18,
-                        height: 1.8,
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE1F5EE),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(
+                              Icons.check_circle_outline,
+                              color: Color(0xFF1D9E75),
+                              size: 20,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'لا توجد أدوية مجدولة لهذا اليوم',
+                              style: TextStyle(
+                                color: Color(0xFF085041),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF085041),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        child: const Text(
+                          '+ إضافة تابعين',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: todaysMeds.length, // unlimited
-                  itemBuilder: (context, index) =>
-                      _MedicationCard(medication: todaysMeds[index]),
+              : Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: todaysMeds.length,
+                        itemBuilder: (context, index) =>
+                            _MedicationCard(medication: todaysMeds[index]),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF085041),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: const Text(
+                        '+ إضافة تابعين',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                 ),
         ),
       ],
@@ -421,10 +655,108 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildRemindersTab() {
-    return const Center(
-      child: Text(
-        'التذكيرات قريبًا',
-        style: TextStyle(color: _Colors.textSecondary),
+    final selectedMeds = _medicationsForDate(_selectedDate);
+    final isToday = _selectedDate.year == DateTime.now().year &&
+        _selectedDate.month == DateTime.now().month &&
+        _selectedDate.day == DateTime.now().day;
+
+    return Column(
+      children: [
+        _buildDateStrip(),
+        const SizedBox(height: 24),
+        Expanded(
+          child: selectedMeds.isEmpty
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 40),
+                    child: Text(
+                      'لا توجد أدوية مجدولة لهذا اليوم.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _Colors.textSecondary,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  itemCount: selectedMeds.length,
+                  itemBuilder: (context, index) {
+                    final medication = selectedMeds[index];
+                    return _buildReminderMedicationCard(medication, isToday);
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReminderMedicationCard(MedicationItem medication, bool isToday) {
+    final checkboxBorder = Border.all(color: const Color(0xFFB85C5C), width: 2);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _Colors.darkGreen,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            medication.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            medication.dosage,
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          ...List.generate(medication.dosesPerDay, (doseIndex) {
+            final taken = _isTaken(medication, _selectedDate, doseIndex);
+            final label = _doseTimeLabel(medication, doseIndex);
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: isToday
+                        ? () => _toggleTaken(medication, _selectedDate, doseIndex)
+                        : null,
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: taken ? const Color(0xFFB85C5C) : Colors.transparent,
+                        border: checkboxBorder,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: taken
+                          ? const Icon(Icons.check, size: 14, color: Colors.white)
+                          : null,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -450,13 +782,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        floatingActionButton: _selectedIndex == 1
-            ? FloatingActionButton(
-                backgroundColor: _Colors.darkGreen,
-                onPressed: _openAddMedicationSheet,
-                child: const Icon(Icons.add, color: Colors.white),
-              )
-            : null,
+        floatingActionButton: null,
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: (index) => setState(() => _selectedIndex = index),
@@ -915,9 +1241,8 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                             style: TextStyle(color: _Colors.textSecondary),
                           ),
                           const SizedBox(height: 6),
-                          InkWell(
+                          GestureDetector(
                             onTap: _pickTime,
-                            borderRadius: BorderRadius.circular(12),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 vertical: 14,
