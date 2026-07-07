@@ -43,12 +43,13 @@ class DawaiApp extends StatelessWidget {
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Scaffold(
-                    body: Center(
-                      child: CircularProgressIndicator(),
-                    ),
+                    body: Center(child: CircularProgressIndicator()),
                   );
                 }
-
+                // If there was any error while reading storage, just show login.
+                if (snapshot.hasError) {
+                  return const LoginScreen();
+                }
                 if (snapshot.data == true) {
                   final user = authProvider.user;
                   return HomeScreen(
@@ -56,7 +57,6 @@ class DawaiApp extends StatelessWidget {
                     photoUrl: user?['photo'] as String?,
                   );
                 }
-
                 return const LoginScreen();
               },
             );
