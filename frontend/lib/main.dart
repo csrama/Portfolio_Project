@@ -4,7 +4,7 @@ import 'providers/auth_provider.dart';
 import 'services/auth_service.dart';
 import 'services/dio_client.dart';
 import 'views/dashboard/home_screen.dart';
-import 'views/auth/login_screen.dart';
+import 'views/splash/splash_screen.dart';
 
 void main() {
   runApp(const DawaiApp());
@@ -42,11 +42,14 @@ class DawaiApp extends StatelessWidget {
   }
 }
 
-/// Runs checkLoginStatus ONCE (not on every rebuild) and switches between
-/// LoginScreen / HomeScreen based on the result. Previously main.dart called
-/// authProvider.checkLoginStatus() directly inside FutureBuilder, which
-/// created a new Future on every rebuild -> notifyListeners caused rebuild
-/// -> new Future -> infinite loop (blank spinner forever).
+/// Decides which screen to show at app start:
+///  - If a session already exists in secure storage -> HomeScreen
+///  - Otherwise -> SplashScreen (which walks through onboarding + login/signup)
+///
+/// Runs the storage read ONCE (Future is cached in initState). Previously
+/// FutureBuilder inside a Consumer created a new Future on every rebuild,
+/// which combined with notifyListeners() caused an infinite rebuild loop
+/// (blank spinner forever).
 class _AuthGate extends StatefulWidget {
   const _AuthGate();
 
@@ -60,7 +63,6 @@ class _AuthGateState extends State<_AuthGate> {
   @override
   void initState() {
     super.initState();
-    // Call once, cache the Future.
     _initFuture = context.read<AuthProvider>().checkLoginStatus();
   }
 
@@ -74,14 +76,14 @@ class _AuthGateState extends State<_AuthGate> {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        if (snapshot.hasError || snapshot.data != true) {
-          return const LoginScreen();
+        if (snapshot.data == true && !snapshot.hasError) {
+          final user = context.read<AuthProvider>().user;
+          return HomeScreen(
+            userName: user?['name'] as String? ?? 'مستخدم',
+            photoUrl: user?['photo'] as String?,
+          );
         }
-        final user = context.read<AuthProvider>().user;
-        return HomeScreen(
-          userName: user?['name'] as String? ?? 'مستخدم',
-          photoUrl: user?['photo'] as String?,
-        );
+        return const SplashScreen();
       },
     );
   }
