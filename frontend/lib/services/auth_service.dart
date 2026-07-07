@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dio/dio.dart';
 
@@ -7,38 +8,57 @@ class AuthService {
   AuthService._internal();
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
-  final Dio _dio = Dio(); 
-  
+  final Dio _dio = Dio();
+
+  // ---------------- Tokens ----------------
   Future<void> saveTokens(String accessToken, String refreshToken) async {
     await _storage.write(key: 'access_token', value: accessToken);
     await _storage.write(key: 'refresh_token', value: refreshToken);
   }
 
-  
   Future<String?> getAccessToken() async {
     return await _storage.read(key: 'access_token');
   }
 
-  
   Future<String?> getRefreshToken() async {
     return await _storage.read(key: 'refresh_token');
   }
 
-  
-  Future<Response> authenticatedGet(String url) async {
-    final token = await getAccessToken();
-    final response = await _dio.get(
-      url,
-      options: Options(
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      ),
-    );
-    return response;
+  Future<void> clearTokens() async {
+    await _storage.delete(key: 'access_token');
+    await _storage.delete(key: 'refresh_token');
   }
 
-  
+  // ---------------- User data ----------------
+  Future<void> saveUserData(Map<String, dynamic> user) async {
+    await _storage.write(key: 'user_data', value: jsonEncode(user));
+  }
+
+  Future<Map<String, dynamic>?> getUserData() async {
+    final raw = await _storage.read(key: 'user_data');
+    if (raw == null) return null;
+    try {
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearUserData() async {
+    await _storage.delete(key: 'user_data');
+  }
+
+  // ---------------- Network helpers ----------------
+  Future<Response> authenticatedGet(String url) async {
+    final token = await getAccessToken();
+    return await _dio.get(
+      url,
+      options: Options(
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+    );
+  }
+
   Future<String?> refreshAccessToken() async {
     try {
       final refreshToken = await getRefreshToken();
@@ -60,13 +80,6 @@ class AuthService {
     }
   }
 
- 
-  Future<void> clearTokens() async {
-    await _storage.delete(key: 'access_token');
-    await _storage.delete(key: 'refresh_token');
-  }
-
-  
   Future<bool> isLoggedIn() async {
     final token = await getAccessToken();
     return token != null;
