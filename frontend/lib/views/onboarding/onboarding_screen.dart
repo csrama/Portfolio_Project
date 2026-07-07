@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../dashboard/home_screen.dart';
-import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 import '../../services/google_auth_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -14,6 +14,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _emailController = TextEditingController();
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _authService = AuthService();
   bool _isLoading = false;
   bool _isSignUp = false;
 
@@ -41,20 +42,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final result = await ApiService.postJson(
-        '/auth/register',
-        body: {
-          'email': email,
-          'password': password,
-          'full_name': name,
-          'user_type': 'general_user',
-        },
+      final result = await _authService.signUp(
+        email: email,
+        password: password,
+        fullName: name,
       );
 
       if (!mounted) return;
+      final isOffline = result['mode'] == 'offline';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('تم إنشاء الحساب بنجاح: ${result['user']['full_name']}'),
+          content: Text(
+            isOffline
+                ? 'تم إنشاء الحساب محليًا بدون اتصال بالإنترنت'
+                : 'تم إنشاء الحساب بنجاح: ${result['user']['full_name']}',
+          ),
         ),
       );
 
@@ -93,14 +95,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final result = await ApiService.postJson(
-        '/auth/login',
-        body: {'email': email, 'password': password},
+      final result = await _authService.signIn(
+        email: email,
+        password: password,
       );
 
       if (!mounted) return;
+      final isOffline = result['mode'] == 'offline';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم تسجيل الدخول بنجاح')),
+        SnackBar(
+          content: Text(
+            isOffline
+                ? 'تم تسجيل الدخول محليًا بدون اتصال بالإنترنت'
+                : 'تم تسجيل الدخول بنجاح',
+          ),
+        ),
       );
 
       Navigator.pushReplacement(
@@ -133,19 +142,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _signInWithGoogle(BuildContext context) async {
     try {
-      final user = await GoogleAuthService().signIn();
+      final authResult = await GoogleAuthService().signInWithBackend(authService: _authService);
       if (!context.mounted) return;
 
-      if (user == null) {
+      if (authResult == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إلغاء تسجيل الدخول')),
+          const SnackBar(content: Text('تم إلغاء تسجيل الدخول أو فشل الإعداد')),
         );
         return;
       }
+
+      final isOffline = authResult['mode'] == 'offline';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isOffline
+                ? 'تم تسجيل الدخول محليًا في وضع التطوير'
+                : 'تم تسجيل الدخول عبر Google بنجاح',
+          ),
+        ),
+      );
+
+      final userName = authResult['user']?['full_name']?.toString() ?? 'مستخدم Google';
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => HomeScreen(userName: user.displayName, photoUrl: user.photoUrl),
+          builder: (_) => HomeScreen(userName: userName, photoUrl: null),
         ),
       );
     } catch (e) {
@@ -382,7 +404,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         hintText: hint,
         hintStyle: const TextStyle(color: Color(0xFF7AAE95), fontSize: 14),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.85),
+        fillColor: Colors.white.withValues(alpha: 0.85),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -408,7 +430,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return OutlinedButton(
       style: OutlinedButton.styleFrom(
         side: const BorderSide(color: Colors.white54, width: 1),
-        backgroundColor: Colors.white.withOpacity(0.75),
+        backgroundColor: Colors.white.withValues(alpha: 0.75),
         padding: const EdgeInsets.symmetric(vertical: 13),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),

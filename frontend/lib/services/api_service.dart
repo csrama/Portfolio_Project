@@ -41,7 +41,7 @@ class ApiService {
     throw Exception('Request failed: ${response.statusCode} ${response.body}');
   }
 
-  static Future<Map<String, dynamic>> getJson(
+  static Future<dynamic> getJsonDynamic(
     String path, {
     String? token,
   }) async {
@@ -54,9 +54,20 @@ class ApiService {
       if (response.body.isEmpty) {
         return {};
       }
-      return jsonDecode(response.body) as Map<String, dynamic>;
+      return jsonDecode(response.body);
     }
 
     throw Exception('Request failed: ${response.statusCode} ${response.body}');
+  }
+
+  static Future<Map<String, dynamic>> getJson(
+    String path, {
+    String? token,
+  }) async {
+    final response = await getJsonDynamic(path, token: token);
+    if (response is Map<String, dynamic>) {
+      return response;
+    }
+    return Map<String, dynamic>.from(response as Map);
   }
 }
