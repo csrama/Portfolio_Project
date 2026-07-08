@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'services/auth_service.dart';
+import 'services/api_service.dart';
+import 'services/dependent_service.dart';
+import 'providers/dependent_provider.dart';
 import 'services/dio_client.dart';
 import 'views/dashboard/home_screen.dart';
 import 'views/splash/splash_screen.dart';
@@ -20,9 +23,17 @@ class DawaiApp extends StatelessWidget {
         Provider<AuthService>(
           create: (_) => AuthService(),
         ),
+        Provider<DependentService>(
+          create: (_) => DependentService(apiService: ApiService()),
+        ),
         ChangeNotifierProvider<AuthProvider>(
           create: (context) => AuthProvider(
             authService: context.read<AuthService>(),
+          ),
+        ),
+        ChangeNotifierProvider<DependentProvider>(
+          create: (context) => DependentProvider(
+            dependentService: context.read<DependentService>(),
           ),
         ),
         Provider<DioClient>(
@@ -31,9 +42,11 @@ class DawaiApp extends StatelessWidget {
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Dawai App',
+        title: 'Dawai',
         theme: ThemeData(
-          primarySwatch: Colors.blue,
+         colorScheme: ColorScheme.fromSeed(
+  seedColor: const Color.fromARGB(255, 2, 111, 38),
+),
           fontFamily: 'Cairo',
         ),
         home: const _AuthGate(),

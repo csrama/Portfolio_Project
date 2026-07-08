@@ -25,7 +25,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../../repositories/auth_repository.dart';
 import '../../services/google_auth_service.dart';
-
+import 'package:provider/provider.dart';
+import '../../providers/dependent_provider.dart';
+import 'dependents_screen.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/dependent_service.dart';
+import '../../services/api_service.dart';
 // ---------------------------------------------------------------------
 // Colors (inlined here to keep this a single self-contained file)
 // ---------------------------------------------------------------------
@@ -139,6 +144,13 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadTakenMedications();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Re-load medications if the selected dependent changes
+    _loadMedications();
+  }
+
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) {
@@ -228,31 +240,64 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadMedications() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? raw = prefs.getString('medications');
-    if (raw == null) return;
-    final List decoded = jsonDecode(raw) as List;
-    setState(() {
-      _medications.clear();
-      _medications.addAll(decoded.map((m) {
-        final timeMap = Map<String, dynamic>.from(m['time'] as Map);
-        return MedicationItem(
-          id: m['id'] as String,
-          name: m['name'] as String,
-          dosage: m['dosage'] as String,
-          type: MedicationType.values[m['type'] as int],
-          daysOfWeek: List<String>.from(m['daysOfWeek'] as List),
-          period: m['period'] as String,
-          time: TimeOfDay(
-            hour: timeMap['hour'] as int,
-            minute: timeMap['minute'] as int,
-          ),
-          dosesPerDay: m['dosesPerDay'] as int,
-          reminderEnabled: m['reminderEnabled'] as bool,
-          isActive: m['isActive'] as bool,
-        );
-      }));
-    });
+    final depProvider = context.read<DependentProvider>();
+    final authProvider = context.read<AuthProvider>();
+    final selectedDep = depProvider.selectedDependent;
+
+    if (authProvider.accessToken != null) {
+      try {
+        final token = authProvider.accessToken!;
+        final depService = context.read<DependentService>();
+        List<dynamic> rawList;
+
+        if (selectedDep != null) {
+          rawList = await depService.getDependentMedications(token, selectedDep.id);
+        } else {
+          // Fallback to local for now as per original code comment,
+          // but we've added API support in the service
+          final prefs = await SharedPreferences.getInstance();
+          final String? raw = prefs.getString('medications');
+          if (raw == null) {
+            setState(() => _medications.clear());
+            return;
+          }
+          rawList = jsonDecode(raw) as List;
+        }
+
+        setState(() {
+          _medications.clear();
+          _medications.addAll(rawList.map((m) {
+            // Mapping logic for API vs Local storage
+            final isApi = m['time'] is String;
+            TimeOfDay time;
+            if (isApi) {
+              final parts = (m['time'] as String).split(':');
+              time = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+            } else {
+              final timeMap = Map<String, dynamic>.from(m['time'] as Map);
+              time = TimeOfDay(hour: timeMap['hour'] as int, minute: timeMap['minute'] as int);
+            }
+
+            return MedicationItem(
+              id: (m['id'] ?? '').toString(),
+              name: m['name'] as String,
+              dosage: m['dosage'] as String? ?? '',
+              type: MedicationType.values[m['type'] is int ? m['type'] : 0],
+              daysOfWeek: m['days_of_week'] != null
+                  ? List<String>.from(m['days_of_week'] as List)
+                  : (m['daysOfWeek'] != null ? List<String>.from(m['daysOfWeek'] as List) : []),
+              period: m['period'] as String? ?? 'صباحا',
+              time: time,
+              dosesPerDay: m['dosesPerDay'] as int? ?? 1,
+              reminderEnabled: m['reminderEnabled'] as bool? ?? true,
+              isActive: m['is_active'] ?? m['isActive'] ?? true,
+            );
+          }));
+        });
+      } catch (e) {
+        debugPrint('Error loading medications: $e');
+      }
+    }
   }
 
   Future<void> _saveTakenMedications() async {
@@ -302,9 +347,37 @@ class _HomeScreenState extends State<HomeScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _AddMedicationSheet(
-        onSave: (med) {
-          setState(() => _medications.add(med));
-          _saveMedications();
+        onSave: (med) async {
+          final depProvider = context.read<DependentProvider>();
+          final authProvider = context.read<AuthProvider>();
+          final selectedDep = depProvider.selectedDependent;
+
+          if (selectedDep != null && authProvider.accessToken != null) {
+            // Save to API for dependent
+            try {
+              await ApiService.postJson(
+                '/medications',
+                body: {
+                  'dependent_id': selectedDep.id,
+                  'name': med.name,
+                  'dosage': med.dosage,
+                  'type': med.type.index,
+                  'days_of_week': med.daysOfWeek,
+                  'period': med.period,
+                  'time': '${med.time.hour}:${med.time.minute}',
+                  'dosesPerDay': med.dosesPerDay,
+                },
+                token: authProvider.accessToken!,
+              );
+              _loadMedications();
+            } catch (e) {
+              debugPrint('Error saving medication for dependent: $e');
+            }
+          } else {
+            // Save locally for self
+            setState(() => _medications.add(med));
+            _saveMedications();
+          }
         },
       ),
     );
@@ -361,8 +434,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildTopBar() {
     final hasName =
         widget.userName != null && widget.userName!.trim().isNotEmpty;
-    final hasPhoto =
-        widget.photoUrl != null && widget.photoUrl!.trim().isNotEmpty;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -377,44 +448,81 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 // Profile avatar - dark green. Tap opens the account menu
                 // (currently just "تسجيل الخروج" / sign out).
-                GestureDetector(
-                  onTap: () => _showAccountMenu(context),
-                  child: CircleAvatar(
-                     radius: 26,
-                     backgroundColor: _Colors.darkGreen,
-                      child: const Icon(
-                         Icons.person,
-                         color: Colors.white,
-                         size: 38,
-                         ),
-                  ),
+                Consumer<DependentProvider>(
+                  builder: (context, depProvider, _) {
+                    final selectedDep = depProvider.selectedDependent;
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const DependentsScreen()),
+                        );
+                      },
+                      child: CircleAvatar(
+                        radius: 26,
+                        backgroundColor: selectedDep != null ? const Color(0xFFC9932E) : _Colors.darkGreen,
+                        child: selectedDep != null
+                            ? Text(selectedDep.fullName[0], style: const TextStyle(color: Colors.white, fontSize: 24))
+                            : const Icon(Icons.person, color: Colors.white, size: 38),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      hasName ? '${_getGreeting()}،' : _getGreeting(),
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                        fontSize: hasName ? 16 : 22,
-                        fontWeight: hasName ? FontWeight.normal : FontWeight.bold,
-                        color: hasName ? _Colors.textSecondary : _Colors.textPrimary,
-                      ),
-                    ),
-                    if (hasName) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.userName!,
-                        textAlign: TextAlign.right,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: _Colors.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ],
+                // Single source for the greeting/name/dependent-profile block.
+                // (Previously there was a duplicate greeting Text widget here
+                // AND inside the Consumer below — that's what caused
+                // "صباح الخير" to render twice, stacked on top of each other.)
+                Expanded(
+                  child: Consumer<DependentProvider>(
+                    builder: (context, depProvider, _) {
+                      final selectedDep = depProvider.selectedDependent;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            selectedDep != null
+                                ? 'ملف: ${selectedDep.fullName}'
+                                : (hasName ? '${_getGreeting()}،' : _getGreeting()),
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: selectedDep != null ? FontWeight.bold : FontWeight.normal,
+                              color: selectedDep != null
+                                  ? const Color.fromARGB(255, 8, 78, 3)
+                                  : _Colors.textSecondary,
+                            ),
+                          ),
+                          if (selectedDep == null && hasName) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.userName!,
+                              textAlign: TextAlign.right,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: _Colors.textPrimary,
+                              ),
+                            ),
+                          ],
+                          if (selectedDep != null) ...[
+                            const SizedBox(height: 4),
+                            GestureDetector(
+                              onTap: () => depProvider.selectDependent(null),
+                              child: const Text(
+                                'العودة لملفي الشخصي',
+                                style: TextStyle(
+                                  color: _Colors.primaryGreen,
+                                  fontSize: 12,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
@@ -453,8 +561,7 @@ class _HomeScreenState extends State<HomeScreen> {
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final date = _dateStrip[index];
-          final selected =
-              date.year == _selectedDate.year &&
+          final selected = date.year == _selectedDate.year &&
               date.month == _selectedDate.month &&
               date.day == _selectedDate.day;
           final hasMed = _hasAnyMedicationOnDate(date);
@@ -549,20 +656,28 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF085041),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        child: const Text(
-                          '+ إضافة تابعين',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const DependentsScreen()),
+                          );
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF085041),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          child: const Text(
+                            '+ إضافة تابعين',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                            ),
                           ),
                         ),
                       ),
@@ -580,20 +695,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF085041),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      child: const Text(
-                        '+ إضافة تابعين',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const DependentsScreen()),
+                        );
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF085041),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        child: const Text(
+                          '+ إضافة تابعين',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
                     ),

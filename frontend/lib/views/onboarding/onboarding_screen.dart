@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../dashboard/home_screen.dart';
 import '../../services/api_service.dart';
 import '../../services/google_auth_service.dart';
-import '../../repositories/auth_repository.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -17,6 +18,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _isSignUp = false;
+  String _userType = 'general_user';
 
   @override
   void dispose() {
@@ -48,15 +50,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           'email': email,
           'password': password,
           'full_name': name,
-          'user_type': 'general_user',
+          'user_type': _userType,
         },
       );
 
-      await AuthRepository().saveSession(
-        token: result['token']?.toString(),
-        userName: result['user']?['full_name']?.toString(),
-        provider: 'email',
-      );
+      // AuthProvider is the single source of truth for the session (backed by
+      // flutter_secure_storage). Every screen that reads auth.accessToken
+      // depends on this call happening right after a successful register.
+      await context.read<AuthProvider>().login(
+            result['token']?.toString() ?? '',
+            result['refreshToken']?.toString() ?? '',
+            result['user'],
+          );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -105,16 +110,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         body: {'email': email, 'password': password},
       );
 
-      await AuthRepository().saveSession(
-        token: result['token']?.toString(),
-        userName: result['user']?['full_name']?.toString(),
-        provider: 'email',
-      );
+      await context.read<AuthProvider>().login(
+            result['token']?.toString() ?? '',
+            result['refreshToken']?.toString() ?? '',
+            result['user'],
+          );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم تسجيل الدخول بنجاح')),
-      );
 
       Navigator.pushReplacement(
         context,
@@ -156,17 +158,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         return;
       }
 
-      await AuthRepository().saveSession(
-        userName: user.displayName,
-        photoUrl: user.photoUrl,
-        provider: 'google',
-      );
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => HomeScreen(userName: user.displayName, photoUrl: user.photoUrl),
-        ),
+      // NOTE: this only signs the user into Google locally — it does not yet
+      // call your backend's /auth/google endpoint or populate AuthProvider,
+      // so accessToken will still be null after this on dependents_screen /
+      // home_screen. This needs its own fix (send user.idToken to
+      // /auth/google, then AuthProvider().login() with the real result) —
+      // flagging it here rather than guessing at GoogleAuthService's shape.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تسجيل الدخول عبر Google قيد الإكمال')),
       );
     } catch (e) {
       if (!context.mounted) return;
@@ -234,6 +233,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         keyboardType: TextInputType.name,
                       ),
                       const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: _userType,
+                        decoration: InputDecoration(
+                          labelText: 'نوع الحساب',
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.85),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'general_user',
+                            child: Text('مستخدم'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'caregiver',
+                            child: Text('مقدم رعاية'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _userType = value!;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
                     ],
 
                     // Email field
@@ -264,15 +290,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
                           elevation: 0,
                         ),
-                        onPressed: _isLoading
-                            ? null
-                            : () {
-                                if (_isSignUp) {
-                                  _signUpWithEmail(context);
-                                } else {
-                                  _signInWithEmail(context);
-                                }
-                              },
+                        onPressed: () {
+                          if (_isSignUp) {
+                            _signUpWithEmail(context);
+                          } else {
+                            _signInWithEmail(context);
+                          }
+                        },
                         child: _isLoading
                             ? const SizedBox(
                                 width: 20,
