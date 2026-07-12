@@ -1,10 +1,4 @@
-// lib/screens/dashboard/home_screen.dart
-//
-// Single drop-in replacement for the previous home_screen.dart.
-// Keeps the same class name (HomeScreen) and constructor signature
-// (userName, photoUrl) so existing imports/usages elsewhere in the
-// project (e.g. OnboardingScreen's Navigator.pushReplacement) keep
-// working without any changes.
+// lib/views/dashboard/home_screen.dart
 //
 // Combines:
 //  - Restored "صباح الخير / مساء الخير" greeting + profile avatar (dark green)
@@ -32,9 +26,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/dependent_service.dart';
 import '../../services/api_service.dart';
 
-// ---------------------------------------------------------------------
 // Colors (inlined here to keep this a single self-contained file)
-// ---------------------------------------------------------------------
 class _Colors {
   static const Color primaryGreen = Color(0xFF1D9E75);
   static const Color darkGreen = Color(0xFF085041);
@@ -45,9 +37,7 @@ class _Colors {
   static const Color borderGrey = Color(0xFFE0E0E0);
 }
 
-// ---------------------------------------------------------------------
 // Medication model (local, in-memory)
-// ---------------------------------------------------------------------
 enum MedicationType { drops, cream, injection, bottle, tablets, capsule }
 
 extension _MedicationTypeIcon on MedicationType {
@@ -101,9 +91,7 @@ class MedicationItem {
   }
 }
 
-// ---------------------------------------------------------------------
 // HomeScreen (public API kept identical to the original file)
-// ---------------------------------------------------------------------
 class HomeScreen extends StatefulWidget {
   final String? userName;
   final String? photoUrl;
@@ -116,9 +104,10 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  final List<MedicationItem> _medications =
-      []; // unlimited: just a growing list
-  final Set<String> _takenMedications = {}; // medication name + date key
+  final List<MedicationItem> _medications = [];
+  final Set<String> _takenMedications = {};
+  
+  final List<Map<String, dynamic>> _interactionResults = [];
 
   late final List<DateTime> _dateStrip;
   late DateTime _selectedDate;
@@ -1086,9 +1075,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ---------------------------------------------------------------------
 // Medication card (used in both tabs)
-// ---------------------------------------------------------------------
 class _MedicationCard extends StatelessWidget {
   final MedicationItem medication;
   final VoidCallback? onEdit;
@@ -1164,11 +1151,9 @@ class _MedicationCard extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------
 // Add medication bottom sheet
-// ---------------------------------------------------------------------
 class _AddMedicationSheet extends StatefulWidget {
-  final void Function(MedicationItem medication) onSave;
+  final Future<void> Function(MedicationItem medication) onSave;
   final MedicationItem? initialMedication;
 
   const _AddMedicationSheet({
