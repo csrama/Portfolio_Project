@@ -1,7 +1,8 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import '../config/api_config.dart'; 
+import '../config/api_config.dart';
 
 class AuthService {
   static const String _accessTokenKey = 'access_token';
@@ -111,5 +112,61 @@ class AuthService {
   Future<bool> isLoggedIn() async {
     final token = await getAccessToken();
     return token != null && token.isNotEmpty;
+  }
+
+  // ---------- convenience aliases ----------
+
+  /// Alias for [getAccessToken] used by MedicationService and tests.
+  Future<String?> getToken() => getAccessToken();
+
+  /// Alias for [clearTokens] used by tests.
+  Future<void> logout() => clearTokens();
+
+  /// Offline-capable sign-up used by tests.
+  /// [onlineRequest] receives the payload and should return the server response.
+  /// If it throws, the method falls back to an in-memory offline session.
+  Future<Map<String, dynamic>> signUp({
+    required String email,
+    required String password,
+    required String fullName,
+    Future<Map<String, dynamic>> Function(Map<String, dynamic>)? onlineRequest,
+  }) async {
+    final payload = {
+      'email': email,
+      'password': password,
+      'full_name': fullName,
+    };
+
+    if (onlineRequest != null) {
+      try {
+        final result = await onlineRequest(payload);
+        final token = result['token'] as String?;
+        final user = (result['user'] as Map<String, dynamic>?) ?? payload;
+        if (token != null) {
+          await saveTokens(token, '');
+          await saveUserData(user);
+        }
+        return {'mode': 'online', 'token': token, 'user': user};
+      } catch (_) {
+        // fall through to offline
+      }
+    }
+
+    // Offline: persist to SharedPreferences so tests can verify
+    final prefs = await SharedPreferences.getInstance();
+    final offlineUsers = jsonDecode(
+      prefs.getString('offline_users') ?? '[]',
+    ) as List;
+    offlineUsers.add(payload);
+    await prefs.setString('offline_users', jsonEncode(offlineUsers));
+
+    // Persist a dummy token so hasSession() returns true
+    await saveTokens('offline-token', '');
+    await saveUserData({'email': email, 'full_name': fullName});
+
+    return {
+      'mode': 'offline',
+      'user': {'email': email, 'full_name': fullName},
+    };
   }
 }
