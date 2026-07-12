@@ -1,162 +1,87 @@
-import 'package:shared_preferences/shared_preferences.dart';
-
-import 'api_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:convert';
+import 'package:dio/dio.dart';
 
 class AuthService {
-  static const _savedUserEmailKey = 'saved_user_email';
-  static const _savedUserNameKey = 'saved_user_name';
-  static const _savedUserPasswordKey = 'saved_user_password';
-  static const _savedTokenKey = 'saved_auth_token';
+  static const String _accessTokenKey = 'access_token';
+  static const String _refreshTokenKey = 'refresh_token';
+  static const String _userDataKey = 'user_data';
 
-  Future<Map<String, dynamic>> signUp({
-    required String email,
-    required String password,
-    required String fullName,
-    Future<Map<String, dynamic>> Function(Map<String, dynamic> body)?
-        onlineRequest,
-  }) async {
-    final requestBody = {
-      'email': email.trim().toLowerCase(),
-      'password': password,
-      'full_name': fullName.trim(),
-      'user_type': 'general_user',
-    };
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final Dio _dio = Dio();
 
-    try {
-      final result = await (onlineRequest ?? _registerOnline)(requestBody);
-      await persistSession(
-        email: requestBody['email'] as String,
-        fullName: fullName.trim(),
-        password: password,
-        token: result['token']?.toString(),
-      );
-      return {...result, 'mode': 'online'};
-    } catch (_) {
-      await persistSession(
-        email: requestBody['email'] as String,
-        fullName: fullName.trim(),
-        password: password,
-        token: 'offline-token',
-      );
-      return {
-        'user': {
-          'email': requestBody['email'],
-          'full_name': fullName.trim(),
-          'user_type': 'general_user',
-        },
-        'token': 'offline-token',
-        'mode': 'offline',
-      };
-    }
+ 
+  Future<void> saveTokens(String accessToken, String refreshToken) async {
+    await _storage.write(key: _accessTokenKey, value: accessToken);
+    await _storage.write(key: _refreshTokenKey, value: refreshToken);
   }
 
-  Future<Map<String, dynamic>> signIn({
-    required String email,
-    required String password,
-    Future<Map<String, dynamic>> Function(Map<String, dynamic> body)?
-        onlineRequest,
-  }) async {
-    final requestBody = {
-      'email': email.trim().toLowerCase(),
-      'password': password,
-    };
+ 
+  Future<String?> getAccessToken() async {
+    return await _storage.read(key: _accessTokenKey);
+  }
 
+  
+  Future<String?> getRefreshToken() async {
+    return await _storage.read(key: _refreshTokenKey);
+  }
+
+ 
+  Future<void> saveUserData(Map<String, dynamic> user) async {
+    await _storage.write(key: _userDataKey, value: jsonEncode(user));
+  }
+
+  
+  Future<Map<String, dynamic>?> getUserData() async {
+    final data = await _storage.read(key: _userDataKey);
+    if (data != null) {
+      return jsonDecode(data) as Map<String, dynamic>;
+    }
+    return null;
+  }
+
+  
+  Future<void> clearTokens() async {
+    await _storage.delete(key: _accessTokenKey);
+    await _storage.delete(key: _refreshTokenKey);
+    await _storage.delete(key: _userDataKey);
+  }
+
+ 
+  Future<void> clearUserData() async {
+    await _storage.delete(key: _userDataKey);
+  }
+
+  
+  Future<void> updateAccessToken(String newAccessToken) async {
+    await _storage.write(key: _accessTokenKey, value: newAccessToken);
+  }
+
+  
+  Future<String?> refreshAccessToken() async {
     try {
-      final result = await (onlineRequest ?? _loginOnline)(requestBody);
-      await persistSession(
-        email: requestBody['email'] as String,
-        fullName: result['user']?['full_name']?.toString() ?? email.trim(),
-        password: password,
-        token: result['token']?.toString(),
+      final refreshToken = await getRefreshToken();
+      if (refreshToken == null) return null;
+
+      final response = await _dio.post(
+        '${ApiConfig.baseUrl}/auth/refresh',
+        data: {'refreshToken': refreshToken},
       );
-      return {...result, 'mode': 'online'};
-    } catch (_) {
-      final storedUser = await _loadStoredUser();
-      if (storedUser != null &&
-          storedUser['email'] == requestBody['email'] &&
-          storedUser['password'] == password) {
-        return {
-          'user': {
-            'email': storedUser['email'],
-            'full_name': storedUser['full_name'],
-            'user_type': 'general_user',
-          },
-          'token': 'offline-token',
-          'mode': 'offline',
-        };
+
+      if (response.statusCode == 200) {
+        final newAccessToken = response.data['accessToken'];
+        await updateAccessToken(newAccessToken);
+        return newAccessToken;
       }
-      throw Exception('Unable to sign in offline');
-    }
-  }
-
-  Future<Map<String, dynamic>> _registerOnline(
-      Map<String, dynamic> body) async {
-    return ApiService.postJson('/auth/register', body: body);
-  }
-
-  Future<Map<String, dynamic>> _loginOnline(Map<String, dynamic> body) async {
-    return ApiService.postJson('/auth/login', body: body);
-  }
-
-  Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_savedTokenKey);
-  }
-
-  Future<String?> getStoredUserName() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_savedUserNameKey);
-  }
-
-  Future<bool> hasSession() async {
-    final token = await getToken();
-    if (token != null && token.isNotEmpty) {
-      return true;
-    }
-
-    final storedUser = await _loadStoredUser();
-    return storedUser != null && storedUser['email'] != null && storedUser['full_name'] != null;
-  }
-
-  Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_savedTokenKey);
-    await prefs.remove(_savedUserEmailKey);
-    await prefs.remove(_savedUserNameKey);
-    await prefs.remove(_savedUserPasswordKey);
-  }
-
-  Future<void> persistSession({
-    required String email,
-    required String fullName,
-    required String password,
-    String? token,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_savedUserEmailKey, email.toLowerCase());
-    await prefs.setString(_savedUserNameKey, fullName.trim());
-    await prefs.setString(_savedUserPasswordKey, password);
-    if (token != null && token.isNotEmpty) {
-      await prefs.setString(_savedTokenKey, token);
-    } else {
-      await prefs.setString(_savedTokenKey, 'offline-token');
-    }
-  }
-
-  Future<Map<String, String>?> _loadStoredUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    final email = prefs.getString(_savedUserEmailKey);
-    final fullName = prefs.getString(_savedUserNameKey);
-    final password = prefs.getString(_savedUserPasswordKey);
-
-    if (email == null || fullName == null || password == null) {
+      return null;
+    } catch (e) {
       return null;
     }
+  }
 
-    return {
-      'email': email,
-      'full_name': fullName,
-      'password': password,
-    };
+  
+  Future<bool> isLoggedIn() async {
+    final token = await getAccessToken();
+    return token != null;
   }
 }
