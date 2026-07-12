@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../dashboard/home_screen.dart';
 import '../../services/auth_service.dart';
 import '../../services/google_auth_service.dart';
+import '../../services/api_service.dart'; 
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 
@@ -55,13 +56,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         },
       );
 
-      // AuthProvider is the single source of truth for the session (backed by
-      // flutter_secure_storage). Every screen that reads auth.accessToken
-      // depends on this call happening right after a successful register.
+      final token = result['token']?.toString();
+      final refreshToken = result['refreshToken']?.toString();
+      final user = result['user'] as Map<String, dynamic>?;
+
+      if (token == null || user == null) {
+        throw Exception('بيانات غير مكتملة من الخادم');
+      }
+
       await context.read<AuthProvider>().login(
-            result['token']?.toString() ?? '',
-            result['refreshToken']?.toString() ?? '',
-            result['user'],
+            token,
+            refreshToken ?? '',
+            user,
           );
 
       if (!mounted) return;
@@ -71,7 +77,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           content: Text(
             isOffline
                 ? 'تم إنشاء الحساب محليًا بدون اتصال بالإنترنت'
-                : 'تم إنشاء الحساب بنجاح: ${result['user']['full_name']}',
+                : 'تم إنشاء الحساب بنجاح: ${user['full_name']}',
           ),
         ),
       );
@@ -80,7 +86,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         context,
         MaterialPageRoute(
           builder: (_) => HomeScreen(
-            userName: result['user']['full_name']?.toString(),
+            userName: user['full_name']?.toString(),
             photoUrl: null,
           ),
         ),
@@ -89,7 +95,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (!mounted) return;
       final message = e.toString().contains('409')
           ? 'هذا البريد مستخدم بالفعل'
-          : 'فشل إنشاء الحساب. تأكد من الاتصال بالإنترنت أو جرّب بريدًا آخر';
+          : 'فشل إنشاء الحساب، جرّب بريدًا آخر';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) {
@@ -116,10 +122,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         body: {'email': email, 'password': password},
       );
 
+      final token = result['token']?.toString();
+      final refreshToken = result['refreshToken']?.toString();
+      final user = result['user'] as Map<String, dynamic>?;
+
+      if (token == null || user == null) {
+        throw Exception('بيانات غير مكتملة من الخادم');
+      }
+
       await context.read<AuthProvider>().login(
-            result['token']?.toString() ?? '',
-            result['refreshToken']?.toString() ?? '',
-            result['user'],
+            token,
+            refreshToken ?? '',
+            user,
           );
 
       if (!mounted) return;
@@ -128,7 +142,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         context,
         MaterialPageRoute(
           builder: (_) => HomeScreen(
-            userName: result['user']['full_name']?.toString(),
+            userName: user['full_name']?.toString(),
             photoUrl: null,
           ),
         ),
@@ -153,31 +167,59 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _signInWithGoogle(BuildContext context) async {
+    setState(() => _isLoading = true);
     try {
-      final authResult = await GoogleAuthService().signInWithBackend(authService: _authService);
+      final googleAuthService = GoogleAuthService();
+      final authResult = await googleAuthService.signInWithBackend(
+        authService: _authService,
+      );
+
       if (!context.mounted) return;
 
       if (authResult == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('تم إلغاء تسجيل الدخول أو فشل الإعداد')),
         );
+        setState(() => _isLoading = false);
         return;
       }
 
-      // NOTE: this only signs the user into Google locally — it does not yet
-      // call your backend's /auth/google endpoint or populate AuthProvider,
-      // so accessToken will still be null after this on dependents_screen /
-      // home_screen. This needs its own fix (send user.idToken to
-      // /auth/google, then AuthProvider().login() with the real result) —
-      // flagging it here rather than guessing at GoogleAuthService's shape.
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تسجيل الدخول عبر Google قيد الإكمال')),
-      );
+      final token = authResult['token']?.toString();
+      final refreshToken = authResult['refreshToken']?.toString();
+      final user = authResult['user'] as Map<String, dynamic>?;
+
+      if (token != null && user != null) {
+        await context.read<AuthProvider>().login(
+              token,
+              refreshToken ?? '',
+              user,
+            );
+
+        if (!mounted) return;
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => HomeScreen(
+              userName: user['full_name']?.toString() ?? user['name']?.toString(),
+              photoUrl: user['picture']?.toString(),
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('بيانات تسجيل الدخول غير مكتملة')),
+        );
+      }
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('حدث خطأ أثناء تسجيل الدخول: $e')),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -296,13 +338,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
                           elevation: 0,
                         ),
-                        onPressed: () {
-                          if (_isSignUp) {
-                            _signUpWithEmail(context);
-                          } else {
-                            _signInWithEmail(context);
-                          }
-                        },
+                        onPressed: _isLoading
+                            ? null
+                            : () {
+                                if (_isSignUp) {
+                                  _signUpWithEmail(context);
+                                } else {
+                                  _signInWithEmail(context);
+                                }
+                              },
                         child: _isLoading
                             ? const SizedBox(
                                 width: 20,
@@ -329,7 +373,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         TextButton(
-                          onPressed: () => setState(() => _isSignUp = !_isSignUp),
+                          onPressed: _isLoading
+                              ? null
+                              : () => setState(() => _isSignUp = !_isSignUp),
                           child: Text(
                             _isSignUp ? 'تسجيل الدخول' : 'إنشاء حساب جديد',
                             style: const TextStyle(
@@ -367,7 +413,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     _buildSocialButton(
                       label: 'Sign up with Google',
                       icon: const Icon(Icons.g_mobiledata, size: 24, color: Colors.black87),
-                      onPressed: () => _signInWithGoogle(context),
+                      onPressed: _isLoading ? null : () => _signInWithGoogle(context),
                     ),
                     const SizedBox(height: 10),
 
@@ -375,7 +421,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     _buildSocialButton(
                       label: 'Sign up with Apple',
                       icon: const Icon(Icons.apple, size: 22, color: Colors.black87),
-                      onPressed: () => _showComingSoon(context),
+                      onPressed: _isLoading ? null : () => _showComingSoon(context),
                     ),
 
                     // Terms
@@ -389,14 +435,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     // Guest
                     const SizedBox(height: 16),
                     TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const HomeScreen(userName: null),
-                          ),
-                        );
-                      },
+                      onPressed: _isLoading
+                          ? null
+                          : () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const HomeScreen(userName: null),
+                                ),
+                              );
+                            },
                       child: const Text(
                         'الاستمرار كضيف',
                         style: TextStyle(
@@ -453,7 +501,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _buildSocialButton({
     required String label,
     required Widget icon,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
   }) {
     return OutlinedButton(
       style: OutlinedButton.styleFrom(
