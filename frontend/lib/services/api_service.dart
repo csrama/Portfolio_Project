@@ -17,6 +17,30 @@ class ApiService {
     return '$_baseUrl$path';
   }
 
+  static Future<Map<String, dynamic>> putJson(
+    String path, {
+    required Map<String, dynamic> body,
+    String? token,
+  }) async {
+    final response = await http.put(
+      Uri.parse(buildUrl(path)),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) {
+        return {};
+      }
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception('Request failed: ${response.statusCode} ${response.body}');
+  }
+
   // ---------- existing Map-returning methods (unchanged behavior) ----------
 
   static Future<Map<String, dynamic>> postJson(
@@ -48,6 +72,25 @@ class ApiService {
     String? token,
   }) async {
     final response = await http.get(
+      Uri.parse(buildUrl(path)),
+      headers: {if (token != null) 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) {
+        return {};
+      }
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception('Request failed: ${response.statusCode} ${response.body}');
+  }
+
+  static Future<Map<String, dynamic>> deleteJson(
+    String path, {
+    String? token,
+  }) async {
+    final response = await http.delete(
       Uri.parse(buildUrl(path)),
       headers: {if (token != null) 'Authorization': 'Bearer $token'},
     );

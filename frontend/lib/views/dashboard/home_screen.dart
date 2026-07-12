@@ -31,6 +31,7 @@ import 'dependents_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/dependent_service.dart';
 import '../../services/api_service.dart';
+
 // ---------------------------------------------------------------------
 // Colors (inlined here to keep this a single self-contained file)
 // ---------------------------------------------------------------------
@@ -250,18 +251,20 @@ class _HomeScreenState extends State<HomeScreen> {
         final depService = context.read<DependentService>();
         List<dynamic> rawList;
 
-        if (selectedDep != null) {
-          rawList = await depService.getDependentMedications(token, selectedDep.id);
-        } else {
-          // Fallback to local for now as per original code comment,
-          // but we've added API support in the service
-          final prefs = await SharedPreferences.getInstance();
-          final String? raw = prefs.getString('medications');
-          if (raw == null) {
-            setState(() => _medications.clear());
-            return;
-          }
-          rawList = jsonDecode(raw) as List;
+        // IMPORTANT:
+        // بعد إضافة دواء (من نفس البحث/البوت شيت) نبي نعرض *كل* الأدوية للمستخدم.
+        // لذلك لا نفلتر حسب selectedDependent هنا.
+        rawList = await ApiService.getJsonList(
+          '/medications',
+          token: token,
+        );
+
+        if (rawList.isNotEmpty) {
+          // Helps identify why delete fails (id mapping mismatch).
+          final first = rawList.first;
+          debugPrint(
+              'Raw medication[0] keys: ${first is Map ? first.keys.toList() : 'NOT_MAP'}');
+          debugPrint('Raw medication[0] payload: $first');
         }
 
         setState(() {
@@ -272,20 +275,36 @@ class _HomeScreenState extends State<HomeScreen> {
             TimeOfDay time;
             if (isApi) {
               final parts = (m['time'] as String).split(':');
-              time = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+              time = TimeOfDay(
+                  hour: int.parse(parts[0]), minute: int.parse(parts[1]));
             } else {
               final timeMap = Map<String, dynamic>.from(m['time'] as Map);
-              time = TimeOfDay(hour: timeMap['hour'] as int, minute: timeMap['minute'] as int);
+              time = TimeOfDay(
+                  hour: timeMap['hour'] as int,
+                  minute: timeMap['minute'] as int);
             }
 
+            // Robust id mapping. Backend delete expects numeric `id`.
+            final dynamic rawId = (m['id'] ??
+                m['medication_id'] ??
+                m['medId'] ??
+                m['medicationId'] ??
+                m['medicationID'] ??
+                m['medication_id'] ??
+                m['medicationId'] ??
+                m['medicationID'] ??
+                m['medId']);
+
             return MedicationItem(
-              id: (m['id'] ?? '').toString(),
+              id: rawId == null ? '' : rawId.toString(),
               name: m['name'] as String,
               dosage: m['dosage'] as String? ?? '',
               type: MedicationType.values[m['type'] is int ? m['type'] : 0],
               daysOfWeek: m['days_of_week'] != null
                   ? List<String>.from(m['days_of_week'] as List)
-                  : (m['daysOfWeek'] != null ? List<String>.from(m['daysOfWeek'] as List) : []),
+                  : (m['daysOfWeek'] != null
+                      ? List<String>.from(m['daysOfWeek'] as List)
+                      : []),
               period: m['period'] as String? ?? 'صباحا',
               time: time,
               dosesPerDay: m['dosesPerDay'] as int? ?? 1,
@@ -318,9 +337,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _doseTimeLabel(MedicationItem medication, int doseIndex) {
-    final intervalHours = medication.dosesPerDay > 1
-        ? 24 ~/ medication.dosesPerDay
-        : 0;
+    final intervalHours =
+        medication.dosesPerDay > 1 ? 24 ~/ medication.dosesPerDay : 0;
     final baseHour = medication.time.hour;
     final baseMinute = medication.time.minute;
     final doseHour = (baseHour + intervalHours * doseIndex) % 24;
@@ -342,18 +360,52 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openAddMedicationSheet() {
+    _openEditMedicationSheet(null);
+  }
+
+  void _openEditMedicationSheet(MedicationItem? medicationOrNull) {
+    // medicationOrNull == null => add
+    final MedicationItem? editing = medicationOrNull;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _AddMedicationSheet(
+        initialMedication: editing,
         onSave: (med) async {
           final depProvider = context.read<DependentProvider>();
           final authProvider = context.read<AuthProvider>();
           final selectedDep = depProvider.selectedDependent;
 
+          // EDIT
+          if (editing != null) {
+            if (selectedDep != null && authProvider.accessToken != null) {
+              try {
+                await ApiService.putJson(
+                  '/medications/${editing.id}',
+                  body: {
+                    'dependent_id': selectedDep.id,
+                    'name': med.name,
+                    'dosage': med.dosage,
+                    'type': med.type.index,
+                    'days_of_week': med.daysOfWeek,
+                    'period': med.period,
+                    'time': '${med.time.hour}:${med.time.minute}',
+                    'dosesPerDay': med.dosesPerDay,
+                  },
+                  token: authProvider.accessToken!,
+                );
+                _loadMedications();
+              } catch (e) {
+                debugPrint('Error updating medication: $e');
+              }
+            }
+            return;
+          }
+
+          // ADD
           if (selectedDep != null && authProvider.accessToken != null) {
-            // Save to API for dependent
             try {
               await ApiService.postJson(
                 '/medications',
@@ -381,6 +433,53 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _deleteMedication(MedicationItem medication) async {
+    final authProvider = context.read<AuthProvider>();
+
+    // backend uses authMiddleware + user context; dependent_id is irrelevant for delete
+    final token = authProvider.accessToken;
+    if (token == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('غير مسجل دخولاً.')),
+      );
+      return;
+    }
+
+    final medicationId = medication.id.trim();
+
+    // UI feedback + logs (current issue: user says delete does nothing and no snackbar)
+    if (!mounted) return;
+    if (medicationId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذر حذف الدواء: id غير موجود.')),
+      );
+      debugPrint(
+          'Delete blocked: medication.id is empty. name=${medication.name}');
+      return;
+    }
+
+    debugPrint('Deleting medication: id=$medicationId name=${medication.name}');
+
+    try {
+      await ApiService.deleteJson(
+        '/medications/$medicationId',
+        token: token,
+      );
+      await _loadMedications();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم حذف الدواء.')),
+      );
+    } catch (e) {
+      debugPrint('Error deleting medication: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('فشل حذف الدواء: $e')),
+      );
+    }
   }
 
   void _showAccountMenu(BuildContext context) {
@@ -455,15 +554,21 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const DependentsScreen()),
+                          MaterialPageRoute(
+                              builder: (_) => const DependentsScreen()),
                         );
                       },
                       child: CircleAvatar(
                         radius: 26,
-                        backgroundColor: selectedDep != null ? const Color(0xFFC9932E) : _Colors.darkGreen,
+                        backgroundColor: selectedDep != null
+                            ? const Color(0xFFC9932E)
+                            : _Colors.darkGreen,
                         child: selectedDep != null
-                            ? Text(selectedDep.fullName[0], style: const TextStyle(color: Colors.white, fontSize: 24))
-                            : const Icon(Icons.person, color: Colors.white, size: 38),
+                            ? Text(selectedDep.fullName[0],
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 24))
+                            : const Icon(Icons.person,
+                                color: Colors.white, size: 38),
                       ),
                     );
                   },
@@ -483,11 +588,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(
                             selectedDep != null
                                 ? 'ملف: ${selectedDep.fullName}'
-                                : (hasName ? '${_getGreeting()}،' : _getGreeting()),
+                                : (hasName
+                                    ? '${_getGreeting()}،'
+                                    : _getGreeting()),
                             textAlign: TextAlign.right,
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: selectedDep != null ? FontWeight.bold : FontWeight.normal,
+                              fontWeight: selectedDep != null
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                               color: selectedDep != null
                                   ? const Color.fromARGB(255, 8, 78, 3)
                                   : _Colors.textSecondary,
@@ -660,7 +769,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const DependentsScreen()),
+                            MaterialPageRoute(
+                                builder: (_) => const DependentsScreen()),
                           );
                         },
                         child: Container(
@@ -690,8 +800,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: todaysMeds.length,
-                        itemBuilder: (context, index) =>
-                            _MedicationCard(medication: todaysMeds[index]),
+                        itemBuilder: (context, index) => _MedicationCard(
+                          medication: todaysMeds[index],
+                          onEdit: () =>
+                              _openEditMedicationSheet(todaysMeds[index]),
+                          onDelete: () => _deleteMedication(todaysMeds[index]),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -699,7 +813,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const DependentsScreen()),
+                          MaterialPageRoute(
+                              builder: (_) => const DependentsScreen()),
                         );
                       },
                       child: Container(
@@ -769,8 +884,11 @@ class _HomeScreenState extends State<HomeScreen> {
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: active.length, // unlimited
-                  itemBuilder: (context, index) =>
-                      _MedicationCard(medication: active[index]),
+                  itemBuilder: (context, index) => _MedicationCard(
+                    medication: active[index],
+                    onEdit: () => _openEditMedicationSheet(active[index]),
+                    onDelete: () => _deleteMedication(active[index]),
+                  ),
                 ),
         ),
       ],
@@ -803,7 +921,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   itemCount: selectedMeds.length,
                   itemBuilder: (context, index) {
                     final medication = selectedMeds[index];
@@ -860,18 +979,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   GestureDetector(
                     onTap: isToday
-                        ? () => _toggleTaken(medication, _selectedDate, doseIndex)
+                        ? () =>
+                            _toggleTaken(medication, _selectedDate, doseIndex)
                         : null,
                     child: Container(
                       width: 20,
                       height: 20,
                       decoration: BoxDecoration(
-                        color: taken ? const Color(0xFFB85C5C) : Colors.transparent,
+                        color: taken
+                            ? const Color(0xFFB85C5C)
+                            : Colors.transparent,
                         border: checkboxBorder,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: taken
-                          ? const Icon(Icons.check, size: 14, color: Colors.white)
+                          ? const Icon(Icons.check,
+                              size: 14, color: Colors.white)
                           : null,
                     ),
                   ),
@@ -937,8 +1060,14 @@ class _HomeScreenState extends State<HomeScreen> {
 // ---------------------------------------------------------------------
 class _MedicationCard extends StatelessWidget {
   final MedicationItem medication;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
-  const _MedicationCard({required this.medication});
+  const _MedicationCard({
+    required this.medication,
+    this.onEdit,
+    this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -950,6 +1079,7 @@ class _MedicationCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: 44,
@@ -980,6 +1110,23 @@ class _MedicationCard extends StatelessWidget {
               ],
             ),
           ),
+          if (onEdit != null || onDelete != null)
+            Row(
+              children: [
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                  onPressed: onEdit,
+                ),
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(Icons.delete_outline, color: Colors.white),
+                  onPressed: onDelete,
+                ),
+              ],
+            ),
         ],
       ),
     );
@@ -991,8 +1138,12 @@ class _MedicationCard extends StatelessWidget {
 // ---------------------------------------------------------------------
 class _AddMedicationSheet extends StatefulWidget {
   final void Function(MedicationItem medication) onSave;
+  final MedicationItem? initialMedication;
 
-  const _AddMedicationSheet({required this.onSave});
+  const _AddMedicationSheet({
+    required this.onSave,
+    this.initialMedication,
+  });
 
   @override
   State<_AddMedicationSheet> createState() => _AddMedicationSheetState();
@@ -1440,7 +1591,10 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                     ),
                     child: const Text(
                       'حفظ',
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -1450,7 +1604,8 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   child: OutlinedButton(
                     onPressed: () => _save(withReminder: false),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: _Colors.darkGreen, width: 1.5),
+                      side: const BorderSide(
+                          color: _Colors.darkGreen, width: 1.5),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),

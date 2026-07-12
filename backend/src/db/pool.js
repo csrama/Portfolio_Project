@@ -240,6 +240,75 @@ const db = {
     return rows[0] || null;
   },
 
+  async updateMedication({ id, userId, updates }) {
+    if (useMemoryStore) {
+      const medication = memoryStore.medications.find(
+        (item) => item.id === Number(id) && item.user_id === Number(userId)
+      );
+      if (!medication) return null;
+
+      Object.assign(medication, {
+        name: updates.name ?? medication.name,
+        dosage: updates.dosage ?? medication.dosage,
+        form: updates.form ?? medication.form,
+        instructions: updates.instructions ?? medication.instructions,
+        total_quantity: updates.total_quantity ?? medication.total_quantity,
+        updated_at: new Date().toISOString(),
+        is_active: updates.is_active ?? medication.is_active
+      });
+
+      return medication;
+    }
+
+    const { rows } = await queryWithFallback(
+      `UPDATE medications
+       SET
+         name = COALESCE($2, name),
+         dosage = COALESCE($3, dosage),
+         form = COALESCE($4, form),
+         instructions = COALESCE($5, instructions),
+         total_quantity = COALESCE($6, total_quantity),
+         is_active = COALESCE($7, is_active),
+         updated_at = NOW()
+       WHERE id = $1 AND user_id = $8
+       RETURNING *`,
+      [
+        id,
+        updates.name ?? null,
+        updates.dosage ?? null,
+        updates.form ?? null,
+        updates.instructions ?? null,
+        updates.total_quantity ?? null,
+        updates.is_active ?? null,
+        userId
+      ]
+    );
+
+    return rows[0] || null;
+  },
+
+  async deleteMedication({ id, userId }) {
+    if (useMemoryStore) {
+      const medication = memoryStore.medications.find(
+        (item) => item.id === Number(id) && item.user_id === Number(userId)
+      );
+      if (!medication) return null;
+      medication.is_active = false;
+      medication.updated_at = new Date().toISOString();
+      return medication;
+    }
+
+    const { rows } = await queryWithFallback(
+      `UPDATE medications
+       SET is_active = FALSE, updated_at = NOW()
+       WHERE id = $1 AND user_id = $2
+       RETURNING *`,
+      [id, userId]
+    );
+
+    return rows[0] || null;
+  },
+
   async createSchedule(data) {
     if (useMemoryStore) {
       const schedule = {
