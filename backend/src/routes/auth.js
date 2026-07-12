@@ -3,9 +3,11 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { z } = require('zod');
 const { pool } = require('../db/pool');
-const router = new Hono();
 const { OAuth2Client } = require('google-auth-library');
 const { createChallenge, verifyChallenge, createOrGetUser, issueTokenForUser } = require('../auth/offline');
+
+const router = new Hono();
+
 
 const registerSchema = z.object({
   email: z.string().trim().email().transform((value) => value.toLowerCase()),
@@ -19,6 +21,7 @@ const loginSchema = z.object({
   password: z.string().min(6)
 });
 
+
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const loginAttempts = new Map();
@@ -27,6 +30,7 @@ function getJwtSecret() {
   const secret = process.env.JWT_SECRET || 'dev-secret-key';
   return secret;
 }
+
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 function normalizeUserType(userType) {
@@ -35,6 +39,7 @@ function normalizeUserType(userType) {
   }
   return userType === 'patient' ? 'general_user' : userType;
 }
+
 
 async function loginRateLimiter(c, next) {
   const forwarded = c.req.header('x-forwarded-for');
@@ -58,6 +63,7 @@ async function loginRateLimiter(c, next) {
   c.set('parsedBody', body);
   await next();
 }
+
 
 router.post('/register', async (c) => {
   try {
@@ -153,6 +159,7 @@ router.post('/google', async (c) => {
   }
 });
 
+
 router.post('/offline/challenge', async (c) => {
   try {
     const body = await c.req.json().catch(() => ({}));
@@ -204,5 +211,53 @@ router.post('/offline/verify', async (c) => {
   }
 });
 
-module.exports = router;
 
+router.get('/google-test', async (c) => {
+  const appUrl = process.env.APP_URL || 'http://localhost:3000';
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=${appUrl}/auth/google-callback&response_type=code&scope=openid%20email%20profile`;
+  return c.redirect(authUrl);
+});
+
+router.get('/google-callback', async (c) => {
+  const { code } = c.req.query();
+  if (!code) {
+    return c.json({ error: 'Missing authorization code' }, 400);
+  }
+
+  try {
+    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+    
+    const oauth2Client = new OAuth2Client(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      `${appUrl}/auth/google-callback`
+    );
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
+
+    const ticket = await oauth2Client.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+
+    if (!payload) {
+      return c.json({ error: 'Invalid Google token' }, 401);
+    }
+
+    const user = await createOrGetUser({
+      email: payload.email.toLowerCase(),
+      full_name: payload.name,
+      provider: 'google'
+    });
+
+    const result = await issueTokenForUser(user);
+    return c.json(result);
+  } catch (error) {
+    console.error('Google callback error:', error);
+    return c.json({ error: 'Google authentication failed' }, 401);
+  }
+});
+
+
+module.exports = router;

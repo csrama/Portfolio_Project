@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../dashboard/home_screen.dart';
 import '../../services/auth_service.dart';
 import '../../services/google_auth_service.dart';
+import '../../repositories/auth_repository.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
