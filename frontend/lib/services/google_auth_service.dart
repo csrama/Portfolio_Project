@@ -28,13 +28,20 @@ class GoogleAuthService {
       }
 
       try {
-        final result = await ApiService.postJson('/auth/google', body: {'idToken': idToken});
+        final result = await ApiService.postJson(
+          '/auth/google',
+          body: {'idToken': idToken},
+        );
 
         await authService.persistSession(
-          email: (result['user']?['email'] ?? account.email).toString().toLowerCase(),
-          fullName: (result['user']?['full_name'] ?? account.displayName ?? account.email).toString(),
-          password: 'google-auth',
-          token: result['token']?.toString(),
+          accessToken: result['token']?.toString() ?? 'google-token',
+          refreshToken: result['refreshToken']?.toString() ?? 'google-refresh-token',
+          user: {
+            'email': (result['user']?['email'] ?? account.email).toString().toLowerCase(),
+            'full_name': (result['user']?['full_name'] ?? account.displayName ?? account.email).toString(),
+            'picture': account.photoUrl,
+            'provider': 'google',
+          },
         );
 
         return {...result, 'mode': 'online'};
@@ -42,12 +49,18 @@ class GoogleAuthService {
         final fallbackUserName = account.displayName?.trim().isNotEmpty == true
             ? account.displayName!.trim()
             : 'Google User';
+        
         await authService.persistSession(
-          email: 'google-user@localhost',
-          fullName: fallbackUserName,
-          password: 'google-auth',
-          token: 'offline-token',
+          accessToken: 'offline-token',
+          refreshToken: 'offline-refresh-token',
+          user: {
+            'email': 'google-user@localhost',
+            'full_name': fallbackUserName,
+            'user_type': 'general_user',
+            'provider': 'google-offline',
+          },
         );
+
         return {
           'user': {
             'email': 'google-user@localhost',
@@ -55,6 +68,7 @@ class GoogleAuthService {
             'user_type': 'general_user',
           },
           'token': 'offline-token',
+          'refreshToken': 'offline-refresh-token',
           'mode': 'offline',
         };
       }
