@@ -1,16 +1,16 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'api_service.dart';
 
 class AuthService {
-
   static const _savedUserEmailKey = 'saved_user_email';
   static const _savedUserNameKey = 'saved_user_name';
   static const _savedUserPasswordKey = 'saved_user_password';
   static const _savedTokenKey = 'saved_auth_token';
   static const _savedRefreshTokenKey = 'saved_refresh_token';
   static const _savedUserDataKey = 'saved_user_data';
-  static const _savedTokenExpiryKey = 'saved_token_expiry'; 
+  static const _savedTokenExpiryKey = 'saved_token_expiry';
 
   Future<Map<String, dynamic>> signUp({
     required String email,
@@ -103,9 +103,7 @@ class AuthService {
     }
   }
 
-
-  Future<Map<String, dynamic>> _registerOnline(
-      Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> _registerOnline(Map<String, dynamic> body) async {
     return ApiService.postJson('/auth/register', body: body);
   }
 
@@ -129,17 +127,12 @@ class AuthService {
     
     if (token != null && token.isNotEmpty) {
       await prefs.setString(_savedTokenKey, token);
-      
       if (refreshToken != null && refreshToken.isNotEmpty) {
         await prefs.setString(_savedRefreshTokenKey, refreshToken);
       }
-      
-      try {
-        final expiry = _extractTokenExpiry(token);
-        if (expiry != null) {
-          await prefs.setString(_savedTokenExpiryKey, expiry.toIso8601String());
-        }
-      } catch (e) {
+      final expiry = _extractTokenExpiry(token);
+      if (expiry != null) {
+        await prefs.setString(_savedTokenExpiryKey, expiry.toIso8601String());
       }
     }
     
@@ -212,11 +205,83 @@ class AuthService {
     return null;
   }
 
+  Future<bool> hasSession() async {
+    final token = await getToken();
+    if (token != null && token.isNotEmpty && token != 'offline-token') {
+      return true;
+    }
+    final storedUser = await _loadStoredUser();
+    return storedUser != null && 
+           storedUser['email'] != null && 
+           storedUser['full_name'] != null;
+  }
+
+  Future<bool> isTokenValid() async {
+    final token = await getAccessToken();
+    if (token == null || token.isEmpty || token == 'offline-token') {
+      return false;
+    }
+    final expiry = await getTokenExpiry();
+    if (expiry != null) {
+      final now = DateTime.now();
+      if (now.isAfter(expiry.subtract(const Duration(minutes: 5)))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Future<bool> needsRefresh() async {
+    final isValid = await isTokenValid();
+    return !isValid;
+  }
+
+  Future<String> refreshAccessToken() async {
+    final refreshToken = await getRefreshToken();
+    
+    if (refreshToken == null || refreshToken.isEmpty) {
+      throw Exception('No refresh token available');
+    }
+
+    try {
+      final response = await ApiService.postJson(
+        '/auth/refresh',
+        body: {'refreshToken': refreshToken},
+      );
+
+      final newAccessToken = response['accessToken']?.toString();
+      final newRefreshToken = response['refreshToken']?.toString();
+
+      if (newAccessToken != null && newAccessToken.isNotEmpty) {
+        await saveTokens(newAccessToken, newRefreshToken ?? refreshToken);
+        return newAccessToken;
+      } else {
+        throw Exception('Invalid response from refresh endpoint');
+      }
+    } catch (e) {
+      await clearTokens();
+      throw Exception('Failed to refresh token: $e');
+    }
+  }
+
+  Future<String?> getValidToken() async {
+    if (await isTokenValid()) {
+      return await getAccessToken();
+    }
+    if (await needsRefresh()) {
+      try {
+        return await refreshAccessToken();
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }
+
   Future<void> saveTokens(String accessToken, String refreshToken) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_savedTokenKey, accessToken);
     await prefs.setString(_savedRefreshTokenKey, refreshToken);
-    
     final expiry = _extractTokenExpiry(accessToken);
     if (expiry != null) {
       await prefs.setString(_savedTokenExpiryKey, expiry.toIso8601String());
@@ -262,85 +327,6 @@ class AuthService {
     await clearUserSession();
   }
 
-  Future<bool> hasSession() async {
-    final token = await getToken();
-    if (token != null && token.isNotEmpty && token != 'offline-token') {
-      return true;
-    }
-
-    final storedUser = await _loadStoredUser();
-    return storedUser != null && 
-           storedUser['email'] != null && 
-           storedUser['full_name'] != null;
-  }
-
-  Future<bool> isTokenValid() async {
-    final token = await getAccessToken();
-    if (token == null || token.isEmpty || token == 'offline-token') {
-      return false;
-    }
-
-    final expiry = await getTokenExpiry();
-    if (expiry != null) {
-      final now = DateTime.now();
-      if (now.isAfter(expiry.subtract(const Duration(minutes: 5)))) {
-        return false; 
-      }
-    }
-
-    return true;
-  }
-
-  Future<bool> needsRefresh() async {
-    final isValid = await isTokenValid();
-    return !isValid;
-  }
-
-  Future<String> refreshAccessToken() async {
-    final refreshToken = await getRefreshToken();
-    
-    if (refreshToken == null || refreshToken.isEmpty) {
-      throw Exception('No refresh token available');
-    }
-
-    try {
-      final response = await ApiService.postJson(
-        '/auth/refresh',
-        body: {'refreshToken': refreshToken},
-      );
-
-      final newAccessToken = response['accessToken']?.toString();
-      final newRefreshToken = response['refreshToken']?.toString();
-
-      if (newAccessToken != null && newAccessToken.isNotEmpty) {
-        await saveTokens(newAccessToken, newRefreshToken ?? refreshToken);
-        return newAccessToken;
-      } else {
-        throw Exception('Invalid response from refresh endpoint');
-      }
-    } catch (e) {
-      await clearTokens();
-      throw Exception('Failed to refresh token: $e');
-    }
-  }
-
-  Future<String?> getValidToken() async {
-    if (await isTokenValid()) {
-      return await getAccessToken();
-    }
-    
-    if (await needsRefresh()) {
-      try {
-        return await refreshAccessToken();
-      } catch (e) {
-        return null;
-      }
-    }
-    
-    return null;
-  }
-
-
   Future<Map<String, String>?> _loadStoredUser() async {
     final prefs = await SharedPreferences.getInstance();
     final email = prefs.getString(_savedUserEmailKey);
@@ -363,7 +349,7 @@ class AuthService {
     return token != null && token.isNotEmpty && token != 'offline-token';
   }
 
-  Map<String, dynamic>? decodeToken() async {
+  Future<Map<String, dynamic>?> decodeToken() async {
     final token = await getAccessToken();
     if (token == null || token.isEmpty) return null;
     
