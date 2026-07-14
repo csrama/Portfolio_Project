@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/dependent_provider.dart';
 import 'providers/medication_provider.dart';
+import 'services/auth_service.dart';
 import 'services/dependent_service.dart';
 import 'services/medication_service.dart';
 import 'views/splash/splash_screen.dart';
@@ -17,7 +18,11 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider(
+            authService: AuthService(),
+          ),
+        ),
         
         Provider(create: (_) => DependentService()),
         Provider(create: (_) => MedicationService()),
