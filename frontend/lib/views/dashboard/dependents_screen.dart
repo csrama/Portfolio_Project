@@ -12,7 +12,6 @@ class DependentsScreen extends StatefulWidget {
 }
 
 class _DependentsScreenState extends State<DependentsScreen> {
-
   @override
   void initState() {
     super.initState();
@@ -21,7 +20,6 @@ class _DependentsScreenState extends State<DependentsScreen> {
     });
   }
 
- 
   Future<void> _loadDependents() async {
     try {
       await context.read<DependentProvider>().fetchDependents();
@@ -37,7 +35,6 @@ class _DependentsScreenState extends State<DependentsScreen> {
     }
   }
 
-  
   void _showAddDependentSheet() {
     final nameController = TextEditingController();
     final relationshipController = TextEditingController();
@@ -73,11 +70,10 @@ class _DependentsScreenState extends State<DependentsScreen> {
                     'إضافة تابع جديد',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(width: 48), 
+                  const SizedBox(width: 48),
                 ],
               ),
               const SizedBox(height: 16),
-              
               TextFormField(
                 controller: nameController,
                 textAlign: TextAlign.right,
@@ -97,7 +93,6 @@ class _DependentsScreenState extends State<DependentsScreen> {
                 },
               ),
               const SizedBox(height: 15),
-              
               TextFormField(
                 controller: relationshipController,
                 textAlign: TextAlign.right,
@@ -114,7 +109,6 @@ class _DependentsScreenState extends State<DependentsScreen> {
                 },
               ),
               const SizedBox(height: 20),
-              
               Row(
                 children: [
                   Expanded(
@@ -132,11 +126,7 @@ class _DependentsScreenState extends State<DependentsScreen> {
                     flex: 2,
                     child: ElevatedButton(
                       onPressed: () async {
-                        if (!formKey.currentState!.validate()) {
-                          return;
-                        }
-
-                        setState(() {});
+                        if (!formKey.currentState!.validate()) return;
                         
                         try {
                           final success = await context
@@ -148,7 +138,6 @@ class _DependentsScreenState extends State<DependentsScreen> {
 
                           if (success && mounted) {
                             Navigator.pop(context);
-                            
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(' تم إضافة التابع بنجاح'),
@@ -186,7 +175,6 @@ class _DependentsScreenState extends State<DependentsScreen> {
       ),
     );
   }
-
 
   Future<void> _deleteDependent(Dependent dependent) async {
     final confirm = await showDialog<bool>(
@@ -235,23 +223,18 @@ class _DependentsScreenState extends State<DependentsScreen> {
     }
   }
 
-  
-
   void _navigateToDashboard(Dependent dependent) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => DependentDashboardScreen(
-          dependentId: dependent.id,
-          dependentName: dependent.fullName,
-        ),
+        builder: (_) => DependentDashboardScreen(dependent: dependent),
       ),
     );
   }
 
   void _selectDependent(Dependent dependent) {
     context.read<DependentProvider>().selectDependent(dependent);
-    Navigator.pop(context); 
+    Navigator.pop(context);
   }
 
   @override
@@ -277,9 +260,7 @@ class _DependentsScreenState extends State<DependentsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(
-                    color: Color(0xFF1D9E75),
-                  ),
+                  CircularProgressIndicator(color: Color(0xFF1D9E75)),
                   SizedBox(height: 16),
                   Text('جاري تحميل التابعين...'),
                 ],
@@ -292,26 +273,16 @@ class _DependentsScreenState extends State<DependentsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.people_outline,
-                    size: 80,
-                    color: Colors.grey[400],
-                  ),
+                  Icon(Icons.people_outline, size: 80, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   const Text(
                     'لا يوجد تابعين',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'أضف تابعاً جديداً بالضغط على زر +',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(color: Colors.grey[600]),
                   ),
                 ],
               ),
@@ -328,7 +299,97 @@ class _DependentsScreenState extends State<DependentsScreen> {
                 final dependent = provider.dependents[index];
                 final isSelected = provider.selectedDependent?.id == dependent.id;
 
-                return _buildDependentCard(dependent, isSelected);
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  elevation: isSelected ? 4 : 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: isSelected
+                        ? const BorderSide(color: Color(0xFF1D9E75), width: 2)
+                        : BorderSide.none,
+                  ),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: isSelected 
+                          ? const Color(0xFF1D9E75) 
+                          : const Color(0xFF085041),
+                      child: Text(
+                        dependent.fullName.isNotEmpty 
+                            ? dependent.fullName[0].toUpperCase() 
+                            : '?',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    title: Text(
+                      dependent.fullName,
+                      style: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                    subtitle: Text(dependent.relationship),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isSelected)
+                          const Icon(
+                            Icons.check_circle,
+                            color: Color(0xFF1D9E75),
+                            size: 24,
+                          ),
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert),
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'dashboard':
+                                _navigateToDashboard(dependent);
+                                break;
+                              case 'select':
+                                _selectDependent(dependent);
+                                break;
+                              case 'delete':
+                                _deleteDependent(dependent);
+                                break;
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'select',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.check, color: Color(0xFF1D9E75)),
+                                  SizedBox(width: 8),
+                                  Text('تحديد كـتابع نشط'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'dashboard',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.dashboard, color: Colors.blue),
+                                  SizedBox(width: 8),
+                                  Text('لوحة التحكم'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete, color: Colors.red),
+                                  SizedBox(width: 8),
+                                  Text('حذف'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    onTap: () => _selectDependent(dependent),
+                    onLongPress: () => _navigateToDashboard(dependent),
+                  ),
+                );
               },
             ),
           );
@@ -339,103 +400,6 @@ class _DependentsScreenState extends State<DependentsScreen> {
         backgroundColor: const Color(0xFF1D9E75),
         child: const Icon(Icons.add, color: Colors.white),
         tooltip: 'إضافة تابع جديد',
-      ),
-    );
-  }
-
-  
-
-  Widget _buildDependentCard(Dependent dependent, bool isSelected) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      elevation: isSelected ? 4 : 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: isSelected
-            ? const BorderSide(color: Color(0xFF1D9E75), width: 2)
-            : BorderSide.none,
-      ),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: isSelected 
-              ? const Color(0xFF1D9E75) 
-              : const Color(0xFF085041),
-          child: Text(
-            dependent.fullName.isNotEmpty 
-                ? dependent.fullName[0].toUpperCase() 
-                : '?',
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
-        title: Text(
-          dependent.fullName,
-          style: TextStyle(
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-        subtitle: Text(dependent.relationship),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isSelected)
-              const Icon(
-                Icons.check_circle,
-                color: Color(0xFF1D9E75),
-                size: 24,
-              ),
-            
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (value) {
-                switch (value) {
-                  case 'dashboard':
-                    _navigateToDashboard(dependent);
-                    break;
-                  case 'select':
-                    _selectDependent(dependent);
-                    break;
-                  case 'delete':
-                    _deleteDependent(dependent);
-                    break;
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'select',
-                  child: Row(
-                    children: [
-                      Icon(Icons.check, color: Color(0xFF1D9E75)),
-                      SizedBox(width: 8),
-                      Text('تحديد كـتابع نشط'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'dashboard',
-                  child: Row(
-                    children: [
-                      Icon(Icons.dashboard, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Text('لوحة التحكم'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('حذف'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        onTap: () => _selectDependent(dependent),
-        onLongPress: () => _navigateToDashboard(dependent),
       ),
     );
   }
