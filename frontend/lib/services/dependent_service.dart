@@ -3,17 +3,10 @@ import 'api_service.dart';
 import 'auth_service.dart';
 
 class DependentService {
-  final ApiService _apiService = ApiService();
   final AuthService _authService = AuthService();
 
-  
   Future<String?> getAccessToken() async {
     return await _authService.getAccessToken();
-  }
-
-  Future<AuthInfo> getAuth() async {
-    final token = await getAccessToken();
-    return AuthInfo(token: token);
   }
 
   Future<List<Dependent>> fetchDependents([String? token]) async {
@@ -24,7 +17,7 @@ class DependentService {
     }
 
     try {
-      final response = await _apiService.getJsonDynamic(
+      final response = await ApiService.getJsonDynamic(
         '/dependents',
         token: authToken,
       );
@@ -60,7 +53,7 @@ class DependentService {
     }
 
     try {
-      final response = await _apiService.getJsonDynamic(
+      final response = await ApiService.getJsonDynamic(
         '/dependents/$id',
         token: authToken,
       );
@@ -75,10 +68,7 @@ class DependentService {
     }
   }
 
-  Future<Dependent> addDependent(
-    Map<String, dynamic> data, [
-    String? token,
-  ]) async {
+  Future<Dependent> addDependent(Map<String, dynamic> data, [String? token]) async {
     final authToken = token ?? await getAccessToken();
     
     if (authToken == null) {
@@ -97,7 +87,7 @@ class DependentService {
     }
 
     try {
-      final response = await _apiService.postJson(
+      final response = await ApiService.postJson(
         '/dependents',
         body: {
           'full_name': name,
@@ -113,12 +103,7 @@ class DependentService {
     }
   }
 
-  
-  Future<Dependent> updateDependent(
-    String id,
-    Map<String, dynamic> data, [
-    String? token,
-  ]) async {
+  Future<Dependent> updateDependent(String id, Map<String, dynamic> data, [String? token]) async {
     final authToken = token ?? await getAccessToken();
     
     if (authToken == null) {
@@ -126,7 +111,7 @@ class DependentService {
     }
 
     try {
-      final response = await _apiService.putJson(
+      final response = await ApiService.putJson(
         '/dependents/$id',
         body: data,
         token: authToken,
@@ -137,6 +122,7 @@ class DependentService {
       throw Exception('Failed to update dependent: $e');
     }
   }
+
   Future<bool> deleteDependent(String id, [String? token]) async {
     final authToken = token ?? await getAccessToken();
     
@@ -145,7 +131,7 @@ class DependentService {
     }
 
     try {
-      await _apiService.deleteJson(
+      await ApiService.deleteJson(
         '/dependents/$id',
         token: authToken,
       );
@@ -155,7 +141,6 @@ class DependentService {
     }
   }
 
-  
   Future<List<Dependent>> syncDependents([String? token]) async {
     final authToken = token ?? await getAccessToken();
     
@@ -164,30 +149,9 @@ class DependentService {
     }
 
     try {
-      final dependents = await fetchDependents(authToken);
-      return dependents;
+      return await fetchDependents(authToken);
     } catch (e) {
       throw Exception('Failed to sync dependents: $e');
     }
   }
-
-  Future<int> getDependentsCount([String? token]) async {
-    final dependents = await fetchDependents(token);
-    return dependents.length;
-  }
-
-  Future<List<Dependent>> getActiveDependents([String? token]) async {
-    final all = await fetchDependents(token);
-    return all.where((d) => d.isActive).toList();
-  }
-}
-
-
-class AuthInfo {
-  final String? token;
-  final String? userId;
-
-  AuthInfo({this.token, this.userId});
-
-  bool get isAuthenticated => token != null && token!.isNotEmpty;
 }
