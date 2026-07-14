@@ -1,21 +1,15 @@
 import 'package:flutter/material.dart';
 import '../models/medication.dart';
-import '../models/dependent.dart';
 import '../services/medication_service.dart';
-import '../repositories/medication_repository.dart';
 
 class MedicationProvider extends ChangeNotifier {
-  final MedicationRepository _repository;
-  
+  final MedicationService _service = MedicationService();
+
   List<Medication> _medications = [];
-  List<Dependent> _dependents = [];
-  Medication? _selectedMedication;
   bool _isLoading = false;
   String? _errorMessage;
 
   List<Medication> get medications => _medications;
-  List<Dependent> get dependents => _dependents;
-  Medication? get selectedMedication => _selectedMedication;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
@@ -24,7 +18,7 @@ class MedicationProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _medications = await _repository.getMedicationsWithDependents();
+      _medications = await _service.fetchMedications();
       _errorMessage = null;
     } catch (e) {
       _errorMessage = e.toString();
@@ -36,7 +30,22 @@ class MedicationProvider extends ChangeNotifier {
 
   Future<bool> addMedication(Medication medication) async {
     try {
-      final newMed = await _medicationService.addMedication(medication);
+      final newMed = await _service.createMedication(
+        name: medication.name,
+        genericName: medication.genericName,
+        dosage: medication.dosage,
+        form: medication.form,
+        times: medication.times,
+        daysOfWeek: medication.daysOfWeek,
+        dependentId: medication.dependentId,
+        instructions: medication.instructions,
+        notes: medication.notes,
+        prescribedBy: medication.prescribedBy,
+        startDate: medication.startDate,
+        endDate: medication.endDate,
+        interactions: medication.interactions,
+        imageUrl: null,
+      );
       _medications.add(newMed);
       notifyListeners();
       return true;
@@ -47,31 +56,26 @@ class MedicationProvider extends ChangeNotifier {
     }
   }
 
-  List<Medication> getActiveMedications() {
-    return _medications.where((m) => m.isActive).toList();
+  Future<bool> deleteMedication(String id) async {
+    try {
+      final success = await _service.deleteMedication(id);
+      if (success) {
+        _medications.removeWhere((m) => m.id == id);
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
   }
 
-  List<Medication> getExpiredMedications() {
-    return _medications.where((m) => m.isExpired).toList();
-  }
-
-  List<Medication> getMedicationsForDependent(String dependentId) {
-    return _medications.where((m) => m.dependentId == dependentId).toList();
-  }
-
-  double getOverallAdherenceRate() {
-    if (_medications.isEmpty) return 0.0;
-    
-    final total = _medications.length;
-    final active = _medications.where((m) => m.isActive).length;
-    return active / total * 100;
-  }
-
-  List<Medication> getMedicationsByTime(String time) {
-    return _medications.where((m) => m.times.contains(time)).toList();
-  }
-
-  List<Medication> getMedicationsWithInteractions() {
-    return _medications.where((m) => m.interactions != null && m.interactions!.isNotEmpty).toList();
+  void clear() {
+    _medications = [];
+    _isLoading = false;
+    _errorMessage = null;
+    notifyListeners();
   }
 }
