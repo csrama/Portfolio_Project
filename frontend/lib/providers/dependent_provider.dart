@@ -1,23 +1,15 @@
 import 'package:flutter/material.dart';
 import '../models/dependent.dart';
 import '../services/dependent_service.dart';
-import '../services/auth_service.dart';
 
 class DependentProvider extends ChangeNotifier {
-  
-
   final DependentService _service = DependentService();
-  final AuthService _authService = AuthService();
-
- 
 
   List<Dependent> _dependents = [];
   Dependent? _selectedDependent;
   bool _isLoading = false;
   String? _errorMessage;
   bool _isInitialized = false;
-
-  
 
   List<Dependent> get dependents => _dependents;
   Dependent? get selectedDependent => _selectedDependent;
@@ -33,22 +25,19 @@ class DependentProvider extends ChangeNotifier {
   }
 
   int get count => _dependents.length;
+  int get activeCount => _dependents.where((d) => d.isActive).length;
+  int get inactiveCount => _dependents.where((d) => !d.isActive).length;
 
   List<Dependent> get activeDependents =>
       _dependents.where((d) => d.isActive).toList();
 
-  
   Future<void> initialize() async {
     if (_isInitialized) return;
-    
     _isLoading = true;
     notifyListeners();
 
     try {
-      final hasSession = await _authService.hasSession();
-      if (hasSession) {
-        await fetchDependents();
-      }
+      await fetchDependents();
       _isInitialized = true;
       _errorMessage = null;
     } catch (e) {
@@ -68,9 +57,7 @@ class DependentProvider extends ChangeNotifier {
       _dependents = await _service.fetchDependents();
       
       if (_selectedDependent != null) {
-        final stillExists = _dependents.any(
-          (d) => d.id == _selectedDependent!.id,
-        );
+        final stillExists = _dependents.any((d) => d.id == _selectedDependent!.id);
         if (!stillExists) {
           _selectedDependent = null;
         }
@@ -83,7 +70,6 @@ class DependentProvider extends ChangeNotifier {
       _errorMessage = null;
     } catch (e) {
       _errorMessage = e.toString();
-      debugPrint('Error fetching dependents: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -111,7 +97,6 @@ class DependentProvider extends ChangeNotifier {
       };
 
       final newDependent = await _service.addDependent(data);
-
       _dependents.add(newDependent);
       
       if (_selectedDependent == null) {
@@ -123,7 +108,6 @@ class DependentProvider extends ChangeNotifier {
       return true;
     } catch (e) {
       _errorMessage = e.toString();
-      debugPrint('Error adding dependent: $e');
       notifyListeners();
       return false;
     } finally {
@@ -167,7 +151,6 @@ class DependentProvider extends ChangeNotifier {
       return true;
     } catch (e) {
       _errorMessage = e.toString();
-      debugPrint('Error updating dependent: $e');
       notifyListeners();
       return false;
     } finally {
@@ -199,7 +182,6 @@ class DependentProvider extends ChangeNotifier {
       return false;
     } catch (e) {
       _errorMessage = e.toString();
-      debugPrint('Error deleting dependent: $e');
       notifyListeners();
       return false;
     } finally {
@@ -208,13 +190,20 @@ class DependentProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> toggleDependentStatus(String id) async {
+    final dependent = getDependentById(id);
+    if (dependent == null) return false;
+
+    return updateDependent(
+      id: id,
+      isActive: !dependent.isActive,
+    );
+  }
+
   void selectDependent(Dependent? dependent) {
     if (dependent != null) {
       final exists = _dependents.any((d) => d.id == dependent.id);
-      if (!exists) {
-        debugPrint('Dependent not found in list');
-        return;
-      }
+      if (!exists) return;
     }
 
     _selectedDependent = dependent;
@@ -239,49 +228,6 @@ class DependentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
- 
-  Future<void> syncDependents() async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      final synced = await _service.syncDependents();
-      _dependents = synced;
-      _errorMessage = null;
-    } catch (e) {
-      _errorMessage = e.toString();
-      debugPrint('Error syncing dependents: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  
-  int get activeCount => _dependents.where((d) => d.isActive).length;
-
-  int get inactiveCount => _dependents.where((d) => !d.isActive).length;
-
-  String get selectedDependentName =>
-      _selectedDependent?.fullName ?? 'غير محدد';
-
-  List<Dependent> searchDependents(String query) {
-    if (query.trim().isEmpty) return _dependents;
-    
-    final lowerQuery = query.toLowerCase().trim();
-    return _dependents.where((d) {
-      return d.fullName.toLowerCase().contains(lowerQuery) ||
-          d.relationship.toLowerCase().contains(lowerQuery);
-    }).toList();
-  }
-
-  List<Dependent> getDependentsByRelationship(String relationship) {
-    return _dependents
-        .where((d) => d.relationship.toLowerCase() == relationship.toLowerCase())
-        .toList();
-  }
-
   void clear() {
     _dependents = [];
     _selectedDependent = null;
@@ -304,15 +250,5 @@ class DependentProvider extends ChangeNotifier {
   }
 
   bool get isEmpty => _dependents.isEmpty;
-
   bool get isNotEmpty => _dependents.isNotEmpty;
-  Future<bool> toggleDependentStatus(String id) async {
-    final dependent = getDependentById(id);
-    if (dependent == null) return false;
-
-    return updateDependent(
-      id: id,
-      isActive: !dependent.isActive,
-    );
-  }
 }
