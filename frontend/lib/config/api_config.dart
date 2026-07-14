@@ -1,12 +1,34 @@
-import 'package:flutter/foundation.dart';
+import 'environment.dart';
 
 class ApiConfig {
-  /// Base URL of the backend API.
-  /// On web we can reach localhost directly; on Android emulator we use 10.0.2.2.
-  static String get baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:3000';
-    }
-    return 'http://10.0.2.2:3000';
+  static String get baseUrl => Environment.baseUrl;
+
+  static const String login = '/auth/login';
+  static const String register = '/auth/register';
+  static const String refresh = '/auth/refresh';
+  static const String logout = '/auth/logout';
+  
+  static const String dependents = '/dependents';
+  static const String medications = '/medications';
+  static const String doses = '/doses';
+  static const String interactions = '/interactions';
+  static const String schedule = '/schedule';
+
+  static String getUrl(String endpoint) {
+    return '$baseUrl$endpoint';
+  }
+
+  static Map<String, String> get defaultHeaders {
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+  }
+
+  static Map<String, String> authHeaders(String token) {
+    return {
+      ...defaultHeaders,
+      'Authorization': 'Bearer $token',
+    };
   }
 }
