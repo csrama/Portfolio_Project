@@ -1,90 +1,152 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../models/user.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
-  bool _isLoggedIn = false;
+  
+  User? _currentUser;
   String? _accessToken;
   String? _refreshToken;
-  Map<String, dynamic>? _user;
+  bool _isLoading = false;
+  bool _isAuthenticated = false;
+  String? _errorMessage;
 
   AuthProvider({required AuthService authService}) : _authService = authService;
 
-  bool get isLoggedIn => _isLoggedIn;
+  User? get currentUser => _currentUser;
   String? get accessToken => _accessToken;
   String? get refreshToken => _refreshToken;
-  Map<String, dynamic>? get user => _user;
+  bool get isLoading => _isLoading;
+  bool get isAuthenticated => _isAuthenticated;
+  String? get errorMessage => _errorMessage;
 
-  /// Reads the current session. Wrapped in try/catch + timeout because
-  /// flutter_secure_storage can hang or throw on Flutter Web where the
-  /// underlying platform channels are not fully implemented.
-  Future<bool> checkLoginStatus() async {
-    try {
-      _accessToken = await _authService
-          .getAccessToken()
-          .timeout(const Duration(seconds: 3), onTimeout: () => null);
-      _refreshToken = await _authService
-          .getRefreshToken()
-          .timeout(const Duration(seconds: 3), onTimeout: () => null);
-      _user = await _authService
-          .getUserData()
-          .timeout(const Duration(seconds: 3), onTimeout: () => null);
-      _isLoggedIn = _accessToken != null;
-    } catch (e) {
-      // On web / unsupported platforms, treat as logged out instead of hanging.
-      if (kDebugMode) {
-        debugPrint('checkLoginStatus failed: $e');
-      }
-      _accessToken = null;
-      _refreshToken = null;
-      _user = null;
-      _isLoggedIn = false;
-    }
+  Future<bool> login({
+    required String email,
+    required String password,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
-    return _isLoggedIn;
+
+    try {
+      final result = await _authService.signIn(
+        email: email,
+        password: password,
+      );
+
+      if (result['token'] != null) {
+        _accessToken = result['token'].toString();
+        _refreshToken = result['refreshToken']?.toString();
+        _isAuthenticated = true;
+        
+        final userData = result['user'] as Map<String, dynamic>?;
+        if (userData != null) {
+          _currentUser = User.fromJson(userData);
+        }
+        
+        _errorMessage = null;
+        notifyListeners();
+        return true;
+      }
+      
+      return false;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isAuthenticated = false;
+      notifyListeners();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
-  Future<bool> login(String accessToken, String refreshToken,
-      Map<String, dynamic> user) async {
+  Future<bool> register({
+    required String email,
+    required String password,
+    required String fullName,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
     try {
-      await _authService.saveTokens(accessToken, refreshToken);
-      await _authService.saveUserData(user);
-      _accessToken = accessToken;
-      _refreshToken = refreshToken;
-      _user = user;
-      _isLoggedIn = true;
-      notifyListeners();
-      return true;
+      final result = await _authService.signUp(
+        email: email,
+        password: password,
+        fullName: fullName,
+      );
+
+      if (result['token'] != null) {
+        _accessToken = result['token'].toString();
+        _refreshToken = result['refreshToken']?.toString();
+        _isAuthenticated = true;
+        
+        final userData = result['user'] as Map<String, dynamic>?;
+        if (userData != null) {
+          _currentUser = User.fromJson(userData);
+        }
+        
+        _errorMessage = null;
+        notifyListeners();
+        return true;
+      }
+      
+      return false;
     } catch (e) {
-      // Even if secure storage fails on web, still mark the session as
-      // logged-in in memory so the user can use the app.
-      _accessToken = accessToken;
-      _refreshToken = refreshToken;
-      _user = user;
-      _isLoggedIn = true;
+      _errorMessage = e.toString();
+      _isAuthenticated = false;
       notifyListeners();
-      return true;
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
   Future<void> logout() async {
-    try {
-      await _authService.clearTokens();
-      await _authService.clearUserData();
-    } catch (_) {}
+    await _authService.logout();
+    _currentUser = null;
     _accessToken = null;
     _refreshToken = null;
-    _user = null;
-    _isLoggedIn = false;
+    _isAuthenticated = false;
     notifyListeners();
   }
 
-  Future<void> updateAccessToken(String newAccessToken) async {
-    try {
-      await _authService.saveTokens(newAccessToken, _refreshToken ?? '');
-    } catch (_) {}
-    _accessToken = newAccessToken;
+  Future<bool> checkSession() async {
+    final hasSession = await _authService.hasSession();
+    if (!hasSession) {
+      _isAuthenticated = false;
+      notifyListeners();
+      return false;
+    }
+
+    final token = await _authService.getAccessToken();
+    if (token != null) {
+      _accessToken = token;
+      _isAuthenticated = true;
+      
+      final userData = await _authService.getUserData();
+      if (userData != null) {
+        _currentUser = User.fromJson(userData);
+      }
+      
+      notifyListeners();
+      return true;
+    }
+
+    return false;
+  }
+
+
+  void clear() {
+    _currentUser = null;
+    _accessToken = null;
+    _refreshToken = null;
+    _isLoading = false;
+    _isAuthenticated = false;
+    _errorMessage = null;
     notifyListeners();
   }
 }
