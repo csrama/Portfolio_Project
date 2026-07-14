@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../dashboard/home_screen.dart';
 import '../../services/auth_service.dart';
 import '../../services/google_auth_service.dart';
-import '../../services/api_service.dart'; 
-import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -17,7 +16,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _emailController = TextEditingController();
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = AuthService();
+  
+  final AuthService _authService = AuthService();
+  final GoogleAuthService _googleAuthService = GoogleAuthService();
+  
   bool _isLoading = false;
   bool _isSignUp = false;
   String _userType = 'general_user';
@@ -39,46 +41,41 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('أدخل اسمًا صالحًا وبريدًا وكلمة مرور 6 أحرف على الأقل'),
+          backgroundColor: Colors.orange,
         ),
       );
       return;
     }
 
     setState(() => _isLoading = true);
+
     try {
-      final result = await ApiService.postJson(
-        '/auth/register',
-        body: {
-          'email': email,
-          'password': password,
-          'full_name': name,
-          'user_type': _userType,
-        },
+      final result = await _authService.signUp(
+        email: email,
+        password: password,
+        fullName: name,
       );
 
       final token = result['token']?.toString();
-      final refreshToken = result['refreshToken']?.toString();
       final user = result['user'] as Map<String, dynamic>?;
 
       if (token == null || user == null) {
         throw Exception('بيانات غير مكتملة من الخادم');
       }
 
-      await context.read<AuthProvider>().login(
-            token,
-            refreshToken ?? '',
-            user,
-          );
+      await context.read<AuthProvider>().loginWithData(
+        token: token,
+        userData: user,
+      );
 
       if (!mounted) return;
-      final isOffline = result['mode'] == 'offline';
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isOffline
-                ? 'تم إنشاء الحساب محليًا بدون اتصال بالإنترنت'
-                : 'تم إنشاء الحساب بنجاح: ${user['full_name']}',
+            ' تم إنشاء الحساب بنجاح: ${user['full_name']}',
           ),
+          backgroundColor: Colors.green,
         ),
       );
 
@@ -87,16 +84,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         MaterialPageRoute(
           builder: (_) => HomeScreen(
             userName: user['full_name']?.toString(),
-            photoUrl: null,
           ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
+      
       final message = e.toString().contains('409')
-          ? 'هذا البريد مستخدم بالفعل'
-          : 'فشل إنشاء الحساب، جرّب بريدًا آخر';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+          ? ' هذا البريد مستخدم بالفعل'
+          : ' فشل إنشاء الحساب: $e';
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -110,31 +113,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('أدخل البريد وكلمة المرور')),
+        const SnackBar(
+          content: Text('أدخل البريد وكلمة المرور'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
 
     setState(() => _isLoading = true);
+
     try {
-      final result = await ApiService.postJson(
-        '/auth/login',
-        body: {'email': email, 'password': password},
+      final result = await _authService.signIn(
+        email: email,
+        password: password,
       );
 
       final token = result['token']?.toString();
-      final refreshToken = result['refreshToken']?.toString();
       final user = result['user'] as Map<String, dynamic>?;
 
       if (token == null || user == null) {
         throw Exception('بيانات غير مكتملة من الخادم');
       }
 
-      await context.read<AuthProvider>().login(
-            token,
-            refreshToken ?? '',
-            user,
-          );
+      await context.read<AuthProvider>().loginWithData(
+        token: token,
+        userData: user,
+      );
 
       if (!mounted) return;
 
@@ -143,16 +148,85 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         MaterialPageRoute(
           builder: (_) => HomeScreen(
             userName: user['full_name']?.toString(),
-            photoUrl: null,
           ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
+      
       final message = e.toString().contains('401')
-          ? 'البريد أو كلمة المرور غير صحيحة'
-          : 'فشل تسجيل الدخول. تأكد من الاتصال بالإنترنت';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+          ? ' البريد أو كلمة المرور غير صحيحة'
+          : ' فشل تسجيل الدخول: $e';
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _signInWithGoogle(BuildContext context) async {
+    setState(() => _isLoading = true);
+
+    try {
+      final authResult = await _googleAuthService.signInWithGoogle();
+
+      if (!mounted) return;
+
+      if (authResult == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إلغاء تسجيل الدخول أو فشل الإعداد'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final token = authResult['token']?.toString();
+      final user = authResult['user'] as Map<String, dynamic>?;
+
+      if (token != null && user != null) {
+        await context.read<AuthProvider>().loginWithData(
+          token: token,
+          userData: user,
+        );
+
+        if (!mounted) return;
+
+        final userName = user['full_name']?.toString() ?? user['name']?.toString();
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => HomeScreen(
+              userName: userName,
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('بيانات تسجيل الدخول غير مكتملة'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(' حدث خطأ أثناء تسجيل الدخول: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -162,67 +236,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _showComingSoon(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('قريباً')),
+      const SnackBar(
+        content: Text(' قريباً...'),
+        backgroundColor: Colors.blue,
+      ),
     );
   }
 
-  Future<void> _signInWithGoogle(BuildContext context) async {
-    setState(() => _isLoading = true);
-    try {
-      final googleAuthService = GoogleAuthService();
-      final authResult = await googleAuthService.signInWithBackend(
-        authService: _authService,
-      );
-
-      if (!context.mounted) return;
-
-      if (authResult == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إلغاء تسجيل الدخول أو فشل الإعداد')),
-        );
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      final token = authResult['token']?.toString();
-      final refreshToken = authResult['refreshToken']?.toString();
-      final user = authResult['user'] as Map<String, dynamic>?;
-
-      if (token != null && user != null) {
-        await context.read<AuthProvider>().login(
-              token,
-              refreshToken ?? '',
-              user,
-            );
-
-        if (!mounted) return;
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => HomeScreen(
-              userName: user['full_name']?.toString() ?? user['name']?.toString(),
-              photoUrl: user['picture']?.toString(),
-            ),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('بيانات تسجيل الدخول غير مكتملة')),
-        );
-      }
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('حدث خطأ أثناء تسجيل الدخول: $e')),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
+  
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -248,12 +269,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 32,
+                ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Title
                     Text(
                       _isSignUp ? 'انشاء حساب جديد' : 'تسجيل الدخول',
                       textAlign: TextAlign.right,
@@ -269,11 +292,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ? 'ادخل بياناتك لإنشاء حساب جديد'
                           : 'أدخل بريدك الالكتروني لتسجيل الدخول',
                       textAlign: TextAlign.right,
-                      style: const TextStyle(fontSize: 14, color: Color(0xFF2D6A4F)),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF2D6A4F),
+                      ),
                     ),
                     const SizedBox(height: 24),
 
-                    // Name field (sign up only)
                     if (_isSignUp) ...[
                       _buildTextField(
                         controller: _nameController,
@@ -281,6 +306,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         keyboardType: TextInputType.name,
                       ),
                       const SizedBox(height: 12),
+                      
                       DropdownButtonFormField<String>(
                         value: _userType,
                         decoration: InputDecoration(
@@ -289,6 +315,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           fillColor: Colors.white.withOpacity(0.85),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide.none,
                           ),
                         ),
                         items: const [
@@ -310,7 +337,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       const SizedBox(height: 12),
                     ],
 
-                    // Email field
                     _buildTextField(
                       controller: _emailController,
                       hint: 'email@gmail.com',
@@ -318,7 +344,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Password field
                     _buildTextField(
                       controller: _passwordController,
                       hint: 'كلمة المرور',
@@ -326,7 +351,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Main button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -367,7 +391,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                     ),
 
-                    // Toggle login/signup
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -387,52 +410,78 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ),
                         Text(
                           _isSignUp ? 'لديك حساب؟' : 'ليس لديك حساب؟',
-                          style: const TextStyle(color: Color(0xFF2D6A4F), fontSize: 14),
+                          style: const TextStyle(
+                            color: Color(0xFF2D6A4F),
+                            fontSize: 14,
+                          ),
                         ),
                       ],
                     ),
 
-                    // Divider
                     const SizedBox(height: 16),
                     Row(
                       children: const [
-                        Expanded(child: Divider(color: Color(0xFF2D6A4F), thickness: 0.5)),
+                        Expanded(
+                          child: Divider(
+                            color: Color(0xFF2D6A4F),
+                            thickness: 0.5,
+                          ),
+                        ),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
                             'أو',
-                            style: TextStyle(color: Color(0xFF2D6A4F), fontSize: 14),
+                            style: TextStyle(
+                              color: Color(0xFF2D6A4F),
+                              fontSize: 14,
+                            ),
                           ),
                         ),
-                        Expanded(child: Divider(color: Color(0xFF2D6A4F), thickness: 0.5)),
+                        Expanded(
+                          child: Divider(
+                            color: Color(0xFF2D6A4F),
+                            thickness: 0.5,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
 
-                    // Google button
                     _buildSocialButton(
                       label: 'Sign up with Google',
-                      icon: const Icon(Icons.g_mobiledata, size: 24, color: Colors.black87),
-                      onPressed: _isLoading ? null : () => _signInWithGoogle(context),
+                      icon: const Icon(
+                        Icons.g_mobiledata,
+                        size: 24,
+                        color: Colors.black87,
+                      ),
+                      onPressed: _isLoading
+                          ? null
+                          : () => _signInWithGoogle(context),
                     ),
                     const SizedBox(height: 10),
 
-                    // Apple button
                     _buildSocialButton(
                       label: 'Sign up with Apple',
-                      icon: const Icon(Icons.apple, size: 22, color: Colors.black87),
-                      onPressed: _isLoading ? null : () => _showComingSoon(context),
+                      icon: const Icon(
+                        Icons.apple,
+                        size: 22,
+                        color: Colors.black87,
+                      ),
+                      onPressed: _isLoading
+                          ? null
+                          : () => _showComingSoon(context),
                     ),
 
-                    // Terms
                     const SizedBox(height: 20),
                     const Text(
                       'عند الضغط على متابعة، أنت توافق على شروط الخدمة وسياسة الخصوصية',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Color(0xFF2D6A4F), fontSize: 12),
+                      style: TextStyle(
+                        color: Color(0xFF2D6A4F),
+                        fontSize: 12,
+                      ),
                     ),
 
-                    // Guest
                     const SizedBox(height: 16),
                     TextButton(
                       onPressed: _isLoading
@@ -441,7 +490,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const HomeScreen(userName: null),
+                                  builder: (_) => const HomeScreen(
+                                    userName: null,
+                                  ),
                                 ),
                               );
                             },
@@ -464,6 +515,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
@@ -478,10 +530,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       style: const TextStyle(color: Color(0xFF0E3C30)),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFF7AAE95), fontSize: 14),
+        hintStyle: const TextStyle(
+          color: Color(0xFF7AAE95),
+          fontSize: 14,
+        ),
         filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.85),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        fillColor: Colors.white.withOpacity(0.85),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
@@ -492,7 +550,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF085041), width: 1.5),
+          borderSide: const BorderSide(
+            color: Color(0xFF085041),
+            width: 1.5,
+          ),
         ),
       ),
     );
@@ -506,9 +567,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return OutlinedButton(
       style: OutlinedButton.styleFrom(
         side: const BorderSide(color: Colors.white54, width: 1),
-        backgroundColor: Colors.white.withValues(alpha: 0.75),
+        backgroundColor: Colors.white.withOpacity(0.75),
         padding: const EdgeInsets.symmetric(vertical: 13),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
       ),
       onPressed: onPressed,
       child: Row(
@@ -518,7 +581,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(width: 10),
           Text(
             label,
-            style: const TextStyle(color: Colors.black87, fontSize: 15),
+            style: const TextStyle(
+              color: Colors.black87,
+              fontSize: 15,
+            ),
           ),
         ],
       ),
