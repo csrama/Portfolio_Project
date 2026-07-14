@@ -1,5 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'dart:convert';
 import 'api_service.dart';
 
 class AuthService {
@@ -7,7 +7,10 @@ class AuthService {
   static const _savedUserNameKey = 'saved_user_name';
   static const _savedUserPasswordKey = 'saved_user_password';
   static const _savedTokenKey = 'saved_auth_token';
+  static const _savedRefreshTokenKey = 'saved_refresh_token';
+  static const _savedUserDataKey = 'saved_user_data';
 
+  
   Future<Map<String, dynamic>> signUp({
     required String email,
     required String password,
@@ -115,15 +118,19 @@ class AuthService {
     }
 
     final storedUser = await _loadStoredUser();
-    return storedUser != null && storedUser['email'] != null && storedUser['full_name'] != null;
+    return storedUser != null && 
+           storedUser['email'] != null && 
+           storedUser['full_name'] != null;
   }
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_savedTokenKey);
+    await prefs.remove(_savedRefreshTokenKey);
     await prefs.remove(_savedUserEmailKey);
     await prefs.remove(_savedUserNameKey);
     await prefs.remove(_savedUserPasswordKey);
+    await prefs.remove(_savedUserDataKey);
   }
 
   Future<void> persistSession({
@@ -158,5 +165,112 @@ class AuthService {
       'full_name': fullName,
       'password': password,
     };
+  }
+
+
+  // جلب توكن الوصول (Access Token)
+  Future<String?> getAccessToken() async {
+    return await getToken(); // reuse existing method
+  }
+
+  // جلب توكن التحديث (Refresh Token)
+  Future<String?> getRefreshToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_savedRefreshTokenKey);
+  }
+
+  // حفظ التوكنات (Access + Refresh)
+  Future<void> saveTokens(String accessToken, String refreshToken) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_savedTokenKey, accessToken);
+    await prefs.setString(_savedRefreshTokenKey, refreshToken);
+  }
+
+  // مسح جميع التوكنات
+  Future<void> clearTokens() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_savedTokenKey);
+    await prefs.remove(_savedRefreshTokenKey);
+  }
+
+  // جلب بيانات المستخدم المخزنة
+  Future<Map<String, dynamic>?> getUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userDataJson = prefs.getString(_savedUserDataKey);
+    if (userDataJson != null && userDataJson.isNotEmpty) {
+      try {
+        return jsonDecode(userDataJson) as Map<String, dynamic>;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  // حفظ بيانات المستخدم
+  Future<void> saveUserData(Map<String, dynamic> userData) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_savedUserDataKey, jsonEncode(userData));
+  }
+
+  // مسح بيانات المستخدم
+  Future<void> clearUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_savedUserDataKey);
+  }
+
+  // تجديد توكن الوصول باستخدام Refresh Token
+  Future<String> refreshAccessToken() async {
+    final refreshToken = await getRefreshToken();
+    
+    if (refreshToken == null || refreshToken.isEmpty) {
+      throw Exception('No refresh token available');
+    }
+
+    try {
+      // استدعاء API لتجديد التوكن
+      final response = await ApiService.postJson(
+        '/auth/refresh',
+        body: {'refreshToken': refreshToken},
+      );
+
+      final newAccessToken = response['accessToken']?.toString();
+      final newRefreshToken = response['refreshToken']?.toString();
+
+      if (newAccessToken != null && newAccessToken.isNotEmpty) {
+        // حفظ التوكنات الجديدة
+        await saveTokens(newAccessToken, newRefreshToken ?? refreshToken);
+        return newAccessToken;
+      } else {
+        throw Exception('Invalid response from refresh endpoint');
+      }
+    } catch (e) {
+      // إذا فشل التجديد، امسح التوكنات وأعد طرح الاستثناء
+      await clearTokens();
+      throw Exception('Failed to refresh token: $e');
+    }
+  }
+
+  // حفظ بيانات المستخدم والتوكنات معاً (للاستخدام السهل)
+  Future<void> saveUserSession({
+    required Map<String, dynamic> userData,
+    required String accessToken,
+    required String refreshToken,
+  }) async {
+    await saveTokens(accessToken, refreshToken);
+    await saveUserData(userData);
+  }
+
+  // مسح جلسة المستخدم بالكامل
+  Future<void> clearUserSession() async {
+    await clearTokens();
+    await clearUserData();
+  }
+
+  // التحقق من صلاحية التوكن (اختياري)
+  Future<bool> isTokenValid() async {
+    final token = await getAccessToken();
+    if (token == null || token.isEmpty) return false;
+    return true;
   }
 }
