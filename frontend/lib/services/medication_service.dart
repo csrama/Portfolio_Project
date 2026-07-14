@@ -1,154 +1,105 @@
-import '../models/medication.dart';
+import '../models/medication_summary.dart';
 import 'api_service.dart';
 import 'auth_service.dart';
 
 class MedicationService {
   final AuthService _authService = AuthService();
 
- 
-  Future<List<Medication>> fetchMedications() async {
-    final token = await _authService.getAccessToken();
-    if (token == null) return [];
+  List<MedicationSummary> mapMedications(List<Map<String, dynamic>> payload) {
+    return payload.map((item) {
+      final id = item['id'];
+      final name = (item['name'] ?? '').toString();
+      final dosage = (item['dosage'] ?? '').toString();
+      final form = (item['form'] ?? 'tablet').toString();
+      final instructions = (item['instructions'] ?? '').toString();
+      final isActive = item['is_active'] != false;
 
-    try {
-      final response = await ApiService.getJsonList(
-        '/medications',
-        token: token,
+      return MedicationSummary(
+        id: id is int ? id : int.tryParse(id.toString()) ?? 0,
+        name: name,
+        dosage: dosage,
+        form: form,
+        instructions: instructions,
+        isActive: isActive,
       );
-
-      return response
-          .whereType<Map<String, dynamic>>()
-          .map((json) => Medication.fromJson(json))
-          .toList();
-    } catch (e) {
-      return [];
-    }
+    }).toList();
   }
 
-  Future<Medication?> fetchMedicationById(String id) async {
-    final token = await _authService.getAccessToken();
-    if (token == null) return null;
+  Future<List<MedicationSummary>> fetchMedications() async {
+    final token = await _authService.getToken();
+    final payload =
+        await ApiService.getJsonDynamic('/medications', token: token);
 
-    try {
-      final response = await ApiService.getJsonMap(
-        '/medications/$id',
-        token: token,
+    if (payload is List) {
+      return mapMedications(
+        payload
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList(),
       );
-
-      return Medication.fromJson(response);
-    } catch (e) {
-      return null;
     }
+
+    if (payload is Map<String, dynamic>) {
+      final list = payload['medications'];
+      if (list is List) {
+        return mapMedications(list
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList());
+      }
+    }
+
+    return [];
   }
 
-
-  Future<Medication> createMedication({
+  Future<MedicationSummary> createMedication({
     required String name,
-    required String genericName,
     required String dosage,
     required String form,
-    required List<String> times,
-    required List<String> daysOfWeek,
-    required String dependentId,
     String? instructions,
-    String? notes,
-    String? prescribedBy,
-    DateTime? startDate,
-    DateTime? endDate,
-    List<String>? interactions,
-    String? imageUrl,
   }) async {
-    final token = await _authService.getAccessToken();
-    if (token == null) {
-      throw Exception('User not authenticated');
-    }
+    final token = await _authService.getToken();
+    final payload = await ApiService.postJson(
+      '/medications',
+      body: {
+        'name': name,
+        'dosage': dosage,
+        'form': form,
+        if (instructions != null && instructions.isNotEmpty)
+          'instructions': instructions,
+      },
+      token: token,
+    );
 
-    final body = {
-      'name': name,
-      'generic_name': genericName,
-      'dosage': dosage,
-      'form': form,
-      'times': times,
-      'days_of_week': daysOfWeek,
-      'dependent_id': dependentId,
-      if (instructions != null) 'instructions': instructions,
-      if (notes != null) 'notes': notes,
-      if (prescribedBy != null) 'prescribed_by': prescribedBy,
-      if (startDate != null) 'start_date': startDate.toIso8601String(),
-      if (endDate != null) 'end_date': endDate.toIso8601String(),
-      if (interactions != null) 'interactions': interactions,
-      if (imageUrl != null) 'image_url': imageUrl,
-    };
-
-    try {
-      final response = await ApiService.postJson(
-        '/medications',
-        body: body,
-        token: token,
-      );
-
-      return Medication.fromJson(response);
-    } catch (e) {
-      throw Exception('Failed to create medication: $e');
-    }
+    return MedicationSummary(
+      id: payload['id'] is int
+          ? payload['id'] as int
+          : int.tryParse(payload['id'].toString()) ?? 0,
+      name: (payload['name'] ?? '').toString(),
+      dosage: (payload['dosage'] ?? '').toString(),
+      form: (payload['form'] ?? form).toString(),
+      instructions: (payload['instructions'] ?? '').toString(),
+      isActive: payload['is_active'] != false,
+    );
   }
 
-  
-
-  Future<Medication> updateMedication(Medication medication) async {
-    final token = await _authService.getAccessToken();
-    if (token == null) {
-      throw Exception('User not authenticated');
+  Future<List<Map<String, dynamic>>> checkInteractions(
+      List<String> medicationNames) async {
+    if (medicationNames.length < 2) {
+      return [];
     }
 
-    try {
-      final response = await ApiService.putJson(
-        '/medications/${medication.id}',
-        body: medication.toJson(),
-        token: token,
-      );
+    final token = await _authService.getToken();
+    final payload = await ApiService.postJson(
+      '/interactions/check',
+      body: {'generic_names': medicationNames},
+      token: token,
+    );
 
-      return Medication.fromJson(response);
-    } catch (e) {
-      throw Exception('Failed to update medication: $e');
-    }
-  }
-
-
-  Future<bool> deleteMedication(String id) async {
-    final token = await _authService.getAccessToken();
-    if (token == null) {
-      throw Exception('User not authenticated');
+    if (payload['interactions'] is List) {
+      return List<Map<String, dynamic>>.from(payload['interactions']);
     }
 
-    try {
-      await ApiService.deleteJson(
-        '/medications/$id',
-        token: token,
-      );
-      return true;
-    } catch (e) {
-      throw Exception('Failed to delete medication: $e');
-    }
-  }
-
-
-  Future<Medication> toggleMedicationStatus(String id) async {
-    final token = await _authService.getAccessToken();
-    if (token == null) {
-      throw Exception('User not authenticated');
-    }
-
-    try {
-      final response = await ApiService.patchJson(
-        '/medications/$id/toggle',
-        body: {},
-        token: token,
-      );
-
-      return Medication.fromJson(response);
-    } catch (e) {
-      throw Exception('Failed to toggle medication status: $e');
-    }
+    return [];
   }
 }
