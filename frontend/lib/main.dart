@@ -1,58 +1,102 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
-import 'providers/dependent_provider.dart';
-import 'providers/medication_provider.dart';
 import 'services/auth_service.dart';
+import 'services/api_service.dart';
 import 'services/dependent_service.dart';
-import 'services/medication_service.dart';
-import 'views/splash/splash_screen.dart';
+import 'providers/dependent_provider.dart';
+import 'services/dio_client.dart';
 import 'views/dashboard/home_screen.dart';
-import 'views/dashboard/dependents_screen.dart';
-import 'views/onboarding/onboarding_screen.dart';
-import 'config/environment.dart';
+import 'views/splash/splash_screen.dart';
 
 void main() {
-  Environment.printEnvironmentInfo();
-  
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(
-          create: (_) => AuthProvider(
-            authService: AuthService(),
-          ),
-        ),
-        
-        Provider(create: (_) => DependentService()),
-        Provider(create: (_) => MedicationService()),
-        
-        ChangeNotifierProvider(create: (context) => DependentProvider()),
-        ChangeNotifierProvider(create: (context) => MedicationProvider()),
-      ],
-      child: const MyApp(),
-    ),
-  );
+  runApp(const DawaiApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class DawaiApp extends StatelessWidget {
+  const DawaiApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'MedTrack',
-      theme: ThemeData(
-        primarySwatch: Colors.green,
-        fontFamily: 'Cairo',
-        useMaterial3: true,
+    return MultiProvider(
+      providers: [
+        Provider<AuthService>(
+          create: (_) => AuthService(),
+        ),
+        Provider<DependentService>(
+          create: (_) => DependentService(apiService: ApiService()),
+        ),
+        ChangeNotifierProvider<AuthProvider>(
+          create: (context) => AuthProvider(
+            authService: context.read<AuthService>(),
+          ),
+        ),
+        ChangeNotifierProvider<DependentProvider>(
+          create: (context) => DependentProvider(
+            dependentService: context.read<DependentService>(),
+          ),
+        ),
+        Provider<DioClient>(
+          create: (_) => DioClient(),
+        ),
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Dawai',
+        theme: ThemeData(
+         colorScheme: ColorScheme.fromSeed(
+  seedColor: const Color.fromARGB(255, 2, 111, 38),
+),
+          fontFamily: 'Cairo',
+        ),
+        home: const _AuthGate(),
       ),
-      debugShowCheckedModeBanner: false,
-      home: const SplashScreen(),
-      routes: {
-        '/home': (context) => const HomeScreen(),
-        '/dependents': (context) => const DependentsScreen(),
-        '/onboarding': (context) => const OnboardingScreen(),
+    );
+  }
+}
+
+/// Decides which screen to show at app start:
+///  - If a session already exists in secure storage -> HomeScreen
+///  - Otherwise -> SplashScreen (which walks through onboarding + login/signup)
+///
+/// Runs the storage read ONCE (Future is cached in initState). Previously
+/// FutureBuilder inside a Consumer created a new Future on every rebuild,
+/// which combined with notifyListeners() caused an infinite rebuild loop
+/// (blank spinner forever).
+class _AuthGate extends StatefulWidget {
+  const _AuthGate();
+
+  @override
+  State<_AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<_AuthGate> {
+  late final Future<bool> _initFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _initFuture = context.read<AuthProvider>().checkLoginStatus();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _initFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.data == true && !snapshot.hasError) {
+          final user = context.read<AuthProvider>().user;
+          return HomeScreen(
+            userName: user?['name'] as String? ?? 'مستخدم',
+            photoUrl: user?['photo'] as String?,
+          );
+        }
+        return const SplashScreen();
       },
     );
   }
