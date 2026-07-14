@@ -39,8 +39,8 @@ class MedicationProvider extends ChangeNotifier {
         daysOfWeek: medication.daysOfWeek,
         dependentId: medication.dependentId,
         instructions: medication.instructions,
-        notes: medication.notes,
-        prescribedBy: medication.prescribedBy,
+        notes: null,  
+        prescribedBy: null,  
         startDate: medication.startDate,
         endDate: medication.endDate,
         interactions: medication.interactions,
@@ -61,6 +61,23 @@ class MedicationProvider extends ChangeNotifier {
       final success = await _service.deleteMedication(id);
       if (success) {
         _medications.removeWhere((m) => m.id == id);
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> toggleMedicationStatus(String id) async {
+    try {
+      final updated = await _service.toggleMedicationStatus(id);
+      final index = _medications.indexWhere((m) => m.id == id);
+      if (index != -1) {
+        _medications[index] = updated;
         notifyListeners();
         return true;
       }
