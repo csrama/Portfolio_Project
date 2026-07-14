@@ -3,11 +3,11 @@ import '../services/auth_service.dart';
 import '../models/user.dart';
 
 class AuthProvider extends ChangeNotifier {
-  
+ 
 
   final AuthService _authService;
 
- 
+  
   User? _currentUser;
   String? _accessToken;
   String? _refreshToken;
@@ -16,6 +16,7 @@ class AuthProvider extends ChangeNotifier {
   String? _errorMessage;
   bool _isInitialized = false;
 
+  
 
   AuthProvider({required AuthService authService})
       : _authService = authService;
@@ -23,18 +24,14 @@ class AuthProvider extends ChangeNotifier {
   
   User? get currentUser => _currentUser;
   String? get accessToken => _accessToken;
-  String? get refreshToken => _refreshToken;
+  String? get refreshToken => _refreshToken;  
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _isAuthenticated;
   String? get errorMessage => _errorMessage;
   bool get isInitialized => _isInitialized;
-
   bool get hasValidSession => _isAuthenticated && _accessToken != null;
-
   String get userName => _currentUser?.fullName ?? 'مستخدم';
-
   bool get isCaregiver => _currentUser?.userType == 'caregiver';
-
   bool get isPatient => _currentUser?.userType == 'general_user';
 
  
@@ -104,6 +101,7 @@ class AuthProvider extends ChangeNotifier {
     return restoreSession();
   }
 
+ 
   Future<bool> login({
     required String email,
     required String password,
@@ -190,6 +188,8 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+ 
+
   Future<bool> register({
     required String email,
     required String password,
@@ -244,7 +244,8 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> refreshToken() async {
+ 
+  Future<bool> refreshAccessToken() async {  
     if (_refreshToken == null) {
       _errorMessage = 'No refresh token available';
       notifyListeners();
@@ -271,7 +272,7 @@ class AuthProvider extends ChangeNotifier {
 
     final isValid = await _authService.isTokenValid();
     if (!isValid) {
-      final success = await refreshToken();
+      final success = await refreshAccessToken();    
       if (!success) {
         await logout();
         return null;
@@ -281,7 +282,6 @@ class AuthProvider extends ChangeNotifier {
     return _accessToken;
   }
 
-  
 
   Future<void> logout() async {
     _isLoading = true;
@@ -314,6 +314,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  
   void clear() {
     _currentUser = null;
     _accessToken = null;
@@ -324,6 +325,8 @@ class AuthProvider extends ChangeNotifier {
     _isInitialized = false;
     notifyListeners();
   }
+
+ 
 
   Future<bool> isTokenValid() async {
     return await _authService.isTokenValid();
@@ -342,9 +345,7 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       await _authService.saveUserData(newData);
-      
       _currentUser = User.fromJson(newData);
-      
       notifyListeners();
     } catch (e) {
       _errorMessage = e.toString();
@@ -353,6 +354,5 @@ class AuthProvider extends ChangeNotifier {
   }
 
   String? get token => _accessToken;
-
   bool get hasValidToken => _accessToken != null && _accessToken!.isNotEmpty;
 }
