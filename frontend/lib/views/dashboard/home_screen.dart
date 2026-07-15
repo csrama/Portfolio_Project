@@ -409,40 +409,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  void _showAccountMenu(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.redAccent),
-                  title: const Text(
-                    'تسجيل الخروج',
-                    textAlign: TextAlign.right,
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(sheetContext); // close the sheet first
-                    await _signOut(context);
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+  
 
   Future<void> _signOut(BuildContext context) async {
     // Clear whatever kind of session is active (email token or Google).
@@ -474,26 +441,140 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 // Profile avatar - dark green. Tap opens the account menu
-                // (currently just "تسجيل الخروج" / sign out).
+                // with improved items: حسابي, الإعدادات, تذكيراتي, أدويتي, التابعون, تسجيل الخروج
                 Consumer<DependentProvider>(
                   builder: (context, depProvider, _) {
                     final selectedDep = depProvider.selectedDependent;
-                    return GestureDetector(
-              onTap: () async {
-                final changed = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const DependentsScreen(),
-                  ),
-                );
-
-                if (changed == true) {
-                  _loadMedications();
-                }
-              },
+                    return PopupMenuButton<String>(
+                      tooltip: '',
+                      offset: const Offset(0, 56),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 4,
+                      itemBuilder: (context) => [
+                        // Header
+                        const PopupMenuItem<String>(
+                          enabled: false,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 4),
+                            child: Text(
+                              ' حسابي',
+                              textAlign: TextAlign.right,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: _Colors.darkGreen,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const PopupMenuDivider(height: 8),
+                        // حسابي
+                        const PopupMenuItem<String>(
+                          value: 'my_account',
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text('حسابي', style: TextStyle(fontSize: 16)),
+                              SizedBox(width: 12),
+                              Icon(Icons.person_outline_rounded, color: _Colors.darkGreen, size: 24),
+                            ],
+                          ),
+                        ),
+                        // الإعدادات
+                        const PopupMenuItem<String>(
+                          value: 'settings',
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text('الإعدادات', style: TextStyle(fontSize: 16)),
+                              SizedBox(width: 12),
+                              Icon(Icons.settings_outlined, color: _Colors.darkGreen, size: 24),
+                            ],
+                          ),
+                        ),
+                        // تذكيراتي
+                        const PopupMenuItem<String>(
+                          value: 'reminders',
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text('تذكيراتي', style: TextStyle(fontSize: 16)),
+                              SizedBox(width: 12),
+                              Icon(Icons.notifications_outlined, color: _Colors.darkGreen, size: 24),
+                            ],
+                          ),
+                        ),
+                        // أدويتي
+                        const PopupMenuItem<String>(
+                          value: 'my_meds',
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text('أدويتي', style: TextStyle(fontSize: 16)),
+                              SizedBox(width: 12),
+                              Icon(Icons.medication_outlined, color: _Colors.darkGreen, size: 24),
+                            ],
+                          ),
+                        ),
+                        // التابعون
+                        const PopupMenuItem<String>(
+                          value: 'dependents',
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text('التابعون', style: TextStyle(fontSize: 16)),
+                              SizedBox(width: 12),
+                              Icon(Icons.people_outline_rounded, color: _Colors.darkGreen, size: 24),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(height: 8),
+                        // تسجيل الخروج
+                        const PopupMenuItem<String>(
+                          value: 'logout',
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text('تسجيل الخروج',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: Colors.redAccent,
+                                  )),
+                              SizedBox(width: 12),
+                              Icon(Icons.logout_rounded, color: Colors.redAccent, size: 24),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onSelected: (value) async {
+                        if (value == 'my_account') {
+                          // TODO: Navigate to account screen
+                        } else if (value == 'settings') {
+                          // TODO: Navigate to settings screen
+                        } else if (value == 'reminders') {
+                          setState(() => _selectedIndex = 2);
+                        } else if (value == 'my_meds') {
+                          setState(() => _selectedIndex = 1);
+                        } else if (value == 'dependents') {
+                          final changed = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const DependentsScreen(),
+                            ),
+                          );
+                          if (changed == true) {
+                            _loadMedications();
+                          }
+                        } else if (value == 'logout') {
+                          await _signOut(context);
+                        }
+                      },
                       child: CircleAvatar(
                         radius: 26,
-                        backgroundColor: selectedDep != null ? const Color.fromARGB(255, 122, 232, 166) : _Colors.darkGreen,
+                        backgroundColor: selectedDep != null ? const Color(0xFFC9932E) : _Colors.darkGreen,
                         child: selectedDep != null
                             ? Text(selectedDep.fullName[0], style: const TextStyle(color: Colors.white, fontSize: 24))
                             : const Icon(Icons.person, color: Colors.white, size: 38),
@@ -502,10 +583,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
                 const SizedBox(width: 12),
+                
                 // Single source for the greeting/name/dependent-profile block.
-                // (Previously there was a duplicate greeting Text widget here
-                // AND inside the Consumer below — that's what caused
-                // "صباح الخير" to render twice, stacked on top of each other.)
+               
                 Expanded(
                   child: Consumer<DependentProvider>(
                     builder: (context, depProvider, _) {
@@ -574,7 +654,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   shape: BoxShape.circle,
                   border: Border.all(color: _Colors.primaryGreen, width: 1.5),
                 ),
-               // _loadMedications();
+
                 child: const Icon(
                   Icons.add,
                   color: _Colors.primaryGreen,
@@ -699,18 +779,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 16),
                       GestureDetector(
-                     onTap: () async {
-                       final changed = await Navigator.push(
-                         context,
-                         MaterialPageRoute(
-                           builder: (_) => const DependentsScreen(),
-                         ),
-                       );
-
-                       if (changed == true) {
-                         _loadMedications();
-                       }
-                     },
+                     onTap: _openAddMedicationSheet,
                         child: Container(
                           width: double.infinity,
                           margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -720,7 +789,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           child: const Text(
-                            '+ إضافة تابعين',
+                            '+ إضافة دواء',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.white,
@@ -744,18 +813,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 16),
                     GestureDetector(
-                      onTap: () async {
-                        final changed = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const DependentsScreen(),
-                          ),
-                        );
-
-                        if (changed == true) {
-                          _loadMedications();
-                        }
-                      },
+                      onTap: _openAddMedicationSheet,
                       child: Container(
                         width: double.infinity,
                         margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -765,7 +823,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         child: const Text(
-                          '+ إضافة تابعين',
+                          '+ إضافة دواء',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Colors.white,
@@ -1074,14 +1132,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   TimeOfDay _time = const TimeOfDay(hour: 6, minute: 0);
   int _dosesPerDay = 1;
 
-  /*static const List<Map<String, String>> _pharmacySuggestions = [
-    {'name': 'Paracetamol', 'dosage': '500mg'},
-    {'name': 'Amoxicillin', 'dosage': '250mg'},
-    {'name': 'Ibuprofen', 'dosage': '400mg'},
-    {'name': 'Metformin', 'dosage': '850mg'},
-    {'name': 'Omeprazole', 'dosage': '20mg'},
-    {'name': 'Vitamin D', 'dosage': '1000IU'},
-  ];*/
+
   List<Map<String, dynamic>> _pharmacySuggestions = [];
   Future<void> _searchMedicines(String query) async {
     if (query.trim().isEmpty) {
@@ -1115,21 +1166,15 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
     super.dispose();
   }
 
-/*  List<Map<String, String>> get _filteredSuggestions {
-    final query = _searchController.text.trim().toLowerCase();
-    if (query.isEmpty) {
-      return [];
-    }
-    return _pharmacySuggestions.where((item) {
-      final name = item['name']!.toLowerCase();
-      return name.contains(query);
-    }).toList();
-  }*/
 
 void _selectSuggestion(Map<String, dynamic> suggestion) {
   setState(() {
+    final nameEn = (suggestion['name_en'] ?? '').toString();
+    final nameAr = (suggestion['name_ar'] ?? '').toString();
+
+    // نحفظ الاسمين مع بعض بنفس الحقل عشان ما نحتاج نعدل قاعدة البيانات
     _nameController.text =
-        suggestion['name_en'] ?? '';
+        nameAr.isNotEmpty ? '$nameEn — $nameAr' : nameEn;
 
     _dosageController.text =
         suggestion['dosage'] ?? '';
@@ -1264,7 +1309,6 @@ void _selectSuggestion(Map<String, dynamic> suggestion) {
                 const SizedBox(height: 6),
                 TextField(
                   controller: _searchController,
-                  //onChanged: (value) => setState(() {}),
                   onChanged: _searchMedicines,
                   textAlign: TextAlign.right,
                   decoration: InputDecoration(
@@ -1290,8 +1334,8 @@ if (_pharmacySuggestions.isNotEmpty)
       physics: const NeverScrollableScrollPhysics(),
       itemCount: _pharmacySuggestions.length,
       itemBuilder: (context, index) {
+   
         final item = _pharmacySuggestions[index];
-
         final nameEn = (item['name_en'] ?? '').toString();
         final nameAr = (item['name_ar'] ?? '').toString();
 
@@ -1307,7 +1351,7 @@ if (_pharmacySuggestions.isNotEmpty)
           trailing: const Icon(
             Icons.medical_services_outlined,
             color: _Colors.primaryGreen,
-            ),
+          ),
           onTap: () => _selectSuggestion(item),
         );
       },
