@@ -1,15 +1,22 @@
-# TODO - Tracking pills / low stock alerts
+# TODO - End-to-End Authentication + Home Page
 
-## Backend
-- [ ] إضافة دالة في `backend/src/db/pool.js` لحساب `remaining_quantity` لكل دواء بناءً على `total_quantity - عدد dose_records حيث dose_taken=true`.
-- [ ] إضافة endpoint في `backend/src/routes/medications.js`: `GET /medications/stocks` يرجع قائمة الأدوية مع remaining + low_stock.
+## Completed
+- [x] Frontend AuthService: added login/register/logout helpers and fixed token getter return type.
+- [x] Backend auth endpoints: `/auth/register` and `/auth/login` now return `refreshToken`.
+- [x] Backend auth endpoints: added `/auth/refresh` and `/auth/logout`.
+- [x] Backend tests updated for refresh flow.
 
-## Frontend
-- [x] تعديل `frontend/lib/views/dashboard/home_screen.dart` لإضافة قسم/Widget يعرض تنبيهات المخزون المنخفض.
+## Still required (DB-backed invalidation)
+- [ ] Replace in-memory `refreshTokensStore` with Postgres-backed storage.
+  - Use existing tables in `backend/src/db/migrations/007_better_auth_tables.sql` (session/account) OR add a new migration.
+- [ ] Update `backend/src/db/pool.js` with queries for refresh token/session revocation.
+- [ ] Update backend `/auth/refresh` and `/auth/logout` to use DB.
+- [ ] Ensure `/auth/google` and offline auth flows also return `refreshToken` (or adapt frontend).
 
-- [ ] (اختياري) إضافة loading/error state للتنبيهات.
+## Testing
+- [ ] Fix inability to run npm/flutter tests under current shell restrictions (avoid && / || separators).
+- [ ] Run backend tests + frontend tests and ensure compilation passes.
 
-## Verification
-- [ ] تشغيل backend + اختبار endpoint عبر browser/postman.
-- [ ] تشغيل Flutter dashboard والتأكد من ظهور التنبيهات.
+## Home page end-to-end
+- [ ] Verify logout redirects to onboarding/splash and home page no longer uses API calls after logout.
 
