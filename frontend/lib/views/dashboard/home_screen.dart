@@ -585,7 +585,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             tooltip: 'تسجيل الخروج',
             icon: const Icon(Icons.logout, color: _Colors.darkGreen),
-            onPressed: _handleLogout,
+            onPressed: () => _signOut(context),
           ),
         ],
       ),
