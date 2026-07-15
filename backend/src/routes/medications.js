@@ -2,6 +2,7 @@ const { Hono } = require('hono');
 const { z } = require('zod');
 const { pool } = require('../db/pool');
 const { authMiddleware } = require('../middleware/auth');
+
 const router = new Hono();
 
 const medicationSchema = z.object({
@@ -10,87 +11,206 @@ const medicationSchema = z.object({
   form: z.string().optional(),
   instructions: z.string().optional(),
   total_quantity: z.number().int().positive().optional(),
-  dependent_id: z.union([z.number().int().nullable(), z.number().int().positive().optional()]).optional()
+
+  dependent_id: z.coerce.number().int().positive().optional(),
+
+  type: z.number().int().optional(),
+  days_of_week: z.array(z.string()).optional(),
+  period: z.string().optional(),
+  time: z.string().optional(),
+  doses_per_day: z.number().int().positive().optional()
 });
 
-router.use('*', authMiddleware);
 
+// ===================================
+// GET MEDICATIONS
+// ===================================
 router.get('/', async (c) => {
-  try {
-    const user = c.get('user');
-    const medications = await pool.listMedications(user.id);
-    return c.json(medications);
-  } catch (error) {
-    throw error;
+
+  const user = c.get('user');
+
+  const dependentId =
+    c.req.query('dependent_id');
+
+
+  let result;
+
+
+
+  // ===================================
+  // طلب أدوية تابع
+  // ===================================
+  if (dependentId) {
+
+
+    // تأكد أن المستخدم هو صاحب التابع
+    const dependent = await pool.query(
+      `
+      SELECT id
+      FROM dependents
+      WHERE id=$1
+      AND caregiver_user_id=$2
+      `,
+      [
+        Number(dependentId),
+        user.id
+      ]
+    );
+
+
+
+    if (dependent.rows.length === 0) {
+
+      return c.json(
+        {
+          error: 'ليس لديك صلاحية لهذا التابع'
+        },
+        403
+      );
+
+    }
+
+
+
+    result = await pool.query(
+      `
+      SELECT *
+      FROM medications
+      WHERE dependent_id=$1
+      ORDER BY created_at DESC
+      `,
+      [
+        Number(dependentId)
+      ]
+    );
+
+
   }
+
+
+  // ===================================
+  // أدوية المستخدم الحالي فقط
+  // ===================================
+  else {
+
+
+    result = await pool.query(
+      `
+      SELECT *
+      FROM medications
+      WHERE user_id=$1
+      AND dependent_id IS NULL
+      ORDER BY created_at DESC
+      `,
+      [
+        user.id
+      ]
+    );
+
+
+  }
+
+
+
+  return c.json(result.rows);
+
+
 });
 
+
+
+
+
+
+// ===================================
+// ADD MEDICATION
+// ===================================
 router.post('/', async (c) => {
-  try {
-    const user = c.get('user');
-    const body = await c.req.json().catch(() => ({}));
-    const parsed = medicationSchema.safeParse(body);
-    if (!parsed.success) {
-      return c.json({ error: parsed.error.issues[0].message }, 400);
+
+
+  const user = c.get('user');
+
+
+  const body =
+    await c.req.json()
+      .catch(() => ({}));
+
+
+
+  const parsed =
+    medicationSchema.safeParse(body);
+
+
+
+  if (!parsed.success) {
+
+    return c.json(
+      {
+        error: parsed.error.issues[0].message
+      },
+      400
+    );
+
+  }
+
+
+
+
+  // ===================================
+  // إذا الدواء للتابع
+  // ===================================
+  if (parsed.data.dependent_id) {
+
+
+    const check =
+      await pool.query(
+        `
+        SELECT id
+        FROM dependents
+        WHERE id=$1
+        AND caregiver_user_id=$2
+        `,
+        [
+          parsed.data.dependent_id,
+          user.id
+        ]
+      );
+
+
+
+    if (check.rows.length === 0) {
+
+      return c.json(
+        {
+          error: 'تابع غير صالح'
+        },
+        403
+      );
+
     }
 
-    const medication = await pool.createMedication({
+
+  }
+  const medication =
+    await pool.createMedication({
+
       ...parsed.data,
-      user_id: user.id
-    });
-    return c.json(medication, 201);
-  } catch (error) {
-    throw error;
-  }
-});
 
-router.put('/:id', async (c) => {
-  try {
-    const user = c.get('user');
-    const body = await c.req.json().catch(() => ({}));
-    const medicationId = c.req.param('id');
+      user_id: user.id,
 
-    const parsed = medicationSchema.partial().safeParse(body);
-    if (!parsed.success) {
-      return c.json({ error: parsed.error.issues[0].message }, 400);
-    }
+      dependent_id:
+        parsed.data.dependent_id || null
 
-    const updated = await pool.updateMedication({
-      id: Number(medicationId),
-      userId: user.id,
-      dependentId: body.dependent_id ?? undefined,
-      updates: parsed.data
     });
 
-    if (!updated) {
-      return c.json({ error: 'Medication not found' }, 404);
-    }
+  return c.json(
+    medication,
+    201
+  );
 
-    return c.json(updated);
-  } catch (error) {
-    throw error;
-  }
+
 });
 
-router.delete('/:id', async (c) => {
-  try {
-    const user = c.get('user');
-    const medicationId = c.req.param('id');
 
-    const deleted = await pool.deleteMedication({
-      id: Number(medicationId),
-      userId: user.id
-    });
-
-    if (!deleted) {
-      return c.json({ error: 'Medication not found' }, 404);
-    }
-
-    return c.json({ ok: true });
-  } catch (error) {
-    throw error;
-  }
-});
 
 module.exports = router;
-

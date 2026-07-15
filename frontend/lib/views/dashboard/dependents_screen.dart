@@ -28,6 +28,7 @@ class _DependentsScreenState extends State<DependentsScreen> {
   void _showAddDependentSheet() {
     final nameController = TextEditingController();
     final relationshipController = TextEditingController();
+    final ageController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -62,6 +63,16 @@ class _DependentsScreenState extends State<DependentsScreen> {
             ),
             const SizedBox(height: 15),
             TextField(
+              controller: ageController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'العمر',
+                border: OutlineInputBorder(),
+              ),
+              textAlign: TextAlign.right,
+            ),
+            const SizedBox(height: 15),
+            TextField(
               controller: relationshipController,
               decoration: const InputDecoration(
                 labelText: 'صلة القرابة (مثلاً: أب، أم، ابن)',
@@ -89,13 +100,25 @@ class _DependentsScreenState extends State<DependentsScreen> {
           return;
         }
 
+        // نحول العمر لتاريخ ميلاد تقريبي (نفس اليوم/الشهر، السنة بس تفرق)
+        // لأن الباك إند يخزن date_of_birth مو رقم عمر مباشر
+        String? dateOfBirth;
+        final age = int.tryParse(ageController.text.trim());
+        if (age != null && age > 0) {
+          final now = DateTime.now();
+          dateOfBirth = DateTime(now.year - age, now.month, now.day)
+              .toIso8601String();
+        }
+
         await context.read<DependentProvider>().addDependent(
           auth.accessToken!,
           {
             'full_name': nameController.text,
             'relationship': relationshipController.text,
+            if (dateOfBirth != null) 'date_of_birth': dateOfBirth,
           },
         );
+        print("DEPENDENT ADDED SUCCESS");
 
         if (mounted) {
           Navigator.pop(context);
@@ -166,20 +189,38 @@ class _DependentsScreenState extends State<DependentsScreen> {
                   ),
                   title: Text(dependent.fullName),
                   subtitle: Text(dependent.relationship),
-                  trailing: isSelected 
+                  trailing: isSelected
                     ? const Icon(Icons.check_circle, color: Color(0xFF1D9E75))
                     : null,
-                  onTap: () {
+                  onTap: () async {
+
                     provider.selectDependent(dependent);
-                    Navigator.pop(context); // Return to home with selected dependent
+
+                    Navigator.pop(
+                      context,
+                      true,
+                    );
+
                   },
-                  onLongPress: () {
-                    Navigator.push(
+                  onLongPress: () async {
+                    final changed = await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => DependentDashboardScreen(dependent: dependent),
+                        builder: (_) => DependentDashboardScreen(
+                          dependent: dependent,
+                        ),
                       ),
                     );
+
+                    if (changed == true && mounted) {
+                      final auth = context.read<AuthProvider>();
+
+                      if (auth.accessToken != null) {
+                        context.read<DependentProvider>().fetchDependents(
+                          auth.accessToken!,
+                        );
+                      }
+                    }
                   },
                 ),
               );

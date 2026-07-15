@@ -73,6 +73,25 @@ const db = {
     return queryWithFallback(text, params);
   },
 
+  async searchMedicines(term) {
+    if (useMemoryStore) {
+      // لا يوجد كتالوج أدوية بالذاكرة المؤقتة؛ هذا البحث متاح فقط
+      // عند الاتصال بقاعدة PostgreSQL.
+      return [];
+    }
+
+    const { rows } = await queryWithFallback(
+      `SELECT id, name_en, name_ar, dosage, category
+       FROM medicines
+       WHERE name_en ILIKE $1 OR name_ar ILIKE $1
+       ORDER BY name_en
+       LIMIT 15`,
+      [`%${term}%`]
+    );
+
+    return rows;
+  },
+
   async createUser(data) {
     if (useMemoryStore) {
       const user = {
@@ -153,23 +172,48 @@ const db = {
     }
 
     const { rows } = await queryWithFallback(
-      `INSERT INTO medications (user_id, dependent_id, name, dosage, form, instructions, color, total_quantity, low_stock_threshold, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       RETURNING *`,
-      [
-        data.user_id,
-        data.dependent_id || null,
-        data.name,
-        data.dosage || null,
-        data.form || 'tablet',
-        data.instructions || null,
-        data.color || null,
-        data.total_quantity || 1,
-        data.low_stock_threshold || 1,
-        data.is_active !== false
-      ]
-    );
-    return rows[0];
+  `INSERT INTO medications (
+      user_id,
+      dependent_id,
+      name,
+      dosage,
+      form,
+      instructions,
+      color,
+      total_quantity,
+      low_stock_threshold,
+      is_active,
+      type,
+      days_of_week,
+      period,
+      time,
+      doses_per_day
+   )
+   VALUES (
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15
+   )
+   RETURNING *`,
+  [
+    data.user_id,
+    data.dependent_id || null,
+    data.name,
+    data.dosage || null,
+    data.form || 'tablet',
+    data.instructions || null,
+    data.color || null,
+    data.total_quantity || 1,
+    data.low_stock_threshold || 1,
+    data.is_active !== false,
+
+    data.type ?? 0,
+    data.days_of_week ?? [],
+    data.period ?? 'صباحا',
+    data.time ?? '08:00',
+    data.doses_per_day ?? 1
+  ]
+);
+
+return rows[0];
   },
 
   async createDependent(data) {
@@ -450,4 +494,3 @@ module.exports = {
     return useMemoryStore;
   }
 };
-
