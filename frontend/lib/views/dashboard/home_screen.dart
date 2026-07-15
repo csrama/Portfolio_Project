@@ -493,7 +493,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
                       child: CircleAvatar(
                         radius: 26,
-                        backgroundColor: selectedDep != null ? const Color(0xFFC9932E) : _Colors.darkGreen,
+                        backgroundColor: selectedDep != null ? const Color.fromARGB(255, 122, 232, 166) : _Colors.darkGreen,
                         child: selectedDep != null
                             ? Text(selectedDep.fullName[0], style: const TextStyle(color: Colors.white, fontSize: 24))
                             : const Icon(Icons.person, color: Colors.white, size: 38),
