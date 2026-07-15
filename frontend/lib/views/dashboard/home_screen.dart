@@ -1292,9 +1292,12 @@ if (_pharmacySuggestions.isNotEmpty)
       itemBuilder: (context, index) {
         final item = _pharmacySuggestions[index];
 
+        final nameEn = (item['name_en'] ?? '').toString();
+        final nameAr = (item['name_ar'] ?? '').toString();
+
         return ListTile(
           title: Text(
-            item['name_en'] ?? '',
+            nameAr.isNotEmpty ? '$nameEn — $nameAr' : nameEn,
             textAlign: TextAlign.right,
           ),
           subtitle: Text(
@@ -1304,7 +1307,7 @@ if (_pharmacySuggestions.isNotEmpty)
           trailing: const Icon(
             Icons.medical_services_outlined,
             color: _Colors.primaryGreen,
-          ),
+            ),
           onTap: () => _selectSuggestion(item),
         );
       },
