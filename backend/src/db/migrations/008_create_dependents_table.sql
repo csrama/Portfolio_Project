@@ -10,5 +10,4 @@ CREATE TABLE IF NOT EXISTS dependents (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-ALTER TABLE medications
-ADD COLUMN dependent_id INTEGER REFERENCES dependents(id) ON DELETE CASCADE;
+

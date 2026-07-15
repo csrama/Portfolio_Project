@@ -1,8 +1,13 @@
 function caregiverCheck(c, next) {
   const user = c.get('user');
-  if (!user || user.user_type !== 'caregiver') {
-    return c.json({ error: 'Caregiver access required' }, 403);
+
+  if (!user) {
+    return c.json(
+      { error: 'Unauthorized' },
+      401
+    );
   }
+
   return next();
 }
 

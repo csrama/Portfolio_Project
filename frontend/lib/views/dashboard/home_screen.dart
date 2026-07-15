@@ -1,4 +1,10 @@
-// lib/views/dashboard/home_screen.dart
+// lib/screens/dashboard/home_screen.dart
+//
+// Single drop-in replacement for the previous home_screen.dart.
+// Keeps the same class name (HomeScreen) and constructor signature
+// (userName, photoUrl) so existing imports/usages elsewhere in the
+// project (e.g. OnboardingScreen's Navigator.pushReplacement) keep
+// working without any changes.
 //
 // Combines:
 //  - Restored "صباح الخير / مساء الخير" greeting + profile avatar (dark green)
@@ -12,6 +18,7 @@
 // schedules endpoint is confirmed working.
 
 import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,8 +31,9 @@ import 'dependents_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/dependent_service.dart';
 import '../../services/api_service.dart';
-
+// ---------------------------------------------------------------------
 // Colors (inlined here to keep this a single self-contained file)
+// ---------------------------------------------------------------------
 class _Colors {
   static const Color primaryGreen = Color(0xFF1D9E75);
   static const Color darkGreen = Color(0xFF085041);
@@ -36,7 +44,9 @@ class _Colors {
   static const Color borderGrey = Color(0xFFE0E0E0);
 }
 
+// ---------------------------------------------------------------------
 // Medication model (local, in-memory)
+// ---------------------------------------------------------------------
 enum MedicationType { drops, cream, injection, bottle, tablets, capsule }
 
 extension _MedicationTypeIcon on MedicationType {
@@ -90,7 +100,9 @@ class MedicationItem {
   }
 }
 
+// ---------------------------------------------------------------------
 // HomeScreen (public API kept identical to the original file)
+// ---------------------------------------------------------------------
 class HomeScreen extends StatefulWidget {
   final String? userName;
   final String? photoUrl;
@@ -103,10 +115,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  final List<MedicationItem> _medications = [];
-  final Set<String> _takenMedications = {};
-
-  final List<Map<String, dynamic>> _interactionResults = [];
+  final List<MedicationItem> _medications =
+      []; // unlimited: just a growing list
+  final Set<String> _takenMedications = {}; // medication name + date key
 
   late final List<DateTime> _dateStrip;
   late DateTime _selectedDate;
@@ -126,6 +137,8 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     final today = DateTime.now();
     _selectedDate = today;
+    // 7-day rolling strip centered on today, oldest first so it reads
+    // naturally left-to-right even inside an RTL Directionality.
     _dateStrip = List.generate(7, (i) => today.add(Duration(days: i - 3)));
     _loadMedications();
     _loadTakenMedications();
@@ -134,12 +147,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Re-load medications if the selected dependent changes
     _loadMedications();
   }
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'صباح الخير';
+    if (hour < 12) {
+      return 'صباح الخير';
+    }
     return 'مساء الخير';
   }
 
@@ -154,6 +170,12 @@ class _HomeScreenState extends State<HomeScreen> {
       final index = western.indexOf(char);
       return index >= 0 ? arabic[index] : char;
     }).join();
+  }
+
+  String _formatMedicationInfo(MedicationItem medication) {
+    final timeLabel = _arabicDigits(medication.timeLabel);
+    final count = _arabicDigits(medication.dosesPerDay.toString());
+    return '$timeLabel. في اليوم/x$count';
   }
 
   List<MedicationItem> _medicationsForDate(DateTime date) {
@@ -177,34 +199,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return '${medication.name}_${iso}_$doseIndex';
   }
 
-  // (Taken) مطلوب: خانة واحدة لكل دواء خلال اليوم المختار.
-  String _medicationTakenKey(MedicationItem medication, DateTime date) {
-    final iso = '${date.year.toString().padLeft(4, '0')}-'
-        '${date.month.toString().padLeft(2, '0')}-'
-        '${date.day.toString().padLeft(2, '0')}';
-    return '${medication.name}_$iso';
-  }
-
-  bool _isMedicationTaken(MedicationItem medication, DateTime date) {
-    return _takenMedications.contains(_medicationTakenKey(medication, date));
-  }
-
-  void _toggleMedicationTaken(MedicationItem medication, DateTime date) {
-    final key = _medicationTakenKey(medication, date);
-    setState(() {
-      if (_takenMedications.contains(key)) {
-        _takenMedications.remove(key);
-      } else {
-        _takenMedications.add(key);
-      }
-    });
-    _saveTakenMedications();
-  }
-
-  // Old per-dose methods kept for reminders tab (currently not used after UI change).
   bool _isTaken(MedicationItem medication, DateTime date, int doseIndex) {
-    return _takenMedications
-        .contains(_medicationDoseKey(medication, date, doseIndex));
+    return _takenMedications.contains(
+      _medicationDoseKey(medication, date, doseIndex),
+    );
   }
 
   void _toggleTaken(MedicationItem medication, DateTime date, int doseIndex) {
@@ -219,6 +217,97 @@ class _HomeScreenState extends State<HomeScreen> {
     _saveTakenMedications();
   }
 
+  Future<void> _saveMedications() async {
+    final prefs = await SharedPreferences.getInstance();
+    final data = _medications.map((m) {
+      return {
+        'id': m.id,
+        'name': m.name,
+        'dosage': m.dosage,
+        'type': m.type.index,
+        'daysOfWeek': m.daysOfWeek,
+        'period': m.period,
+        'time': {
+          'hour': m.time.hour,
+          'minute': m.time.minute,
+        },
+        'dosesPerDay': m.dosesPerDay,
+        'reminderEnabled': m.reminderEnabled,
+        'isActive': m.isActive,
+      };
+    }).toList();
+    await prefs.setString('medications', jsonEncode(data));
+  }
+
+ Future<void> _loadMedications() async {
+   final depProvider = context.read<DependentProvider>();
+   final authProvider = context.read<AuthProvider>();
+   final selectedDep = depProvider.selectedDependent;
+
+   if (authProvider.accessToken == null) return;
+
+   try {
+     final token = authProvider.accessToken!;
+     final depService = context.read<DependentService>();
+
+     List<dynamic> rawList;
+
+     // أدوية التابع
+     if (selectedDep != null) {
+       rawList = await depService.getDependentMedications(
+         token,
+         selectedDep.id,
+       );
+     }
+
+     // أدوية المستخدم الأساسي
+     else {
+       rawList = await ApiService.getJsonList(
+         '/medications',
+         token: token,
+       );
+     }
+
+     setState(() {
+       _medications.clear();
+
+       _medications.addAll(
+         rawList.map((m) {
+           TimeOfDay time;
+
+           if (m['time'] != null) {
+             final parts = m['time'].toString().split(':');
+
+             time = TimeOfDay(
+               hour: int.parse(parts[0]),
+               minute: int.parse(parts[1]),
+             );
+           } else {
+             time = const TimeOfDay(hour: 8, minute: 0);
+           }
+
+           return MedicationItem(
+             id: m['id'].toString(),
+             name: m['name'] ?? '',
+             dosage: m['dosage'] ?? '',
+             type: MedicationType.values[
+                 (m['type'] ?? 0).clamp(0, MedicationType.values.length - 1)],
+             daysOfWeek: m['days_of_week'] != null
+                 ? List<String>.from(m['days_of_week'])
+                 : [],
+             period: m['period'] ?? 'صباحا',
+             time: time,
+             dosesPerDay: m['dosesPerDay'] ?? 1,
+             reminderEnabled: true,
+             isActive: m['is_active'] ?? true,
+           );
+         }).toList(),
+       );
+     });
+   } catch (e) {
+     debugPrint("LOAD MEDICATION ERROR = $e");
+   }
+ }
   Future<void> _saveTakenMedications() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('takenMedications', _takenMedications.toList());
@@ -237,8 +326,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _doseTimeLabel(MedicationItem medication, int doseIndex) {
-    final intervalHours =
-        medication.dosesPerDay > 1 ? 24 ~/ medication.dosesPerDay : 0;
+    final intervalHours = medication.dosesPerDay > 1
+        ? 24 ~/ medication.dosesPerDay
+        : 0;
     final baseHour = medication.time.hour;
     final baseMinute = medication.time.minute;
     final doseHour = (baseHour + intervalHours * doseIndex) % 24;
@@ -259,192 +349,26 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'مساءً';
   }
 
-  Future<void> _saveMedications() async {
-    final prefs = await SharedPreferences.getInstance();
-    final data = _medications.map((m) {
-      return {
-        'id': m.id,
-        'name': m.name,
-        'dosage': m.dosage,
-        'type': m.type.index,
-        'daysOfWeek': m.daysOfWeek,
-        'period': m.period,
-        'time': {'hour': m.time.hour, 'minute': m.time.minute},
-        'dosesPerDay': m.dosesPerDay,
-        'reminderEnabled': m.reminderEnabled,
-        'isActive': m.isActive,
-      };
-    }).toList();
-    await prefs.setString('medications', jsonEncode(data));
-  }
-
-  Future<void> _loadMedications() async {
-    final authProvider = context.read<AuthProvider>();
-
-    // Requirement: allow delete/add UI even without login.
-    // - If token exists: load from backend
-    // - Else: load from local SharedPreferences
-    if (authProvider.accessToken == null) {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('medications');
-      if (raw == null || raw.isEmpty) {
-        setState(() => _medications.clear());
-        return;
-      }
-
-      final decoded = jsonDecode(raw);
-      if (decoded is List) {
-        setState(() {
-          _medications.clear();
-          _medications.addAll(decoded.map((m) {
-            final timeMap = Map<String, dynamic>.from(m['time'] as Map);
-            return MedicationItem(
-              id: (m['id'] ?? '').toString(),
-              name: (m['name'] ?? '').toString(),
-              dosage: (m['dosage'] ?? '').toString(),
-              type: MedicationType.values[m['type'] as int? ?? 0],
-              daysOfWeek: List<String>.from(m['daysOfWeek'] ?? const []),
-              period: (m['period'] ?? 'صباحا').toString(),
-              time: TimeOfDay(
-                  hour: timeMap['hour'] as int,
-                  minute: timeMap['minute'] as int),
-              dosesPerDay: (m['dosesPerDay'] as int?) ?? 1,
-              reminderEnabled: (m['reminderEnabled'] as bool?) ?? true,
-              isActive: (m['isActive'] as bool?) ?? true,
-            );
-          }));
-        });
-      }
-      return;
-    }
-
-    try {
-      final token = authProvider.accessToken!;
-      final rawList =
-          await ApiService.getJsonList('/medications', token: token);
-
-      if (!mounted) return;
-
-      setState(() {
-        _medications.clear();
-        _medications.addAll(rawList.map((m) {
-          final isApiTime = m['time'] is String;
-          TimeOfDay time;
-          if (isApiTime) {
-            final parts = (m['time'] as String).split(':');
-            final hour = int.tryParse(parts[0]) ?? 0;
-            final minute = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
-            time = TimeOfDay(hour: hour, minute: minute);
-          } else {
-            final timeMap = Map<String, dynamic>.from(m['time'] as Map);
-            final hour = timeMap['hour'];
-            final minute = timeMap['minute'];
-            time = TimeOfDay(
-                hour: (hour is int ? hour : int.tryParse(hour.toString()) ?? 0),
-                minute: (minute is int
-                    ? minute
-                    : int.tryParse(minute.toString()) ?? 0));
-          }
-
-          final dynamic rawId = (m['id'] ?? m['medication_id'] ?? m['medId']);
-
-          return MedicationItem(
-            id: rawId == null ? '' : rawId.toString(),
-            name: (m['name'] ?? '').toString(),
-            dosage: m['dosage'] as String? ?? '',
-            type: MedicationType.values[m['type'] is int ? m['type'] : 0],
-            daysOfWeek: () {
-              final rawDays = (m['days_of_week'] is List)
-                  ? List<String>.from(m['days_of_week'] as List)
-                  : ((m['daysOfWeek'] is List)
-                      ? List<String>.from(m['daysOfWeek'] as List)
-                      : <String>[]);
-
-              // Backend may return English day names; map them to Arabic.
-              const enToAr = <String, String>{
-                'Monday': 'الاثنين',
-                'Tuesday': 'الثلاثاء',
-                'Wednesday': 'الأربعاء',
-                'Thursday': 'الخميس',
-                'Friday': 'الجمعة',
-                'Saturday': 'السبت',
-                'Sunday': 'الأحد',
-                'الاثنين': 'الاثنين',
-                'الثلاثاء': 'الثلاثاء',
-                'الأربعاء': 'الأربعاء',
-                'الخميس': 'الخميس',
-                'الجمعة': 'الجمعة',
-                'السبت': 'السبت',
-                'الأحد': 'الأحد',
-              };
-
-              return rawDays.map((d) => enToAr[d] ?? d).toList();
-            }(),
-            period: (m['period'] ?? 'صباحا').toString(),
-            time: time,
-            dosesPerDay:
-                (m['dosesPerDay'] as int?) ?? (m['doses_per_day'] as int?) ?? 1,
-            reminderEnabled: m['reminderEnabled'] as bool? ?? true,
-            isActive: (m['is_active'] ?? m['isActive'] ?? true) as bool,
-          );
-        }));
-      });
-    } catch (e) {
-      debugPrint('Error loading medications: $e');
-    }
-  }
-
   void _openAddMedicationSheet() {
-    _openEditMedicationSheet(null);
-  }
-
-  void _openEditMedicationSheet(MedicationItem? medicationOrNull) {
-    final MedicationItem? editing = medicationOrNull;
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _AddMedicationSheet(
-        initialMedication: editing,
         onSave: (med) async {
           final depProvider = context.read<DependentProvider>();
           final authProvider = context.read<AuthProvider>();
           final selectedDep = depProvider.selectedDependent;
 
-          // EDIT
-          if (editing != null) {
-            if (selectedDep != null && authProvider.accessToken != null) {
-              try {
-                await ApiService.putJson(
-                  '/medications/${editing.id}',
-                  body: {
-                    'dependent_id': selectedDep.id,
-                    'name': med.name,
-                    'dosage': med.dosage,
-                    'type': med.type.index,
-                    'days_of_week': med.daysOfWeek,
-                    'period': med.period,
-                    'time': '${med.time.hour}:${med.time.minute}',
-                    'dosesPerDay': med.dosesPerDay,
-                  },
-                  token: authProvider.accessToken!,
-                );
-                _loadMedications();
-              } catch (e) {
-                debugPrint('Error updating medication: $e');
-              }
-            }
-            return;
-          }
-
-          // ADD
           if (selectedDep != null && authProvider.accessToken != null) {
+            // Save to API for dependent
+            print("DEPENDENT ID SENT = ${selectedDep.id}");
             try {
               await ApiService.postJson(
                 '/medications',
                 body: {
-                  'dependent_id': selectedDep.id,
+                  //'dependent_id': selectedDep.id,
+                  'dependent_id': int.parse(selectedDep.id.toString()),
                   'name': med.name,
                   'dosage': med.dosage,
                   'type': med.type.index,
@@ -455,47 +379,84 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
                 token: authProvider.accessToken!,
               );
-              _loadMedications();
+              await _loadMedications();
             } catch (e) {
               debugPrint('Error saving medication for dependent: $e');
             }
-          } else {
-            // Save locally for self
-            setState(() => _medications.add(med));
-            _saveMedications();
-          }
+          } else if (authProvider.accessToken != null) {
+              try {
+                await ApiService.postJson(
+                  '/medications',
+                  body: {
+                    'name': med.name,
+                    'dosage': med.dosage,
+                    'type': med.type.index,
+                    'days_of_week': med.daysOfWeek,
+                    'period': med.period,
+                    'time': '${med.time.hour}:${med.time.minute}',
+                    'dosesPerDay': med.dosesPerDay,
+                  },
+                  token: authProvider.accessToken!,
+                );
+
+                await _loadMedications();
+              } catch (e) {
+                debugPrint(e.toString());
+              }
+            }
         },
       ),
     );
   }
 
-  Future<void> _deleteMedication(MedicationItem medication) async {
-    final authProvider = context.read<AuthProvider>();
-
-    // If no token -> delete locally
-    if (authProvider.accessToken == null) {
-      setState(() => _medications.removeWhere((m) => m.id == medication.id));
-      await _saveMedications();
-      return;
-    }
-
-    final token = authProvider.accessToken;
-    final medicationId = medication.id.trim();
-
-    if (token == null) return;
-    if (medicationId.isEmpty) return;
-
-    final parsedId = int.tryParse(medicationId);
-    if (parsedId == null) return;
-
-    try {
-      await ApiService.deleteJson('/medications/$parsedId', token: token);
-      await _loadMedications();
-    } catch (e) {
-      debugPrint('Error deleting medication: $e');
-    }
+  void _showAccountMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.redAccent),
+                  title: const Text(
+                    'تسجيل الخروج',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(sheetContext); // close the sheet first
+                    await _signOut(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
+  Future<void> _signOut(BuildContext context) async {
+    // Clear whatever kind of session is active (email token or Google).
+    await AuthRepository().clearSession();
+    await GoogleAuthService().signOut();
+
+    if (!context.mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      (route) => false,
+    );
+  }
+
+  // ------------------------- Top bar -------------------------
   Widget _buildTopBar() {
     final hasName =
         widget.userName != null && widget.userName!.trim().isNotEmpty;
@@ -506,39 +467,44 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Greeting + Profile avatar (rendered on the right in RTL)
           Expanded(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
+                // Profile avatar - dark green. Tap opens the account menu
+                // (currently just "تسجيل الخروج" / sign out).
                 Consumer<DependentProvider>(
                   builder: (context, depProvider, _) {
                     final selectedDep = depProvider.selectedDependent;
                     return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const DependentsScreen()),
-                        );
-                      },
+              onTap: () async {
+                final changed = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const DependentsScreen(),
+                  ),
+                );
+
+                if (changed == true) {
+                  _loadMedications();
+                }
+              },
                       child: CircleAvatar(
                         radius: 26,
-                        backgroundColor: selectedDep != null
-                            ? const Color(0xFFC9932E)
-                            : _Colors.darkGreen,
+                        backgroundColor: selectedDep != null ? const Color(0xFFC9932E) : _Colors.darkGreen,
                         child: selectedDep != null
-                            ? Text(
-                                selectedDep.fullName[0],
-                                style: const TextStyle(
-                                    color: Colors.white, fontSize: 24),
-                              )
-                            : const Icon(Icons.person,
-                                color: Colors.white, size: 38),
+                            ? Text(selectedDep.fullName[0], style: const TextStyle(color: Colors.white, fontSize: 24))
+                            : const Icon(Icons.person, color: Colors.white, size: 38),
                       ),
                     );
                   },
                 ),
                 const SizedBox(width: 12),
+                // Single source for the greeting/name/dependent-profile block.
+                // (Previously there was a duplicate greeting Text widget here
+                // AND inside the Consumer below — that's what caused
+                // "صباح الخير" to render twice, stacked on top of each other.)
                 Expanded(
                   child: Consumer<DependentProvider>(
                     builder: (context, depProvider, _) {
@@ -549,15 +515,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(
                             selectedDep != null
                                 ? 'ملف: ${selectedDep.fullName}'
-                                : (hasName
-                                    ? '${_getGreeting()}،'
-                                    : _getGreeting()),
+                                : (hasName ? '${_getGreeting()}،' : _getGreeting()),
                             textAlign: TextAlign.right,
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: selectedDep != null
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
+                              fontWeight: selectedDep != null ? FontWeight.bold : FontWeight.normal,
                               color: selectedDep != null
                                   ? const Color.fromARGB(255, 8, 78, 3)
                                   : _Colors.textSecondary,
@@ -578,7 +540,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           if (selectedDep != null) ...[
                             const SizedBox(height: 4),
                             GestureDetector(
-                              onTap: () => depProvider.selectDependent(null),
+                             onTap: () {
+                               depProvider.selectDependent(null);
+                               _loadMedications();
+                             },
                               child: const Text(
                                 'العودة لملفي الشخصي',
                                 style: TextStyle(
@@ -597,6 +562,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
+          // "+" add button on the left side (rendered on the left in RTL)
           if (_selectedIndex == 1)
             GestureDetector(
               onTap: _openAddMedicationSheet,
@@ -607,8 +573,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   shape: BoxShape.circle,
                   border: Border.all(color: _Colors.primaryGreen, width: 1.5),
                 ),
-                child: const Icon(Icons.add,
-                    color: _Colors.primaryGreen, size: 20),
+               // _loadMedications();
+                child: const Icon(
+                  Icons.add,
+                  color: _Colors.primaryGreen,
+                  size: 20,
+                ),
               ),
             ),
         ],
@@ -616,6 +586,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ------------------------- Day strip (fixed) -------------------------
   Widget _buildDateStrip() {
     return SizedBox(
       height: 100,
@@ -630,7 +601,6 @@ class _HomeScreenState extends State<HomeScreen> {
               date.month == _selectedDate.month &&
               date.day == _selectedDate.day;
           final hasMed = _hasAnyMedicationOnDate(date);
-
           return GestureDetector(
             onTap: () => setState(() => _selectedDate = date),
             child: Container(
@@ -640,7 +610,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: selected ? _Colors.darkGreen : Colors.white,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                    color: selected ? _Colors.darkGreen : _Colors.borderGrey),
+                  color: selected ? _Colors.darkGreen : _Colors.borderGrey,
+                ),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -648,17 +619,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     _arabicDigits(date.day.toString()),
                     style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: selected ? Colors.white : _Colors.textPrimary),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: selected ? Colors.white : _Colors.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     _weekdayNameFromDate(date),
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        fontSize: 12,
-                        color: selected ? Colors.white : _Colors.textSecondary),
+                      fontSize: 12,
+                      color: selected ? Colors.white : _Colors.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   if (hasMed)
@@ -666,7 +639,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 6,
                       height: 6,
                       decoration: const BoxDecoration(
-                          color: Color(0xFF1D9E75), shape: BoxShape.circle),
+                        color: Color(0xFF1D9E75),
+                        shape: BoxShape.circle,
+                      ),
                     ),
                 ],
               ),
@@ -677,9 +652,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ------------------------- Tabs -------------------------
   Widget _buildTodayTab() {
     final todaysMeds = _medicationsForDate(_selectedDate);
-
     return Column(
       children: [
         _buildDateStrip(),
@@ -694,39 +669,58 @@ class _HomeScreenState extends State<HomeScreen> {
                         margin: const EdgeInsets.symmetric(horizontal: 16),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                            color: const Color(0xFFE1F5EE),
-                            borderRadius: BorderRadius.circular(12)),
+                          color: const Color(0xFFE1F5EE),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: const [
-                            Icon(Icons.check_circle_outline,
-                                color: Color(0xFF1D9E75), size: 20),
+                            Icon(
+                              Icons.check_circle_outline,
+                              color: Color(0xFF1D9E75),
+                              size: 20,
+                            ),
                             SizedBox(width: 8),
-                            Text('لا توجد أدوية مجدولة لهذا اليوم',
-                                style: TextStyle(
-                                    color: Color(0xFF085041), fontSize: 14)),
+                            Text(
+                              'لا توجد أدوية مجدولة لهذا اليوم',
+                              style: TextStyle(
+                                color: Color(0xFF085041),
+                                fontSize: 14,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 16),
                       GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const DependentsScreen()));
-                        },
+                     onTap: () async {
+                       final changed = await Navigator.push(
+                         context,
+                         MaterialPageRoute(
+                           builder: (_) => const DependentsScreen(),
+                         ),
+                       );
+
+                       if (changed == true) {
+                         _loadMedications();
+                       }
+                     },
                         child: Container(
                           width: double.infinity,
                           margin: const EdgeInsets.symmetric(horizontal: 16),
                           decoration: BoxDecoration(
-                              color: const Color(0xFF085041),
-                              borderRadius: BorderRadius.circular(12)),
+                            color: const Color(0xFF085041),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          child: const Text('+ إضافة تابعين',
-                              textAlign: TextAlign.center,
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 15)),
+                          child: const Text(
+                            '+ إضافة تابعين',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -738,33 +732,40 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: todaysMeds.length,
-                        itemBuilder: (context, index) => _MedicationCard(
-                          medication: todaysMeds[index],
-                          onEdit: () =>
-                              _openEditMedicationSheet(todaysMeds[index]),
-                          onDelete: () => _deleteMedication(todaysMeds[index]),
-                        ),
+                        itemBuilder: (context, index) =>
+                            _MedicationCard(medication: todaysMeds[index]),
                       ),
                     ),
                     const SizedBox(height: 16),
                     GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const DependentsScreen()));
+                      onTap: () async {
+                        final changed = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const DependentsScreen(),
+                          ),
+                        );
+
+                        if (changed == true) {
+                          _loadMedications();
+                        }
                       },
                       child: Container(
                         width: double.infinity,
                         margin: const EdgeInsets.symmetric(horizontal: 16),
                         decoration: BoxDecoration(
-                            color: const Color(0xFF085041),
-                            borderRadius: BorderRadius.circular(12)),
+                          color: const Color(0xFF085041),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        child: const Text('+ إضافة تابعين',
-                            textAlign: TextAlign.center,
-                            style:
-                                TextStyle(color: Colors.white, fontSize: 15)),
+                        child: const Text(
+                          '+ إضافة تابعين',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -777,7 +778,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMedicationsTab() {
     final active = _medications.where((m) => m.isActive).toList();
-
     return Column(
       children: [
         Padding(
@@ -785,34 +785,40 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                    color: _Colors.lightGreenBg,
-                    borderRadius: BorderRadius.circular(20)),
-                child: const Text('نشطة',
-                    style: TextStyle(color: _Colors.darkGreen)),
+                  color: _Colors.lightGreenBg,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'نشطة',
+                  style: TextStyle(color: _Colors.darkGreen),
+                ),
               ),
               const Spacer(),
-              const Text('الأدوية المحفوظة',
-                  style: TextStyle(color: _Colors.textPrimary)),
+              const Text(
+                'الأدوية المحفوظة',
+                style: TextStyle(color: _Colors.textPrimary),
+              ),
             ],
           ),
         ),
         Expanded(
           child: active.isEmpty
               ? const Center(
-                  child: Text('لا يوجد أدوية محفوظة بعد',
-                      style: TextStyle(color: _Colors.textSecondary)),
+                  child: Text(
+                    'لا يوجد أدوية محفوظة بعد',
+                    style: TextStyle(color: _Colors.textSecondary),
+                  ),
                 )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: active.length,
-                  itemBuilder: (context, index) => _MedicationCard(
-                    medication: active[index],
-                    onEdit: () => _openEditMedicationSheet(active[index]),
-                    onDelete: () => _deleteMedication(active[index]),
-                  ),
+                  itemCount: active.length, // unlimited
+                  itemBuilder: (context, index) =>
+                      _MedicationCard(medication: active[index]),
                 ),
         ),
       ],
@@ -834,18 +840,23 @@ class _HomeScreenState extends State<HomeScreen> {
               ? const Center(
                   child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: 40),
-                    child: Text('لا توجد أدوية مجدولة لهذا اليوم.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            color: _Colors.textSecondary, fontSize: 16)),
+                    child: Text(
+                      'لا توجد أدوية مجدولة لهذا اليوم.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _Colors.textSecondary,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
                 )
               : ListView.builder(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   itemCount: selectedMeds.length,
-                  itemBuilder: (context, index) => _buildReminderMedicationCard(
-                      selectedMeds[index], isToday),
+                  itemBuilder: (context, index) {
+                    final medication = selectedMeds[index];
+                    return _buildReminderMedicationCard(medication, isToday);
+                  },
                 ),
         ),
       ],
@@ -859,18 +870,25 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-          color: _Colors.darkGreen, borderRadius: BorderRadius.circular(16)),
+        color: _Colors.darkGreen,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(medication.name,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16)),
+          Text(
+            medication.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text(medication.dosage,
-              style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          Text(
+            medication.dosage,
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+          ),
           const SizedBox(height: 12),
           ...List.generate(medication.dosesPerDay, (doseIndex) {
             final taken = _isTaken(medication, _selectedDate, doseIndex);
@@ -880,28 +898,28 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(label,
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 14)),
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
+                    ),
                   ),
                   GestureDetector(
                     onTap: isToday
-                        ? () =>
-                            _toggleTaken(medication, _selectedDate, doseIndex)
+                        ? () => _toggleTaken(medication, _selectedDate, doseIndex)
                         : null,
                     child: Container(
                       width: 20,
                       height: 20,
                       decoration: BoxDecoration(
-                        color: taken
-                            ? const Color(0xFFB85C5C)
-                            : Colors.transparent,
+                        color: taken ? const Color(0xFFB85C5C) : Colors.transparent,
                         border: checkboxBorder,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: taken
-                          ? const Icon(Icons.check,
-                              size: 14, color: Colors.white)
+                          ? const Icon(Icons.check, size: 14, color: Colors.white)
                           : null,
                     ),
                   ),
@@ -919,7 +937,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final tabs = [
       _buildTodayTab(),
       _buildMedicationsTab(),
-      _buildRemindersTab()
+      _buildRemindersTab(),
     ];
 
     return Directionality(
@@ -944,11 +962,17 @@ class _HomeScreenState extends State<HomeScreen> {
           type: BottomNavigationBarType.fixed,
           items: const [
             BottomNavigationBarItem(
-                icon: Icon(CupertinoIcons.calendar), label: 'اليوم'),
+              icon: Icon(CupertinoIcons.calendar),
+              label: 'اليوم',
+            ),
             BottomNavigationBarItem(
-                icon: Icon(Icons.medication), label: 'أدويتي'),
+              icon: Icon(Icons.medication),
+              label: 'أدويتي',
+            ),
             BottomNavigationBarItem(
-                icon: Icon(CupertinoIcons.bell), label: 'التذكيرات'),
+              icon: Icon(CupertinoIcons.bell),
+              label: 'التذكيرات',
+            ),
           ],
         ),
       ),
@@ -956,17 +980,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+// ---------------------------------------------------------------------
 // Medication card (used in both tabs)
+// ---------------------------------------------------------------------
 class _MedicationCard extends StatelessWidget {
   final MedicationItem medication;
-  final VoidCallback? onEdit;
-  final VoidCallback? onDelete;
 
-  const _MedicationCard({
-    required this.medication,
-    this.onEdit,
-    this.onDelete,
-  });
+  const _MedicationCard({required this.medication});
 
   @override
   Widget build(BuildContext context) {
@@ -974,15 +994,18 @@ class _MedicationCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-          color: _Colors.darkGreen, borderRadius: BorderRadius.circular(16)),
+        color: _Colors.darkGreen,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-                color: Colors.white, borderRadius: BorderRadius.circular(12)),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Icon(medication.type.icon, color: _Colors.darkGreen),
           ),
           const SizedBox(width: 12),
@@ -993,7 +1016,9 @@ class _MedicationCard extends StatelessWidget {
                 Text(
                   '${medication.name}${medication.dosage.isNotEmpty ? " ${medication.dosage}" : ""}',
                   style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -1003,38 +1028,19 @@ class _MedicationCard extends StatelessWidget {
               ],
             ),
           ),
-          if (onEdit != null || onDelete != null)
-            Row(
-              children: [
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  icon: const Icon(Icons.edit_outlined, color: Colors.white),
-                  onPressed: onEdit,
-                ),
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  icon: const Icon(Icons.delete_outline, color: Colors.white),
-                  onPressed: onDelete,
-                ),
-              ],
-            ),
         ],
       ),
     );
   }
 }
 
+// ---------------------------------------------------------------------
 // Add medication bottom sheet
+// ---------------------------------------------------------------------
 class _AddMedicationSheet extends StatefulWidget {
-  final Future<void> Function(MedicationItem medication) onSave;
-  final MedicationItem? initialMedication;
+  final void Function(MedicationItem medication) onSave;
 
-  const _AddMedicationSheet({
-    required this.onSave,
-    this.initialMedication,
-  });
+  const _AddMedicationSheet({required this.onSave});
 
   @override
   State<_AddMedicationSheet> createState() => _AddMedicationSheetState();
@@ -1045,7 +1051,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _dosageController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
-  final bool _reminderEnabled = true;
+  bool _reminderEnabled = true;
 
   static const List<String> _allDays = [
     'الجمعة',
@@ -1056,21 +1062,44 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
     'الأربعاء',
     'الخميس',
   ];
-
   final Set<String> _selectedDays = {};
 
   String _period = 'صباحا';
   TimeOfDay _time = const TimeOfDay(hour: 6, minute: 0);
   int _dosesPerDay = 1;
 
-  static const List<Map<String, String>> _pharmacySuggestions = [
+  /*static const List<Map<String, String>> _pharmacySuggestions = [
     {'name': 'Paracetamol', 'dosage': '500mg'},
     {'name': 'Amoxicillin', 'dosage': '250mg'},
     {'name': 'Ibuprofen', 'dosage': '400mg'},
     {'name': 'Metformin', 'dosage': '850mg'},
     {'name': 'Omeprazole', 'dosage': '20mg'},
     {'name': 'Vitamin D', 'dosage': '1000IU'},
-  ];
+  ];*/
+  List<Map<String, dynamic>> _pharmacySuggestions = [];
+  Future<void> _searchMedicines(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() {
+        _pharmacySuggestions.clear();
+      });
+      return;
+    }
+
+    final auth = context.read<AuthProvider>();
+
+    try {
+      final result = await ApiService.getJsonList(
+        '/medicines/search?q=$query',
+        token: auth.accessToken!,
+      );
+
+      setState(() {
+        _pharmacySuggestions = List<Map<String, dynamic>>.from(result);
+      });
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+  }
 
   @override
   void dispose() {
@@ -1080,24 +1109,31 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
     super.dispose();
   }
 
-  List<Map<String, String>> get _filteredSuggestions {
+/*  List<Map<String, String>> get _filteredSuggestions {
     final query = _searchController.text.trim().toLowerCase();
-    if (query.isEmpty) return [];
-
+    if (query.isEmpty) {
+      return [];
+    }
     return _pharmacySuggestions.where((item) {
       final name = item['name']!.toLowerCase();
       return name.contains(query);
     }).toList();
-  }
+  }*/
 
-  void _selectSuggestion(Map<String, String> suggestion) {
-    setState(() {
-      _nameController.text = suggestion['name']!;
-      _dosageController.text = suggestion['dosage']!;
-      _searchController.clear();
-    });
-    FocusScope.of(context).unfocus();
-  }
+void _selectSuggestion(Map<String, dynamic> suggestion) {
+  setState(() {
+    _nameController.text =
+        suggestion['name_en'] ?? '';
+
+    _dosageController.text =
+        suggestion['dosage'] ?? '';
+
+    _searchController.clear();
+    _pharmacySuggestions.clear();
+  });
+
+  FocusScope.of(context).unfocus();
+}
 
   Future<void> _pickTime() async {
     final picked = await showTimePicker(context: context, initialTime: _time);
@@ -1107,7 +1143,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   bool get _isValid =>
       _nameController.text.trim().isNotEmpty && _selectedDays.isNotEmpty;
 
-  Future<void> _save({required bool withReminder}) async {
+  void _save({required bool withReminder}) {
     if (!_isValid) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('الرجاء إدخال اسم الدواء واختيار الأيام')),
@@ -1115,7 +1151,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
       return;
     }
 
-    await widget.onSave(
+    widget.onSave(
       MedicationItem(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text.trim(),
@@ -1128,10 +1164,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
         reminderEnabled: withReminder,
       ),
     );
-
-    if (mounted) {
-      Navigator.of(context).pop();
-    }
+    Navigator.of(context).pop();
   }
 
   @override
@@ -1168,9 +1201,10 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   'جدول دوائك',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: _Colors.textPrimary),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: _Colors.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 const Text(
@@ -1216,45 +1250,60 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                 const SizedBox(height: 20),
                 const Align(
                   alignment: Alignment.centerRight,
-                  child: Text('اسم الدواء',
-                      style: TextStyle(color: _Colors.textSecondary)),
+                  child: Text(
+                    'اسم الدواء',
+                    style: TextStyle(color: _Colors.textSecondary),
+                  ),
                 ),
                 const SizedBox(height: 6),
                 TextField(
                   controller: _searchController,
-                  onChanged: (value) => setState(() {}),
+                  //onChanged: (value) => setState(() {}),
+                  onChanged: _searchMedicines,
                   textAlign: TextAlign.right,
                   decoration: InputDecoration(
                     hintText: 'ابحث عن الدواء من نفس الصيدلية',
                     filled: true,
                     fillColor: const Color(0xFFF6F6F6),
                     border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none),
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
-                if (_filteredSuggestions.isNotEmpty)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FFF9),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _Colors.borderGrey),
-                    ),
-                    child: Column(
-                      children: _filteredSuggestions.map((item) {
-                        return ListTile(
-                          title:
-                              Text(item['name']!, textAlign: TextAlign.right),
-                          subtitle:
-                              Text(item['dosage']!, textAlign: TextAlign.right),
-                          trailing: const Icon(Icons.medical_services_outlined,
-                              color: _Colors.primaryGreen),
-                          onTap: () => _selectSuggestion(item),
-                        );
-                      }).toList(),
-                    ),
-                  ),
+if (_pharmacySuggestions.isNotEmpty)
+  Container(
+    decoration: BoxDecoration(
+      color: const Color(0xFFF8FFF9),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: _Colors.borderGrey),
+    ),
+    child: ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _pharmacySuggestions.length,
+      itemBuilder: (context, index) {
+        final item = _pharmacySuggestions[index];
+
+        return ListTile(
+          title: Text(
+            item['name_en'] ?? '',
+            textAlign: TextAlign.right,
+          ),
+          subtitle: Text(
+            item['dosage'] ?? '',
+            textAlign: TextAlign.right,
+          ),
+          trailing: const Icon(
+            Icons.medical_services_outlined,
+            color: _Colors.primaryGreen,
+          ),
+          onTap: () => _selectSuggestion(item),
+        );
+      },
+    ),
+  ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -1268,8 +1317,9 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                           filled: true,
                           fillColor: const Color(0xFFF6F6F6),
                           border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none),
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
                       ),
                     ),
@@ -1283,8 +1333,9 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                           filled: true,
                           fillColor: const Color(0xFFF6F6F6),
                           border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none),
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
                       ),
                     ),
@@ -1313,21 +1364,24 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                           decoration: BoxDecoration(
                             color: selected ? _Colors.darkGreen : Colors.white,
                             border: Border.all(
-                                color: selected
-                                    ? _Colors.darkGreen
-                                    : _Colors.borderGrey),
+                              color: selected
+                                  ? _Colors.darkGreen
+                                  : _Colors.borderGrey,
+                            ),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(day,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: selected
-                                        ? Colors.white
-                                        : _Colors.textPrimary,
-                                  )),
+                              Text(
+                                day,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: selected
+                                      ? Colors.white
+                                      : _Colors.textPrimary,
+                                ),
+                              ),
                               const SizedBox(height: 4),
                               Icon(
                                 selected
@@ -1352,24 +1406,31 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text('الفترة',
-                              style: TextStyle(color: _Colors.textSecondary)),
+                          const Text(
+                            'الفترة',
+                            style: TextStyle(color: _Colors.textSecondary),
+                          ),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
-                            initialValue: _period,
+                            value: _period,
                             alignment: AlignmentDirectional.centerEnd,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: const Color(0xFFF6F6F6),
                               border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none),
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                             items: const [
                               DropdownMenuItem(
-                                  value: 'صباحا', child: Text('صباحا')),
+                                value: 'صباحا',
+                                child: Text('صباحا'),
+                              ),
                               DropdownMenuItem(
-                                  value: 'مساء', child: Text('مساء')),
+                                value: 'مساء',
+                                child: Text('مساء'),
+                              ),
                             ],
                             onChanged: (value) =>
                                 setState(() => _period = value!),
@@ -1382,20 +1443,26 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text('الوقت',
-                              style: TextStyle(color: _Colors.textSecondary)),
+                          const Text(
+                            'الوقت',
+                            style: TextStyle(color: _Colors.textSecondary),
+                          ),
                           const SizedBox(height: 6),
                           GestureDetector(
                             onTap: _pickTime,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                  vertical: 14, horizontal: 12),
+                                vertical: 14,
+                                horizontal: 12,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF6F6F6),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Text(_time.format(context),
-                                  textAlign: TextAlign.center),
+                              child: Text(
+                                _time.format(context),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
                         ],
@@ -1406,8 +1473,10 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                 const SizedBox(height: 20),
                 const Align(
                   alignment: Alignment.centerRight,
-                  child: Text('عدد الجرعات في اليوم',
-                      style: TextStyle(color: _Colors.textSecondary)),
+                  child: Text(
+                    'عدد الجرعات في اليوم',
+                    style: TextStyle(color: _Colors.textSecondary),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -1431,8 +1500,9 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                               'x$value',
                               textAlign: TextAlign.center,
                               style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold),
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
@@ -1444,35 +1514,36 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () async => _save(withReminder: true),
+                    onPressed: () => _save(withReminder: true),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _Colors.darkGreen,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
-                    child: const Text('حفظ',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'حفظ',
+                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
-                    onPressed: () async => _save(withReminder: false),
+                    onPressed: () => _save(withReminder: false),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(
-                          color: _Colors.darkGreen, width: 1.5),
+                      side: const BorderSide(color: _Colors.darkGreen, width: 1.5),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
-                    child: const Text('حفظ الدواء بدون التنبيه',
-                        style:
-                            TextStyle(color: _Colors.darkGreen, fontSize: 15)),
+                    child: const Text(
+                      'حفظ الدواء بدون التنبيه',
+                      style: TextStyle(color: _Colors.darkGreen, fontSize: 15),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
