@@ -16,6 +16,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../onboarding/onboarding_screen.dart';
+import '../splash/splash_screen.dart';
 import '../../repositories/auth_repository.dart';
 import '../../services/google_auth_service.dart';
 import 'package:provider/provider.dart';
@@ -103,6 +104,20 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+
+  Future<void> _handleLogout() async {
+    try {
+      await context.read<AuthProvider>().logout();
+    } catch (_) {
+      // AuthProvider.logout() already clears local state on failure.
+    }
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const SplashScreen()),
+      (route) => false,
+    );
+  }
   final List<MedicationItem> _medications = [];
   final Set<String> _takenMedications = {};
 
@@ -328,6 +343,9 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _medications.clear();
         _medications.addAll(rawList.map((m) {
+          // Backend returns medications with persisted fields only.
+          // Ensure id/name/dosage are read from correct keys.
+
           final isApiTime = m['time'] is String;
           TimeOfDay time;
           if (isApiTime) {
@@ -380,12 +398,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
               return rawDays.map((d) => enToAr[d] ?? d).toList();
             }(),
+            // These fields are not persisted by backend /medications.
+            // Keep UI-only values so the card can still display something.
+            // (Name/dosage/id are persisted and should be source of truth.)
             period: (m['period'] ?? 'صباحا').toString(),
             time: time,
-            dosesPerDay:
-                (m['dosesPerDay'] as int?) ?? (m['doses_per_day'] as int?) ?? 1,
+            dosesPerDay: (m['dosesPerDay'] as int?) ?? (m['doses_per_day'] as int?) ?? 1,
             reminderEnabled: m['reminderEnabled'] as bool? ?? true,
             isActive: (m['is_active'] ?? m['isActive'] ?? true) as bool,
+
           );
         }));
       });
@@ -422,11 +443,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     'dependent_id': selectedDep.id,
                     'name': med.name,
                     'dosage': med.dosage,
-                    'type': med.type.index,
-                    'days_of_week': med.daysOfWeek,
-                    'period': med.period,
-                    'time': '${med.time.hour}:${med.time.minute}',
-                    'dosesPerDay': med.dosesPerDay,
+                    // Backend /medications does not persist schedule/time fields.
                   },
                   token: authProvider.accessToken!,
                 );
@@ -448,14 +465,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   'name': med.name,
                   'dosage': med.dosage,
                   'type': med.type.index,
-                  'days_of_week': med.daysOfWeek,
-                  'period': med.period,
-                  'time': '${med.time.hour}:${med.time.minute}',
-                  'dosesPerDay': med.dosesPerDay,
                 },
                 token: authProvider.accessToken!,
               );
-              _loadMedications();
+              // Important: ensure new item appears and delete works after save.
+              await _loadMedications();
             } catch (e) {
               debugPrint('Error saving medication for dependent: $e');
             }
@@ -611,6 +625,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: _Colors.primaryGreen, size: 20),
               ),
             ),
+          IconButton(
+            tooltip: 'تسجيل الخروج',
+            icon: const Icon(Icons.logout, color: _Colors.darkGreen),
+            onPressed: _handleLogout,
+          ),
         ],
       ),
     );

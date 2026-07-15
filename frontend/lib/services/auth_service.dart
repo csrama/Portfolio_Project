@@ -1,8 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import '../config/api_config.dart';
+import '../config/api_config.dart'; 
 
 class AuthService {
   static const String _accessTokenKey = 'access_token';
@@ -114,59 +113,153 @@ class AuthService {
     return token != null && token.isNotEmpty;
   }
 
-  // ---------- convenience aliases ----------
+  Future<String?> getToken() async {
+    // For backward-compat usage in other services/tests.
+    return await getAccessToken();
+  }
 
-  /// Alias for [getAccessToken] used by MedicationService and tests.
-  Future<String?> getToken() => getAccessToken();
-
-  /// Alias for [clearTokens] used by tests.
-  Future<void> logout() => clearTokens();
-
-  /// Offline-capable sign-up used by tests.
-  /// [onlineRequest] receives the payload and should return the server response.
-  /// If it throws, the method falls back to an in-memory offline session.
+  /// Signs up the user.
+  ///
+  /// If the online request fails, falls back to an offline mode.
+  /// This is used by the existing unit tests.
   Future<Map<String, dynamic>> signUp({
     required String email,
     required String password,
     required String fullName,
-    Future<Map<String, dynamic>> Function(Map<String, dynamic>)? onlineRequest,
+    required Future<Map<String, dynamic>> Function(Map<String, dynamic>) onlineRequest,
   }) async {
-    final payload = {
+    final payload = <String, dynamic>{
       'email': email,
       'password': password,
       'full_name': fullName,
     };
 
-    if (onlineRequest != null) {
-      try {
-        final result = await onlineRequest(payload);
-        final token = result['token'] as String?;
-        final user = (result['user'] as Map<String, dynamic>?) ?? payload;
-        if (token != null) {
-          await saveTokens(token, '');
-          await saveUserData(user);
-        }
-        return {'mode': 'online', 'token': token, 'user': user};
-      } catch (_) {
-        // fall through to offline
+    try {
+      final result = await onlineRequest(payload);
+      final token = result['token']?.toString();
+      final user = result['user'] as Map<String, dynamic>?;
+      final refreshToken = result['refreshToken']?.toString() ?? '';
+
+      if (token != null && user != null) {
+        await persistSession(
+          accessToken: token,
+          refreshToken: refreshToken,
+          user: user,
+        );
       }
+
+      return {
+        'mode': 'online',
+        'token': token,
+        'refreshToken': refreshToken,
+        'user': user ?? payload,
+      };
+    } catch (_) {
+      await persistSession(
+        accessToken: 'offline-token',
+        refreshToken: 'offline-refresh-token',
+        user: {
+          'email': email,
+          'full_name': fullName,
+        },
+      );
+
+      return {
+        'mode': 'offline',
+        'token': 'offline-token',
+        'refreshToken': 'offline-refresh-token',
+        'user': {
+          'email': email,
+          'full_name': fullName,
+        },
+      };
+    }
+  }
+
+  /// Calls backend /auth/login and persists session tokens + user.
+  Future<Map<String, dynamic>> login({
+    required String email,
+    required String password,
+  }) async {
+    final response = await _dio.post(
+      '${ApiConfig.baseUrl}/auth/login',
+      data: {'email': email, 'password': password},
+    );
+
+    final token = response.data['token']?.toString();
+    final refreshToken = response.data['refreshToken']?.toString() ?? '';
+    final user = response.data['user'] as Map<String, dynamic>?;
+
+    if (token == null || user == null) {
+      throw Exception('Login failed: missing token/user');
     }
 
-    // Offline: persist to SharedPreferences so tests can verify
-    final prefs = await SharedPreferences.getInstance();
-    final offlineUsers = jsonDecode(
-      prefs.getString('offline_users') ?? '[]',
-    ) as List;
-    offlineUsers.add(payload);
-    await prefs.setString('offline_users', jsonEncode(offlineUsers));
+    await persistSession(
+      accessToken: token,
+      refreshToken: refreshToken,
+      user: user,
+    );
 
-    // Persist a dummy token so hasSession() returns true
-    await saveTokens('offline-token', '');
-    await saveUserData({'email': email, 'full_name': fullName});
+    return response.data as Map<String, dynamic>;
+  }
 
-    return {
-      'mode': 'offline',
-      'user': {'email': email, 'full_name': fullName},
-    };
+  /// Calls backend /auth/register and persists session tokens + user.
+  Future<Map<String, dynamic>> register({
+    required String email,
+    required String password,
+    required String fullName,
+    String? userType,
+  }) async {
+    final response = await _dio.post(
+      '${ApiConfig.baseUrl}/auth/register',
+      data: {
+        'email': email,
+        'password': password,
+        'full_name': fullName,
+        if (userType != null) 'user_type': userType,
+      },
+    );
+
+    final token = response.data['token']?.toString();
+    final refreshToken = response.data['refreshToken']?.toString() ?? '';
+    final user = response.data['user'] as Map<String, dynamic>?;
+
+    if (token == null || user == null) {
+      throw Exception('Register failed: missing token/user');
+    }
+
+    await persistSession(
+      accessToken: token,
+      refreshToken: refreshToken,
+      user: user,
+    );
+
+    return response.data as Map<String, dynamic>;
+  }
+
+  /// Server-side logout.
+  ///
+  /// Note: backend must implement POST /auth/logout for DB-backed invalidation.
+  Future<void> logout() async {
+    try {
+      final token = await getAccessToken();
+      final refreshToken = await getRefreshToken();
+
+      // If backend supports refresh-token logout, call it.
+      if (refreshToken != null && refreshToken.isNotEmpty) {
+        await _dio.post(
+          '${ApiConfig.baseUrl}/auth/logout',
+          data: {'refreshToken': refreshToken},
+          options: Options(headers: {
+            if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          }),
+        );
+      }
+    } catch (_) {
+      // Even if server logout fails, clear local session so UI logs out.
+    }
+
+    await clearTokens();
+    await clearUserData();
   }
 }

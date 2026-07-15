@@ -70,9 +70,12 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     try {
+      await _authService.logout();
+    } catch (_) {
+      // Fallback: always clear local state.
       await _authService.clearTokens();
       await _authService.clearUserData();
-    } catch (_) {}
+    }
     _accessToken = null;
     _refreshToken = null;
     _user = null;
