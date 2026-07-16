@@ -21,6 +21,7 @@ import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../splash/splash_screen.dart';
@@ -32,6 +33,7 @@ import 'dependents_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/dependent_service.dart';
 import '../../services/api_service.dart';
+
 // ---------------------------------------------------------------------
 // Colors (inlined here to keep this a single self-contained file)
 // ---------------------------------------------------------------------
@@ -119,6 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<MedicationItem> _medications =
       []; // unlimited: just a growing list
   final Set<String> _takenMedications = {}; // medication name + date key
+  final Map<String, int> _doseRecordIds = {}; // نفس المفتاح -> id السجل بالباك إند
 
   late final List<DateTime> _dateStrip;
   late DateTime _selectedDate;
@@ -206,16 +209,270 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _toggleTaken(MedicationItem medication, DateTime date, int doseIndex) {
+  DateTime _doseDateTime(MedicationItem medication, DateTime date, int doseIndex) {
+    final intervalHours =
+        medication.dosesPerDay > 1 ? 24 ~/ medication.dosesPerDay : 0;
+    final baseHour = medication.time.hour;
+    final baseMinute = medication.time.minute;
+    final doseHour = (baseHour + intervalHours * doseIndex) % 24;
+    return DateTime(date.year, date.month, date.day, doseHour, baseMinute);
+  }
+
+  // PATCH يدوي بدون تعديل api_service.dart (الـ ApiService الحالي ما فيه patch)
+  Future<Map<String, dynamic>> _patchJson(
+    String path, {
+    required Map<String, dynamic> body,
+    required String token,
+  }) async {
+    final response = await http.patch(
+      Uri.parse(ApiService.buildUrl(path)),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) return {};
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Request failed: ${response.statusCode} ${response.body}');
+  }
+
+  Future<void> _toggleTaken(
+      MedicationItem medication, DateTime date, int doseIndex) async {
     final key = _medicationDoseKey(medication, date, doseIndex);
+    final wasTaken = _takenMedications.contains(key);
+
     setState(() {
-      if (_takenMedications.contains(key)) {
+      if (wasTaken) {
         _takenMedications.remove(key);
       } else {
         _takenMedications.add(key);
       }
     });
-    _saveTakenMedications();
+    await _saveTakenMedications();
+
+    final authProvider = context.read<AuthProvider>();
+    final token = authProvider.accessToken;
+    final medId = int.tryParse(medication.id);
+    if (token == null || medId == null) return; // بدون تسجيل دخول: محلي بس
+
+    final scheduledTime =
+        _doseDateTime(medication, date, doseIndex).toIso8601String();
+
+    try {
+      final existingId = _doseRecordIds[key];
+      if (!wasTaken) {
+        // صارت مأخوذة الحين
+        if (existingId != null) {
+          await _patchJson(
+            '/dose-logs/$existingId',
+            body: {
+              'status': 'TAKEN',
+              'dose_taken': true,
+              'taken_time': DateTime.now().toIso8601String(),
+            },
+            token: token,
+          );
+        } else {
+          final created = await ApiService.postJson(
+            '/dose-logs',
+            body: {
+              'medication_id': medId,
+              'scheduled_time': scheduledTime,
+              'status': 'TAKEN',
+              'dose_taken': true,
+              'taken_time': DateTime.now().toIso8601String(),
+            },
+            token: token,
+          );
+          final newId = created['id'];
+          if (newId != null) {
+            _doseRecordIds[key] =
+                newId is int ? newId : int.tryParse(newId.toString()) ?? -1;
+          }
+        }
+      } else if (existingId != null) {
+        // كانت مأخوذة وألغيناها
+        await _patchJson(
+          '/dose-logs/$existingId',
+          body: {'status': 'PENDING', 'dose_taken': false},
+          token: token,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error syncing dose record: $e');
+    }
+  }
+
+  Future<void> _loadDoseRecords() async {
+    final authProvider = context.read<AuthProvider>();
+    final token = authProvider.accessToken;
+    if (token == null) return;
+
+    try {
+      final records = await ApiService.getJsonList('/dose-logs', token: token);
+
+      final taken = <String>{};
+      final ids = <String, int>{};
+
+      for (final r in records) {
+        final status = (r['status'] ?? '').toString();
+        final doseTaken = r['dose_taken'] == true;
+        if (status != 'TAKEN' && !doseTaken) continue;
+
+        final medIdRaw = r['medication_id'];
+        final scheduledRaw = r['scheduled_time'];
+        if (medIdRaw == null || scheduledRaw == null) continue;
+
+        final scheduled = DateTime.tryParse(scheduledRaw.toString());
+        if (scheduled == null) continue;
+
+        MedicationItem? med;
+        for (final m in _medications) {
+          if (m.id == medIdRaw.toString()) {
+            med = m;
+            break;
+          }
+        }
+        if (med == null) continue;
+
+        int doseIndex = 0;
+        for (int i = 0; i < med.dosesPerDay; i++) {
+          if (_doseDateTime(med, scheduled, i).hour == scheduled.hour) {
+            doseIndex = i;
+            break;
+          }
+        }
+
+        final key = _medicationDoseKey(med, scheduled, doseIndex);
+        taken.add(key);
+
+        final recordId = r['id'];
+        if (recordId != null) {
+          ids[key] =
+              recordId is int ? recordId : int.tryParse(recordId.toString()) ?? -1;
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _takenMedications
+          ..clear()
+          ..addAll(taken);
+        _doseRecordIds
+          ..clear()
+          ..addAll(ids);
+      });
+    } catch (e) {
+      debugPrint('Error loading dose records: $e');
+    }
+  }
+
+  // ملخص متابعة الجرعات (يستخدم GET /adherence/rate الجاهز بالباك إند)
+  void _showAdherenceSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: FutureBuilder<dynamic>(
+              future: () async {
+                final authProvider = context.read<AuthProvider>();
+                final token = authProvider.accessToken;
+                if (token == null) return null;
+                return ApiService.getJsonDynamic('/adherence/rate', token: token);
+              }(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const SizedBox(
+                    height: 120,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                final data = snapshot.data;
+                if (data == null || data is! Map) {
+                  return const SizedBox(
+                    height: 100,
+                    child: Center(
+                      child: Text(
+                        'تعذر جلب بيانات متابعة الجرعات',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                }
+
+                final rate = data['adherence_rate'] ?? 0;
+                final completed = data['completed'] ?? 0;
+                final total = data['total'] ?? 0;
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'متابعة الجرعات',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      '$rate%',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: _Colors.darkGreen,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'نسبة الالتزام بالجرعات',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: _Colors.textSecondary),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Column(
+                          children: [
+                            Text('$completed',
+                                style: const TextStyle(
+                                    fontSize: 20, fontWeight: FontWeight.bold)),
+                            const Text('جرعات مأخوذة',
+                                style: TextStyle(color: _Colors.textSecondary)),
+                          ],
+                        ),
+                        Column(
+                          children: [
+                            Text('$total',
+                                style: const TextStyle(
+                                    fontSize: 20, fontWeight: FontWeight.bold)),
+                            const Text('إجمالي الجرعات',
+                                style: TextStyle(color: _Colors.textSecondary)),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _saveMedications() async {
@@ -240,75 +497,78 @@ class _HomeScreenState extends State<HomeScreen> {
     await prefs.setString('medications', jsonEncode(data));
   }
 
- Future<void> _loadMedications() async {
-   final depProvider = context.read<DependentProvider>();
-   final authProvider = context.read<AuthProvider>();
-   final selectedDep = depProvider.selectedDependent;
+  Future<void> _loadMedications() async {
+    final depProvider = context.read<DependentProvider>();
+    final authProvider = context.read<AuthProvider>();
+    final selectedDep = depProvider.selectedDependent;
 
-   if (authProvider.accessToken == null) return;
+    if (authProvider.accessToken == null) return;
 
-   try {
-     final token = authProvider.accessToken!;
-     final depService = context.read<DependentService>();
+    try {
+      final token = authProvider.accessToken!;
+      final depService = context.read<DependentService>();
 
-     List<dynamic> rawList;
+      List<dynamic> rawList;
 
-     // أدوية التابع
-     if (selectedDep != null) {
-       rawList = await depService.getDependentMedications(
-         token,
-         selectedDep.id,
-       );
-     }
+      // أدوية التابع
+      if (selectedDep != null) {
+        rawList = await depService.getDependentMedications(
+          token,
+          selectedDep.id,
+        );
+      }
 
-     // أدوية المستخدم الأساسي
-     else {
-       rawList = await ApiService.getJsonList(
-         '/medications',
-         token: token,
-       );
-     }
+      // أدوية المستخدم الأساسي
+      else {
+        rawList = await ApiService.getJsonList(
+          '/medications',
+          token: token,
+        );
+      }
 
-     setState(() {
-       _medications.clear();
+      setState(() {
+        _medications.clear();
 
-       _medications.addAll(
-         rawList.map((m) {
-           TimeOfDay time;
+        _medications.addAll(
+          rawList.map((m) {
+            TimeOfDay time;
 
-           if (m['time'] != null) {
-             final parts = m['time'].toString().split(':');
+            if (m['time'] != null) {
+              final parts = m['time'].toString().split(':');
 
-             time = TimeOfDay(
-               hour: int.parse(parts[0]),
-               minute: int.parse(parts[1]),
-             );
-           } else {
-             time = const TimeOfDay(hour: 8, minute: 0);
-           }
+              time = TimeOfDay(
+                hour: int.parse(parts[0]),
+                minute: int.parse(parts[1]),
+              );
+            } else {
+              time = const TimeOfDay(hour: 8, minute: 0);
+            }
 
-           return MedicationItem(
-             id: m['id'].toString(),
-             name: m['name'] ?? '',
-             dosage: m['dosage'] ?? '',
-             type: MedicationType.values[
-                 (m['type'] ?? 0).clamp(0, MedicationType.values.length - 1)],
-             daysOfWeek: m['days_of_week'] != null
-                 ? List<String>.from(m['days_of_week'])
-                 : [],
-             period: m['period'] ?? 'صباحا',
-             time: time,
-             dosesPerDay: m['dosesPerDay'] ?? 1,
-             reminderEnabled: true,
-             isActive: m['is_active'] ?? true,
-           );
-         }).toList(),
-       );
-     });
-   } catch (e) {
-     debugPrint("LOAD MEDICATION ERROR = $e");
-   }
- }
+            return MedicationItem(
+              id: m['id'].toString(),
+              name: m['name'] ?? '',
+              dosage: m['dosage'] ?? '',
+              type: MedicationType.values[
+                  (m['type'] ?? 0).clamp(0, MedicationType.values.length - 1)],
+              daysOfWeek: m['days_of_week'] != null
+                  ? List<String>.from(m['days_of_week'])
+                  : [],
+              period: m['period'] ?? 'صباحا',
+              time: time,
+              dosesPerDay: m['dosesPerDay'] ?? 1,
+              reminderEnabled: true,
+              isActive: m['is_active'] ?? true,
+            );
+          }).toList(),
+        );
+      });
+
+      await _loadDoseRecords();
+    } catch (e) {
+      debugPrint("LOAD MEDICATION ERROR = $e");
+    }
+  }
+
   Future<void> _saveTakenMedications() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('takenMedications', _takenMedications.toList());
@@ -350,41 +610,64 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'مساءً';
   }
 
-  void _openAddMedicationSheet() {
+  void _openAddMedicationSheet({MedicationItem? existingMedication}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _AddMedicationSheet(
+        existingMedication: existingMedication,
         onSave: (med) async {
           final depProvider = context.read<DependentProvider>();
           final authProvider = context.read<AuthProvider>();
           final selectedDep = depProvider.selectedDependent;
 
-          if (selectedDep != null && authProvider.accessToken != null) {
-            // Save to API for dependent
-            print("DEPENDENT ID SENT = ${selectedDep.id}");
-            try {
-              await ApiService.postJson(
-                '/medications',
-                body: {
-                  //'dependent_id': selectedDep.id,
-                  'dependent_id': int.parse(selectedDep.id.toString()),
-                  'name': med.name,
-                  'dosage': med.dosage,
-                  'type': med.type.index,
-                  'days_of_week': med.daysOfWeek,
-                  'period': med.period,
-                  'time': '${med.time.hour}:${med.time.minute}',
-                  'dosesPerDay': med.dosesPerDay,
-                },
-                token: authProvider.accessToken!,
-              );
-              await _loadMedications();
-            } catch (e) {
-              debugPrint('Error saving medication for dependent: $e');
+          if (existingMedication != null) {
+            // Update existing medication
+            if (authProvider.accessToken != null) {
+              try {
+                await ApiService.putJson(
+                  '/medications/${existingMedication.id}',
+                  body: {
+                    'name': med.name,
+                    'dosage': med.dosage,
+                    'type': med.type.index,
+                    'days_of_week': med.daysOfWeek,
+                    'period': med.period,
+                    'time': '${med.time.hour}:${med.time.minute}',
+                    'doses_per_day': med.dosesPerDay,
+                  },
+                  token: authProvider.accessToken!,
+                );
+                await _loadMedications();
+              } catch (e) {
+                debugPrint('Error updating medication: $e');
+              }
             }
-          } else if (authProvider.accessToken != null) {
+          } else {
+            // Add new medication
+            if (selectedDep != null && authProvider.accessToken != null) {
+              // Save to API for dependent
+              try {
+                await ApiService.postJson(
+                  '/medications',
+                  body: {
+                    'dependent_id': int.parse(selectedDep.id.toString()),
+                    'name': med.name,
+                    'dosage': med.dosage,
+                    'type': med.type.index,
+                    'days_of_week': med.daysOfWeek,
+                    'period': med.period,
+                    'time': '${med.time.hour}:${med.time.minute}',
+                    'doses_per_day': med.dosesPerDay,
+                  },
+                  token: authProvider.accessToken!,
+                );
+                await _loadMedications();
+              } catch (e) {
+                debugPrint('Error saving medication for dependent: $e');
+              }
+            } else if (authProvider.accessToken != null) {
               try {
                 await ApiService.postJson(
                   '/medications',
@@ -395,21 +678,136 @@ class _HomeScreenState extends State<HomeScreen> {
                     'days_of_week': med.daysOfWeek,
                     'period': med.period,
                     'time': '${med.time.hour}:${med.time.minute}',
-                    'dosesPerDay': med.dosesPerDay,
+                    'doses_per_day': med.dosesPerDay,
                   },
                   token: authProvider.accessToken!,
                 );
-
                 await _loadMedications();
               } catch (e) {
                 debugPrint(e.toString());
               }
             }
+          }
         },
       ),
     );
   }
-  
+
+ Future<void> _deleteMedication(MedicationItem med) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text("حذف الدواء"),
+      content: Text("هل تريد حذف ${med.name} ؟"),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text("إلغاء"),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+          ),
+          child: const Text("حذف"),
+        ),
+      ],
+    ),
+  );
+
+  if (ok != true) return;
+
+  final auth = context.read<AuthProvider>();
+  if (auth.accessToken == null) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('الرجاء تسجيل الدخول أولاً'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+    return;
+  }
+
+  // قائمة المسارات المحتملة
+  final List<Map<String, String>> tests = [
+    {'method': 'DELETE', 'path': '/medications/${med.id}'},
+    {'method': 'DELETE', 'path': '/medication/${med.id}'},
+    {'method': 'DELETE', 'path': '/medicines/${med.id}'},
+    {'method': 'DELETE', 'path': '/medicine/${med.id}'},
+    {'method': 'DELETE', 'path': '/api/medications/${med.id}'},
+    {'method': 'POST', 'path': '/medications/${med.id}', 'body': '{"_method":"DELETE"}'},
+    {'method': 'POST', 'path': '/medication/${med.id}', 'body': '{"_method":"DELETE"}'},
+    {'method': 'DELETE', 'path': '/medications/delete/${med.id}'},
+    {'method': 'DELETE', 'path': '/delete-medication/${med.id}'},
+  ];
+
+  String? workingPath;
+  int? lastStatusCode;
+
+  for (final test in tests) {
+    try {
+      final url = ApiService.buildUrl(test['path']!);
+      debugPrint('🔍 Trying: ${test['method']} $url');
+
+      http.Response response;
+
+      if (test['method'] == 'POST') {
+        response = await http.post(
+          Uri.parse(url),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ${auth.accessToken!}',
+          },
+          body: test['body'],
+        );
+      } else {
+        response = await http.delete(
+          Uri.parse(url),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ${auth.accessToken!}',
+          },
+        );
+      }
+
+      debugPrint('🔍 Status: ${response.statusCode} for ${test['path']}');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        workingPath = test['path'];
+        break;
+      } else {
+        lastStatusCode = response.statusCode;
+      }
+    } catch (e) {
+      debugPrint('❌ Error with ${test['path']}: $e');
+    }
+  }
+
+  if (workingPath != null) {
+    await _loadMedications();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ تم حذف الدواء بنجاح'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  } else {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ فشل الحذف: الكود $lastStatusCode'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+}
 
   Future<void> _signOut(BuildContext context) async {
     // Clear whatever kind of session is active (email token or Google).
@@ -518,6 +916,18 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
+                        // متابعة الجرعات
+                        const PopupMenuItem<String>(
+                          value: 'adherence',
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text('متابعة الجرعات', style: TextStyle(fontSize: 16)),
+                              SizedBox(width: 12),
+                              Icon(Icons.fact_check_outlined, color: _Colors.darkGreen, size: 24),
+                            ],
+                          ),
+                        ),
                         // التابعون
                         const PopupMenuItem<String>(
                           value: 'dependents',
@@ -558,6 +968,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           setState(() => _selectedIndex = 2);
                         } else if (value == 'my_meds') {
                           setState(() => _selectedIndex = 1);
+                        } else if (value == 'adherence') {
+                          _showAdherenceSheet(context);
                         } else if (value == 'dependents') {
                           final changed = await Navigator.push(
                             context,
@@ -583,9 +995,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
                 const SizedBox(width: 12),
-                
+
                 // Single source for the greeting/name/dependent-profile block.
-               
                 Expanded(
                   child: Consumer<DependentProvider>(
                     builder: (context, depProvider, _) {
@@ -621,10 +1032,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           if (selectedDep != null) ...[
                             const SizedBox(height: 4),
                             GestureDetector(
-                             onTap: () {
-                               depProvider.selectDependent(null);
-                               _loadMedications();
-                             },
+                              onTap: () {
+                                depProvider.selectDependent(null);
+                                _loadMedications();
+                              },
                               child: const Text(
                                 'العودة لملفي الشخصي',
                                 style: TextStyle(
@@ -646,7 +1057,7 @@ class _HomeScreenState extends State<HomeScreen> {
           // "+" add button on the left side (rendered on the left in RTL)
           if (_selectedIndex == 1)
             GestureDetector(
-              onTap: _openAddMedicationSheet,
+              onTap: () => _openAddMedicationSheet(),
               child: Container(
                 width: 34,
                 height: 34,
@@ -654,7 +1065,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   shape: BoxShape.circle,
                   border: Border.all(color: _Colors.primaryGreen, width: 1.5),
                 ),
-
                 child: const Icon(
                   Icons.add,
                   color: _Colors.primaryGreen,
@@ -662,8 +1072,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-          
-          
         ],
       ),
     );
@@ -776,7 +1184,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 16),
                       GestureDetector(
-                     onTap: _openAddMedicationSheet,
+                        onTap: () => _openAddMedicationSheet(),
                         child: Container(
                           width: double.infinity,
                           margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -805,12 +1213,18 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.all(16),
                         itemCount: todaysMeds.length,
                         itemBuilder: (context, index) =>
-                            _MedicationCard(medication: todaysMeds[index]),
+                            _MedicationCard(
+                              medication: todaysMeds[index],
+                              onEdit: () => _openAddMedicationSheet(
+                                existingMedication: todaysMeds[index],
+                              ),
+                              onDelete: () => _deleteMedication(todaysMeds[index]),
+                            ),
                       ),
                     ),
                     const SizedBox(height: 16),
                     GestureDetector(
-                      onTap: _openAddMedicationSheet,
+                      onTap: () => _openAddMedicationSheet(),
                       child: Container(
                         width: double.infinity,
                         margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -879,7 +1293,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: active.length, // unlimited
                   itemBuilder: (context, index) =>
-                      _MedicationCard(medication: active[index]),
+                      _MedicationCard(
+                        medication: active[index],
+                        onEdit: () => _openAddMedicationSheet(
+                          existingMedication: active[index],
+                        ),
+                        onDelete: () => _deleteMedication(active[index]),
+                      ),
                 ),
         ),
       ],
@@ -1046,8 +1466,14 @@ class _HomeScreenState extends State<HomeScreen> {
 // ---------------------------------------------------------------------
 class _MedicationCard extends StatelessWidget {
   final MedicationItem medication;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
-  const _MedicationCard({required this.medication});
+  const _MedicationCard({
+    required this.medication,
+    this.onEdit,
+    this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1059,7 +1485,46 @@ class _MedicationCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          PopupMenuButton<String>(
+            color: Colors.white,
+            icon: const Icon(
+              Icons.more_vert,
+              color: Colors.white,
+            ),
+            onSelected: (value) {
+              if (value == "edit") {
+                onEdit?.call();
+              }
+              if (value == "delete") {
+                onDelete?.call();
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: "edit",
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, color: Colors.green),
+                    SizedBox(width: 8),
+                    Text("تعديل"),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: "delete",
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text("حذف"),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 12),
           Container(
             width: 44,
             height: 44,
@@ -1099,9 +1564,13 @@ class _MedicationCard extends StatelessWidget {
 // Add medication bottom sheet
 // ---------------------------------------------------------------------
 class _AddMedicationSheet extends StatefulWidget {
+  final MedicationItem? existingMedication;
   final void Function(MedicationItem medication) onSave;
 
-  const _AddMedicationSheet({required this.onSave});
+  const _AddMedicationSheet({
+    this.existingMedication,
+    required this.onSave,
+  });
 
   @override
   State<_AddMedicationSheet> createState() => _AddMedicationSheetState();
@@ -1115,13 +1584,13 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   bool _reminderEnabled = true;
 
   static const List<String> _allDays = [
-    'الجمعة',
-    'السبت',
-    'الأحد',
-    'الإثنين',
+    'الاثنين',
     'الثلاثاء',
     'الأربعاء',
     'الخميس',
+    'الجمعة',
+    'السبت',
+    'الأحد',
   ];
   final Set<String> _selectedDays = {};
 
@@ -1129,8 +1598,8 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   TimeOfDay _time = const TimeOfDay(hour: 6, minute: 0);
   int _dosesPerDay = 1;
 
-
   List<Map<String, dynamic>> _pharmacySuggestions = [];
+
   Future<void> _searchMedicines(String query) async {
     if (query.trim().isEmpty) {
       setState(() {
@@ -1156,6 +1625,21 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    final existing = widget.existingMedication;
+    if (existing != null) {
+      _nameController.text = existing.name;
+      _dosageController.text = existing.dosage;
+      _selectedType = existing.type;
+      _selectedDays.addAll(existing.daysOfWeek);
+      _period = existing.period;
+      _time = existing.time;
+      _dosesPerDay = existing.dosesPerDay;
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _dosageController.dispose();
@@ -1163,25 +1647,24 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
     super.dispose();
   }
 
+  void _selectSuggestion(Map<String, dynamic> suggestion) {
+    setState(() {
+      final nameEn = (suggestion['name_en'] ?? '').toString();
+      final nameAr = (suggestion['name_ar'] ?? '').toString();
 
-void _selectSuggestion(Map<String, dynamic> suggestion) {
-  setState(() {
-    final nameEn = (suggestion['name_en'] ?? '').toString();
-    final nameAr = (suggestion['name_ar'] ?? '').toString();
+      // نحفظ الاسمين مع بعض بنفس الحقل عشان ما نحتاج نعدل قاعدة البيانات
+      _nameController.text =
+          nameAr.isNotEmpty ? '$nameEn — $nameAr' : nameEn;
 
-    // نحفظ الاسمين مع بعض بنفس الحقل عشان ما نحتاج نعدل قاعدة البيانات
-    _nameController.text =
-        nameAr.isNotEmpty ? '$nameEn — $nameAr' : nameEn;
+      _dosageController.text =
+          suggestion['dosage'] ?? '';
 
-    _dosageController.text =
-        suggestion['dosage'] ?? '';
+      _searchController.clear();
+      _pharmacySuggestions.clear();
+    });
 
-    _searchController.clear();
-    _pharmacySuggestions.clear();
-  });
-
-  FocusScope.of(context).unfocus();
-}
+    FocusScope.of(context).unfocus();
+  }
 
   Future<void> _pickTime() async {
     final picked = await showTimePicker(context: context, initialTime: _time);
@@ -1201,7 +1684,7 @@ void _selectSuggestion(Map<String, dynamic> suggestion) {
 
     widget.onSave(
       MedicationItem(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: widget.existingMedication?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text.trim(),
         dosage: _dosageController.text.trim(),
         type: _selectedType,
@@ -1319,41 +1802,40 @@ void _selectSuggestion(Map<String, dynamic> suggestion) {
                   ),
                 ),
                 const SizedBox(height: 8),
-if (_pharmacySuggestions.isNotEmpty)
-  Container(
-    decoration: BoxDecoration(
-      color: const Color(0xFFF8FFF9),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: _Colors.borderGrey),
-    ),
-    child: ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _pharmacySuggestions.length,
-      itemBuilder: (context, index) {
-   
-        final item = _pharmacySuggestions[index];
-        final nameEn = (item['name_en'] ?? '').toString();
-        final nameAr = (item['name_ar'] ?? '').toString();
+                if (_pharmacySuggestions.isNotEmpty)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FFF9),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _Colors.borderGrey),
+                    ),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _pharmacySuggestions.length,
+                      itemBuilder: (context, index) {
+                        final item = _pharmacySuggestions[index];
+                        final nameEn = (item['name_en'] ?? '').toString();
+                        final nameAr = (item['name_ar'] ?? '').toString();
 
-        return ListTile(
-          title: Text(
-            nameAr.isNotEmpty ? '$nameEn — $nameAr' : nameEn,
-            textAlign: TextAlign.right,
-          ),
-          subtitle: Text(
-            item['dosage'] ?? '',
-            textAlign: TextAlign.right,
-          ),
-          trailing: const Icon(
-            Icons.medical_services_outlined,
-            color: _Colors.primaryGreen,
-          ),
-          onTap: () => _selectSuggestion(item),
-        );
-      },
-    ),
-  ),
+                        return ListTile(
+                          title: Text(
+                            nameAr.isNotEmpty ? '$nameEn — $nameAr' : nameEn,
+                            textAlign: TextAlign.right,
+                          ),
+                          subtitle: Text(
+                            item['dosage'] ?? '',
+                            textAlign: TextAlign.right,
+                          ),
+                          trailing: const Icon(
+                            Icons.medical_services_outlined,
+                            color: _Colors.primaryGreen,
+                          ),
+                          onTap: () => _selectSuggestion(item),
+                        );
+                      },
+                    ),
+                  ),
                 const SizedBox(height: 12),
                 Row(
                   children: [

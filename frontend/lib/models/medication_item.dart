@@ -70,7 +70,7 @@ class MedicationItem {
       'days_of_week': daysOfWeek,
       'period': period,
       'time': '${time.hour}:${time.minute}',
-      'dosesPerDay': dosesPerDay,
+      'doses_per_day': dosesPerDay,
     };
   }
 }

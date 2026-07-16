@@ -41,6 +41,30 @@ class ApiService {
     throw Exception('Request failed: ${response.statusCode} ${response.body}');
   }
 
+  static Future<Map<String, dynamic>> patchJson(
+    String path, {
+    required Map<String, dynamic> body,
+    String? token,
+  }) async {
+    final response = await http.patch(
+      Uri.parse(buildUrl(path)),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) {
+        return {};
+      }
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception('Request failed: ${response.statusCode} ${response.body}');
+  }
+
   // ---------- existing Map-returning methods (unchanged behavior) ----------
 
   static Future<Map<String, dynamic>> postJson(
@@ -167,5 +191,25 @@ class ApiService {
     }
 
     throw Exception('Request failed: ${response.statusCode} ${response.body}');
+  }
+
+  // ✅✅✅ الدالة delete الآن داخل class ApiService ✅✅✅
+  static Future<void> delete(
+    String path, {
+    required String token,
+    Map<String, dynamic>? body,
+  }) async {
+    final response = await http.delete(
+      Uri.parse(buildUrl(path)),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: body != null ? jsonEncode(body) : null,
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('DELETE failed: ${response.statusCode} ${response.body}');
+    }
   }
 }
