@@ -1,4 +1,6 @@
-import 'dart:async';
+﻿import 'dart:async';
+import '../../providers/app_settings_provider.dart';
+import 'package:provider/provider.dart';
 
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
@@ -92,8 +94,12 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final settings = context.watch<AppSettingsProvider>();
+    final isRtl = settings.languageCode == 'ar';
+    final textDirection = isRtl ? TextDirection.rtl : TextDirection.ltr;
+
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: textDirection,
       child: Container(
         width: size.width,
         height: size.height,

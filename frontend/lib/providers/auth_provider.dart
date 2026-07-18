@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 
@@ -88,6 +88,23 @@ class AuthProvider extends ChangeNotifier {
       await _authService.saveTokens(newAccessToken, _refreshToken ?? '');
     } catch (_) {}
     _accessToken = newAccessToken;
+    notifyListeners();
+  }
+
+  Future<void> updateProfile({
+    required String fullName,
+    required String email,
+    String? photoUrl,
+  }) async {
+    final updatedUser = Map<String, dynamic>.from(_user ?? {});
+    updatedUser['full_name'] = fullName;
+    updatedUser['name'] = fullName;
+    updatedUser['email'] = email;
+    if (photoUrl != null) {
+      updatedUser['photo'] = photoUrl;
+    }
+    await _authService.saveUserData(updatedUser);
+    _user = updatedUser;
     notifyListeners();
   }
 }

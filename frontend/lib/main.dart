@@ -1,4 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'providers/app_settings_provider.dart';
+import 'views/settings/settings_screen.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'services/auth_service.dart';
@@ -43,17 +46,41 @@ class DawaiApp extends StatelessWidget {
         Provider<DioClient>(
           create: (_) => DioClient(),
         ),
-      ],
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Dawai',
-        theme: ThemeData(
-         colorScheme: ColorScheme.fromSeed(
-  seedColor: const Color.fromARGB(255, 2, 111, 38),
-),
-          fontFamily: 'Cairo',
+        ChangeNotifierProvider<AppSettingsProvider>(
+          create: (_) => AppSettingsProvider()..load(),
         ),
-        home: const _AuthGate(),
+      ],
+      child: Consumer<AppSettingsProvider>(
+        builder: (context, settings, _) {
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'Dawai',
+            locale: settings.locale,
+            supportedLocales: const [
+              Locale('ar'),
+              Locale('en'),
+            ],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color.fromARGB(255, 2, 111, 38),
+              ),
+              fontFamily: 'Cairo',
+            ),
+            darkTheme: ThemeData.dark().copyWith(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color.fromARGB(255, 2, 111, 38),
+                brightness: Brightness.dark,
+              ),
+            ),
+            themeMode: settings.themeMode,
+            home: const _AuthGate(),
+          );
+        },
       ),
     );
   }

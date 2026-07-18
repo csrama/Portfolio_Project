@@ -1,138 +1,39 @@
-// lib/screens/dashboard/home_screen.dart
-//
-// Single drop-in replacement for the previous home_screen.dart.
-// Keeps the same class name (HomeScreen) and constructor signature
-// (userName, photoUrl) so existing imports/usages elsewhere in the
-// project (e.g. OnboardingScreen's Navigator.pushReplacement) keep
-// working without any changes.
-//
-  void _openAddMedicationSheet({MedicationItem? existingMedication}) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _AddMedicationSheet(
-        existingMedication: existingMedication,
-        onSave: (med) async {
-          final depProvider = context.read<DependentProvider>();
-          final authProvider = context.read<AuthProvider>();
-          final selectedDep = depProvider.selectedDependent;
+﻿import 'dart:convert';
+import '../../repositories/auth_repository.dart';
+import '../../services/google_auth_service.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 
-          if (existingMedication != null) {
-            // Update existing medication
-            if (authProvider.accessToken != null) {
-              try {
-                await ApiService.putJson(
-                  '/medications/${existingMedication.id}',
-                  body: {
-                    'name': med.name,
-                    'dosage': med.dosage,
-                    'type': med.type.index,
-                    'days_of_week': med.daysOfWeek,
-                    'period': med.period,
-                    'time': '${med.time.hour}:${med.time.minute}',
-                    'doses_per_day': med.dosesPerDay,
-                  },
-                  token: authProvider.accessToken!,
-                );
-                await _loadMedications();
-                if (med.reminderEnabled) {
-                  final idx = _medications.indexWhere((m) => m.name == med.name && m.time.hour == med.time.hour && m.time.minute == med.time.minute);
-                  if (idx >= 0) {
-                    await NotificationService.scheduleMedicineReminder(
-                      id: idx,
-                      medicineName: _medications[idx].name,
-                      hour: _medications[idx].time.hour,
-                      minute: _medications[idx].time.minute,
-                    );
-                  }
-                }
-              } catch (e) {
-                debugPrint('Error updating medication: $e');
-              }
-            }
-          } else {
-            // Add new medication
-            if (selectedDep != null && authProvider.accessToken != null) {
-              // Save to API for dependent
-              try {
-                await ApiService.postJson(
-                  '/medications',
-                  body: {
-                    'dependent_id': int.parse(selectedDep.id.toString()),
-                    'name': med.name,
-                    'dosage': med.dosage,
-                    'type': med.type.index,
-                    'days_of_week': med.daysOfWeek,
-                    'period': med.period,
-                    'time': '${med.time.hour}:${med.time.minute}',
-                    'doses_per_day': med.dosesPerDay,
-                  },
-                  token: authProvider.accessToken!,
-                );
-                await _loadMedications();
-                if (med.reminderEnabled) {
-                  final idx = _medications.indexWhere((m) => m.name == med.name && m.time.hour == med.time.hour && m.time.minute == med.time.minute);
-                  if (idx >= 0) {
-                    await NotificationService.scheduleMedicineReminder(
-                      id: idx,
-                      medicineName: _medications[idx].name,
-                      hour: _medications[idx].time.hour,
-                      minute: _medications[idx].time.minute,
-                    );
-                  }
-                }
-              } catch (e) {
-                debugPrint('Error saving medication for dependent: $e');
-              }
-            } else if (authProvider.accessToken != null) {
-              try {
-                await ApiService.postJson(
-                  '/medications',
-                  body: {
-                    'name': med.name,
-                    'dosage': med.dosage,
-                    'type': med.type.index,
-                    'days_of_week': med.daysOfWeek,
-                    'period': med.period,
-                    'time': '${med.time.hour}:${med.time.minute}',
-                    'doses_per_day': med.dosesPerDay,
-                  },
-                  token: authProvider.accessToken!,
-                );
-                await _loadMedications();
-                if (med.reminderEnabled) {
-                  final idx = _medications.indexWhere((m) => m.name == med.name && m.time.hour == med.time.hour && m.time.minute == med.time.minute);
-                  if (idx >= 0) {
-                    await NotificationService.scheduleMedicineReminder(
-                      id: idx,
-                      medicineName: _medications[idx].name,
-                      hour: _medications[idx].time.hour,
-                      minute: _medications[idx].time.minute,
-                    );
-                  }
-                }
-              } catch (e) {
-                debugPrint(e.toString());
-              }
-            } else {
-              // Fallback: local-only save
-              setState(() => _medications.add(med));
-              await _saveMedications();
-              if (med.reminderEnabled) {
-                await NotificationService.scheduleMedicineReminder(
-                  id: _medications.length - 1,
-                  medicineName: med.name,
-                  hour: med.time.hour,
-                  minute: med.time.minute,
-                );
-              }
-            }
-          }
-        },
-      ),
-    );
-  }
+import '../../models/medication_item.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/dependent_provider.dart';
+import '../../providers/app_settings_provider.dart';
+import '../../services/api_service.dart';
+import '../../services/dependent_service.dart';
+import '../../services/notification_service.dart';
+import '../../i18n/strings.dart';
+import '../onboarding/onboarding_screen.dart';
+import '../profile/profile_screen.dart';
+import '../settings/settings_screen.dart';
+import 'dependents_screen.dart';
+
+class _Colors {
+  static const Color primaryGreen = Color(0xFF1D9E75);
+  static const Color darkGreen = Color(0xFF085041);
+  static const Color lightGreenBg = Color(0xFFD9F2E7);
+  static const Color mutedGreen = Color(0xFF7FBF9E);
+  static const Color textPrimary = Colors.black;
+  static const Color textSecondary = Colors.black54;
+  static const Color borderGrey = Color(0xFFE0E0E0);
+}
+
+class HomeScreen extends StatefulWidget {
+  final String? userName;
+  final String? photoUrl;
+
   const HomeScreen({super.key, this.userName, this.photoUrl});
 
   @override
@@ -1486,17 +1387,22 @@ class _HomeScreenState extends State<HomeScreen> {
       _buildTodayTab(),
       _buildMedicationsTab(),
       _buildRemindersTab(),
+      const ProfileScreen(),
     ];
 
+    final settings = context.watch<AppSettingsProvider>();
+    final isRtl = settings.languageCode == 'ar';
+    final textDirection = isRtl ? TextDirection.rtl : TextDirection.ltr;
+
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: textDirection,
       child: Scaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildTopBar(),
+              if (_selectedIndex != 3) _buildTopBar(),
               Expanded(child: tabs[_selectedIndex]),
             ],
           ),
@@ -1508,18 +1414,22 @@ class _HomeScreenState extends State<HomeScreen> {
           selectedItemColor: const Color.fromARGB(255, 4, 96, 67),
           unselectedItemColor: Colors.grey,
           type: BottomNavigationBarType.fixed,
-          items: const [
+          items: [
             BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.calendar),
-              label: 'اليوم',
+              icon: const Icon(CupertinoIcons.calendar),
+              label: Strings.tr(context, 'today'),
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.medication),
-              label: 'أدويتي',
+              icon: const Icon(Icons.medication),
+              label: Strings.tr(context, 'my_meds'),
             ),
             BottomNavigationBarItem(
-              icon: Icon(CupertinoIcons.bell),
-              label: 'التذكيرات',
+              icon: const Icon(CupertinoIcons.bell),
+              label: Strings.tr(context, 'reminders'),
+            ),
+            BottomNavigationBarItem(
+              icon: const Icon(CupertinoIcons.person),
+              label: Strings.tr(context, 'my_account'),
             ),
           ],
         ),

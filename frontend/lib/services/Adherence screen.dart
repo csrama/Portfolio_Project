@@ -1,4 +1,4 @@
-// lib/views/dashboard/adherence_screen.dart
+﻿// lib/views/dashboard/adherence_screen.dart
 //
 // صفحة كاملة مستقلة لمتابعة الجرعات (نسبة الالتزام + سجل الجرعات).
 // تُستدعى من HomeScreen عبر Navigator.push، وتاخذ قائمة الأدوية
@@ -9,9 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
-import 'home_screen.dart'
-
-show MedicationItem 
+import '../models/medication_item.dart'; 
 
 class _Colors {
   static const Color primaryGreen = Color(0xFF1D9E75);
