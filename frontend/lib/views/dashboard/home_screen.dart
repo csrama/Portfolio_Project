@@ -25,6 +25,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../../repositories/auth_repository.dart';
 import '../../services/google_auth_service.dart';
+import '../../services/notification_service.dart';
 
 // ---------------------------------------------------------------------
 // Colors (inlined here to keep this a single self-contained file)
@@ -295,16 +296,23 @@ class _HomeScreenState extends State<HomeScreen> {
     if (hour < 18) return 'مساءً';
     return 'مساءً';
   }
-
   void _openAddMedicationSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _AddMedicationSheet(
-        onSave: (med) {
+        onSave: (med) async {
           setState(() => _medications.add(med));
-          _saveMedications();
+          await _saveMedications();
+          if (med.reminderEnabled) {
+            await NotificationService.scheduleMedicineReminder(
+              id: _medications.length - 1,
+              medicineName: med.name,
+              hour: med.time.hour,
+              minute: med.time.minute,
+            );
+          }
         },
       ),
     );

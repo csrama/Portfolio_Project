@@ -5,8 +5,12 @@ import 'services/auth_service.dart';
 import 'services/dio_client.dart';
 import 'views/dashboard/home_screen.dart';
 import 'views/splash/splash_screen.dart';
+import 'package:frontend/services/notification_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.init(); // Initialize the notification service
+  await NotificationService.requestPermission();
   runApp(const DawaiApp());
 }
 
