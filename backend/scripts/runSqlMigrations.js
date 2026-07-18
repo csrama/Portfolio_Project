@@ -20,8 +20,8 @@ async function run() {
     }
 
     const files = fs.readdirSync(migrationsDir)
-      .filter((file) => file.endsWith('.sql'))
-      .sort();
+      .filter((file) => file.endsWith(".sql"))
+      .sort((a, b) => a.localeCompare(b));
 
     for (const file of files) {
       const filePath = path.join(migrationsDir, file);

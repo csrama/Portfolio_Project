@@ -1,0 +1,16 @@
+{
+  "hosting": {
+    "public": "flutter build apk --release",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

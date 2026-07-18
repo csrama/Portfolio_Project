@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../dashboard/home_screen.dart';
-import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 import '../../services/google_auth_service.dart';
-import '../../repositories/auth_repository.dart';
+import '../../services/api_service.dart'; 
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -15,8 +17,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _emailController = TextEditingController();
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _authService = AuthService();
   bool _isLoading = false;
   bool _isSignUp = false;
+  String _userType = 'general_user';
 
   @override
   void dispose() {
@@ -48,20 +52,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           'email': email,
           'password': password,
           'full_name': name,
-          'user_type': 'general_user',
+          'user_type': _userType,
         },
       );
 
-      await AuthRepository().saveSession(
-        token: result['token']?.toString(),
-        userName: result['user']?['full_name']?.toString(),
-        provider: 'email',
-      );
+      final token = result['token']?.toString();
+      final refreshToken = result['refreshToken']?.toString();
+      final user = result['user'] as Map<String, dynamic>?;
+
+      if (token == null || user == null) {
+        throw Exception('بيانات غير مكتملة من الخادم');
+      }
+
+      await context.read<AuthProvider>().login(
+            token,
+            refreshToken ?? '',
+            user,
+          );
 
       if (!mounted) return;
+      final isOffline = result['mode'] == 'offline';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('تم إنشاء الحساب بنجاح: ${result['user']['full_name']}'),
+          content: Text(
+            isOffline
+                ? 'تم إنشاء الحساب محليًا بدون اتصال بالإنترنت'
+                : 'تم إنشاء الحساب بنجاح: ${user['full_name']}',
+          ),
         ),
       );
 
@@ -69,7 +86,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         context,
         MaterialPageRoute(
           builder: (_) => HomeScreen(
-            userName: result['user']['full_name']?.toString(),
+            userName: user['full_name']?.toString(),
             photoUrl: null,
           ),
         ),
@@ -78,7 +95,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (!mounted) return;
       final message = e.toString().contains('409')
           ? 'هذا البريد مستخدم بالفعل'
-          : 'فشل إنشاء الحساب. تأكد من الاتصال بالإنترنت أو جرّب بريدًا آخر';
+          : 'فشل إنشاء الحساب، جرّب بريدًا آخر';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) {
@@ -105,22 +122,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         body: {'email': email, 'password': password},
       );
 
-      await AuthRepository().saveSession(
-        token: result['token']?.toString(),
-        userName: result['user']?['full_name']?.toString(),
-        provider: 'email',
-      );
+      final token = result['token']?.toString();
+      final refreshToken = result['refreshToken']?.toString();
+      final user = result['user'] as Map<String, dynamic>?;
+
+      if (token == null || user == null) {
+        throw Exception('بيانات غير مكتملة من الخادم');
+      }
+
+      await context.read<AuthProvider>().login(
+            token,
+            refreshToken ?? '',
+            user,
+          );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم تسجيل الدخول بنجاح')),
-      );
 
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => HomeScreen(
-            userName: result['user']['full_name']?.toString(),
+            userName: user['full_name']?.toString(),
             photoUrl: null,
           ),
         ),
@@ -145,34 +167,59 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _signInWithGoogle(BuildContext context) async {
+    setState(() => _isLoading = true);
     try {
-      final user = await GoogleAuthService().signIn();
+      final googleAuthService = GoogleAuthService();
+      final authResult = await googleAuthService.signInWithBackend(
+        authService: _authService,
+      );
+
       if (!context.mounted) return;
 
-      if (user == null) {
+      if (authResult == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إلغاء تسجيل الدخول')),
+          const SnackBar(content: Text('تم إلغاء تسجيل الدخول أو فشل الإعداد')),
         );
+        setState(() => _isLoading = false);
         return;
       }
 
-      await AuthRepository().saveSession(
-        userName: user.displayName,
-        photoUrl: user.photoUrl,
-        provider: 'google',
-      );
+      final token = authResult['token']?.toString();
+      final refreshToken = authResult['refreshToken']?.toString();
+      final user = authResult['user'] as Map<String, dynamic>?;
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => HomeScreen(userName: user.displayName, photoUrl: user.photoUrl),
-        ),
-      );
+      if (token != null && user != null) {
+        await context.read<AuthProvider>().login(
+              token,
+              refreshToken ?? '',
+              user,
+            );
+
+        if (!mounted) return;
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => HomeScreen(
+              userName: user['full_name']?.toString() ?? user['name']?.toString(),
+              photoUrl: user['picture']?.toString(),
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('بيانات تسجيل الدخول غير مكتملة')),
+        );
+      }
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('حدث خطأ أثناء تسجيل الدخول: $e')),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -232,6 +279,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         controller: _nameController,
                         hint: 'الاسم الكامل',
                         keyboardType: TextInputType.name,
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: _userType,
+                        decoration: InputDecoration(
+                          labelText: 'نوع الحساب',
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.85),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'general_user',
+                            child: Text('مستخدم'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'caregiver',
+                            child: Text('مقدم رعاية'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _userType = value!;
+                          });
+                        },
                       ),
                       const SizedBox(height: 12),
                     ],
@@ -299,7 +373,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         TextButton(
-                          onPressed: () => setState(() => _isSignUp = !_isSignUp),
+                          onPressed: _isLoading
+                              ? null
+                              : () => setState(() => _isSignUp = !_isSignUp),
                           child: Text(
                             _isSignUp ? 'تسجيل الدخول' : 'إنشاء حساب جديد',
                             style: const TextStyle(
@@ -337,7 +413,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     _buildSocialButton(
                       label: 'Sign up with Google',
                       icon: const Icon(Icons.g_mobiledata, size: 24, color: Colors.black87),
-                      onPressed: () => _signInWithGoogle(context),
+                      onPressed: _isLoading ? null : () => _signInWithGoogle(context),
                     ),
                     const SizedBox(height: 10),
 
@@ -345,7 +421,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     _buildSocialButton(
                       label: 'Sign up with Apple',
                       icon: const Icon(Icons.apple, size: 22, color: Colors.black87),
-                      onPressed: () => _showComingSoon(context),
+                      onPressed: _isLoading ? null : () => _showComingSoon(context),
                     ),
 
                     // Terms
@@ -359,14 +435,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     // Guest
                     const SizedBox(height: 16),
                     TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const HomeScreen(userName: null),
-                          ),
-                        );
-                      },
+                      onPressed: _isLoading
+                          ? null
+                          : () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const HomeScreen(userName: null),
+                                ),
+                              );
+                            },
                       child: const Text(
                         'الاستمرار كضيف',
                         style: TextStyle(
@@ -402,7 +480,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         hintText: hint,
         hintStyle: const TextStyle(color: Color(0xFF7AAE95), fontSize: 14),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.85),
+        fillColor: Colors.white.withValues(alpha: 0.85),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -423,12 +501,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _buildSocialButton({
     required String label,
     required Widget icon,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
   }) {
     return OutlinedButton(
       style: OutlinedButton.styleFrom(
         side: const BorderSide(color: Colors.white54, width: 1),
-        backgroundColor: Colors.white.withOpacity(0.75),
+        backgroundColor: Colors.white.withValues(alpha: 0.75),
         padding: const EdgeInsets.symmetric(vertical: 13),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),

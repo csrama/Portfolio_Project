@@ -17,7 +17,8 @@ const memoryStore = {
   medications: [],
   schedules: [],
   doseRecords: [],
-  notifications: []
+  notifications: [],
+  dependents: []
 };
 
 function normalizeUserType(userType) {
@@ -70,6 +71,25 @@ async function queryWithFallback(text, params = []) {
 const db = {
   async query(text, params = []) {
     return queryWithFallback(text, params);
+  },
+
+  async searchMedicines(term) {
+    if (useMemoryStore) {
+      // لا يوجد كتالوج أدوية بالذاكرة المؤقتة؛ هذا البحث متاح فقط
+      // عند الاتصال بقاعدة PostgreSQL.
+      return [];
+    }
+
+    const { rows } = await queryWithFallback(
+      `SELECT id, name_en, name_ar, dosage, category
+       FROM medicines
+       WHERE name_en ILIKE $1 OR name_ar ILIKE $1
+       ORDER BY name_en
+       LIMIT 15`,
+      [`%${term}%`]
+    );
+
+    return rows;
   },
 
   async createUser(data) {
@@ -135,6 +155,7 @@ const db = {
       const medication = {
         id: memoryStore.medications.length + 1,
         user_id: data.user_id,
+        dependent_id: data.dependent_id || null,
         name: data.name,
         dosage: data.dosage || null,
         form: data.form || 'tablet',
@@ -151,30 +172,106 @@ const db = {
     }
 
     const { rows } = await queryWithFallback(
-      `INSERT INTO medications (user_id, name, dosage, form, instructions, color, total_quantity, low_stock_threshold, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+  `INSERT INTO medications (
+      user_id,
+      dependent_id,
+      name,
+      dosage,
+      form,
+      instructions,
+      color,
+      total_quantity,
+      low_stock_threshold,
+      is_active,
+      type,
+      days_of_week,
+      period,
+      time,
+      doses_per_day
+   )
+   VALUES (
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15
+   )
+   RETURNING *`,
+  [
+    data.user_id,
+    data.dependent_id || null,
+    data.name,
+    data.dosage || null,
+    data.form || 'tablet',
+    data.instructions || null,
+    data.color || null,
+    data.total_quantity || 1,
+    data.low_stock_threshold || 1,
+    data.is_active !== false,
+
+    data.type ?? 0,
+    data.days_of_week ?? [],
+    data.period ?? 'صباحا',
+    data.time ?? '08:00',
+    data.doses_per_day ?? 1
+  ]
+);
+
+return rows[0];
+  },
+
+  async createDependent(data) {
+    if (useMemoryStore) {
+      const dependent = {
+        id: memoryStore.dependents.length + 1,
+        caregiver_user_id: data.caregiver_user_id,
+        full_name: data.full_name,
+        date_of_birth: data.date_of_birth || null,
+        relationship: data.relationship,
+        profile_image_url: data.profile_image_url || null,
+        medical_conditions: data.medical_conditions || [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      memoryStore.dependents.push(dependent);
+      return dependent;
+    }
+
+    const { rows } = await queryWithFallback(
+      `INSERT INTO dependents (caregiver_user_id, full_name, date_of_birth, relationship, profile_image_url, medical_conditions)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
       [
-        data.user_id,
-        data.name,
-        data.dosage || null,
-        data.form || 'tablet',
-        data.instructions || null,
-        data.color || null,
-        data.total_quantity || 1,
-        data.low_stock_threshold || 1,
-        data.is_active !== false
+        data.caregiver_user_id,
+        data.full_name,
+        data.date_of_birth || null,
+        data.relationship,
+        data.profile_image_url || null,
+        data.medical_conditions || []
       ]
     );
     return rows[0];
   },
 
-  async listMedications(userId) {
+  async listDependents(caregiverId) {
     if (useMemoryStore) {
-      return memoryStore.medications.filter((item) => item.user_id === Number(userId));
+      return memoryStore.dependents.filter((item) => item.caregiver_user_id === Number(caregiverId));
     }
 
-    const { rows } = await queryWithFallback('SELECT * FROM medications WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+    const { rows } = await queryWithFallback('SELECT * FROM dependents WHERE caregiver_user_id = $1 ORDER BY created_at DESC', [caregiverId]);
+    return rows;
+  },
+
+  async listMedications(userId, dependentId = null) {
+    if (useMemoryStore) {
+      return memoryStore.medications.filter((item) => {
+        if (dependentId) return item.dependent_id === Number(dependentId);
+        return item.user_id === Number(userId) && !item.dependent_id;
+      });
+    }
+
+    const query = dependentId 
+      ? 'SELECT * FROM medications WHERE dependent_id = $1 ORDER BY created_at DESC'
+      : 'SELECT * FROM medications WHERE user_id = $1 AND (dependent_id IS NULL OR $1 = -1) ORDER BY created_at DESC';
+    const params = dependentId ? [dependentId] : [userId];
+    
+    const { rows } = await queryWithFallback(query, params);
     return rows;
   },
 
@@ -184,6 +281,75 @@ const db = {
     }
 
     const { rows } = await queryWithFallback('SELECT * FROM medications WHERE id = $1', [id]);
+    return rows[0] || null;
+  },
+
+  async updateMedication({ id, userId, updates }) {
+    if (useMemoryStore) {
+      const medication = memoryStore.medications.find(
+        (item) => item.id === Number(id) && item.user_id === Number(userId)
+      );
+      if (!medication) return null;
+
+      Object.assign(medication, {
+        name: updates.name ?? medication.name,
+        dosage: updates.dosage ?? medication.dosage,
+        form: updates.form ?? medication.form,
+        instructions: updates.instructions ?? medication.instructions,
+        total_quantity: updates.total_quantity ?? medication.total_quantity,
+        updated_at: new Date().toISOString(),
+        is_active: updates.is_active ?? medication.is_active
+      });
+
+      return medication;
+    }
+
+    const { rows } = await queryWithFallback(
+      `UPDATE medications
+       SET
+         name = COALESCE($2, name),
+         dosage = COALESCE($3, dosage),
+         form = COALESCE($4, form),
+         instructions = COALESCE($5, instructions),
+         total_quantity = COALESCE($6, total_quantity),
+         is_active = COALESCE($7, is_active),
+         updated_at = NOW()
+       WHERE id = $1 AND user_id = $8
+       RETURNING *`,
+      [
+        id,
+        updates.name ?? null,
+        updates.dosage ?? null,
+        updates.form ?? null,
+        updates.instructions ?? null,
+        updates.total_quantity ?? null,
+        updates.is_active ?? null,
+        userId
+      ]
+    );
+
+    return rows[0] || null;
+  },
+
+  async deleteMedication({ id, userId }) {
+    if (useMemoryStore) {
+      const medication = memoryStore.medications.find(
+        (item) => item.id === Number(id) && item.user_id === Number(userId)
+      );
+      if (!medication) return null;
+      medication.is_active = false;
+      medication.updated_at = new Date().toISOString();
+      return medication;
+    }
+
+    const { rows } = await queryWithFallback(
+      `UPDATE medications
+       SET is_active = FALSE, updated_at = NOW()
+       WHERE id = $1 AND user_id = $2
+       RETURNING *`,
+      [id, userId]
+    );
+
     return rows[0] || null;
   },
 
@@ -328,4 +494,3 @@ module.exports = {
     return useMemoryStore;
   }
 };
-

@@ -65,6 +65,24 @@ async function loginRateLimiter(c, next) {
 }
 
 
+// Simple refresh-token store (DB-backed only when DB is available; otherwise memory fallback)
+const refreshTokensStore = new Map(); // refreshToken -> { userId, revokedAt }
+
+function generateRefreshToken() {
+  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+}
+
+function issueAccessToken(userId) {
+  return jwt.sign({ id: userId }, getJwtSecret(), { expiresIn: '7d' });
+}
+
+function issueTokensForUser(user) {
+  const accessToken = issueAccessToken(user.id);
+  const refreshToken = generateRefreshToken();
+  refreshTokensStore.set(refreshToken, { userId: user.id, revokedAt: null });
+  return { user, token: accessToken, refreshToken };
+}
+
 router.post('/register', async (c) => {
   try {
     const body = await c.req.json().catch(() => ({}));
@@ -89,8 +107,7 @@ router.post('/register', async (c) => {
       user_type: normalizeUserType(user_type)
     });
 
-    const token = jwt.sign({ id: user.id }, getJwtSecret(), { expiresIn: '7d' });
-    return c.json({ user, token }, 201);
+    return c.json(issueTokensForUser(user), 201);
   } catch (error) {
     throw error;
   }
@@ -116,10 +133,13 @@ router.post('/login', loginRateLimiter, async (c) => {
       return c.json({ error: 'Invalid credentials' }, 401);
     }
 
-    const { password_hash, ...safeUser } = user;
     loginAttempts.delete(c.get('loginAttemptKey'));
-    const token = jwt.sign({ id: user.id }, getJwtSecret(), { expiresIn: '7d' });
-    return c.json({ user: safeUser, token });
+
+    // Issue access+refresh tokens
+    const { password_hash, ...safeUser } = user;
+    const tokens = issueTokensForUser({ ...safeUser, id: user.id });
+
+    return c.json(tokens);
   } catch (error) {
     throw error;
   }
@@ -259,5 +279,59 @@ router.get('/google-callback', async (c) => {
   }
 });
 
+
+// Refresh endpoint: client sends refreshToken, server returns a new access token + rotated refresh token.
+router.post('/refresh', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const refreshToken = body.refreshToken;
+
+    if (!refreshToken || typeof refreshToken !== 'string') {
+      return c.json({ error: 'refreshToken is required' }, 400);
+    }
+
+    const record = refreshTokensStore.get(refreshToken);
+    if (!record || record.revokedAt) {
+      return c.json({ error: 'Invalid refresh token' }, 401);
+    }
+
+    // Rotate refresh token
+    record.revokedAt = new Date().toISOString();
+    refreshTokensStore.delete(refreshToken);
+
+    const user = await pool.findUserById(record.userId);
+    if (!user) {
+      return c.json({ error: 'User not found' }, 401);
+    }
+
+    const { password_hash, ...safeUser } = user;
+    const tokens = issueTokensForUser({ ...safeUser, id: user.id });
+    return c.json(tokens);
+  } catch (e) {
+    return c.json({ error: 'Unable to refresh token' }, 500);
+  }
+});
+
+// Logout endpoint: revoke refresh token in store.
+router.post('/logout', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const refreshToken = body.refreshToken;
+
+    if (!refreshToken || typeof refreshToken !== 'string') {
+      return c.json({ error: 'refreshToken is required' }, 400);
+    }
+
+    const record = refreshTokensStore.get(refreshToken);
+    if (record) {
+      record.revokedAt = new Date().toISOString();
+      refreshTokensStore.delete(refreshToken);
+    }
+
+    return c.json({ ok: true });
+  } catch (e) {
+    return c.json({ error: 'Unable to logout' }, 500);
+  }
+});
 
 module.exports = router;

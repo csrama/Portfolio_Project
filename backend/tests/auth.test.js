@@ -51,13 +51,36 @@ describe('auth endpoints', () => {
     expect(response.body.user.user_type).toBe('general_user');
   });
 
-  it('logs in and returns a token', async () => {
+  it('logs in and returns token + refreshToken', async () => {
     const response = await request(server)
       .post('/auth/login')
       .send({ email, password: 'secret123' });
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('token');
+    expect(response.body).toHaveProperty('refreshToken');
+  });
+
+  it('refreshes token and then rejects logout-used refreshToken', async () => {
+    const login = await request(server)
+      .post('/auth/login')
+      .send({ email, password: 'secret123' });
+
+    expect(login.status).toBe(200);
+    const refreshToken = login.body.refreshToken;
+
+    const refreshed = await request(server)
+      .post('/auth/refresh')
+      .send({ refreshToken });
+
+    expect(refreshed.status).toBe(200);
+    expect(refreshed.body).toHaveProperty('token');
+
+    const refreshedAgain = await request(server)
+      .post('/auth/refresh')
+      .send({ refreshToken });
+
+    expect(refreshedAgain.status).toBe(401);
   });
 
   afterAll(async () => {

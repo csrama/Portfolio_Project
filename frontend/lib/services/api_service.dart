@@ -17,6 +17,56 @@ class ApiService {
     return '$_baseUrl$path';
   }
 
+  static Future<Map<String, dynamic>> putJson(
+    String path, {
+    required Map<String, dynamic> body,
+    String? token,
+  }) async {
+    final response = await http.put(
+      Uri.parse(buildUrl(path)),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) {
+        return {};
+      }
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception('Request failed: ${response.statusCode} ${response.body}');
+  }
+
+  static Future<Map<String, dynamic>> patchJson(
+    String path, {
+    required Map<String, dynamic> body,
+    String? token,
+  }) async {
+    final response = await http.patch(
+      Uri.parse(buildUrl(path)),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) {
+        return {};
+      }
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception('Request failed: ${response.statusCode} ${response.body}');
+  }
+
+  // ---------- existing Map-returning methods (unchanged behavior) ----------
+
   static Future<Map<String, dynamic>> postJson(
     String path, {
     required Map<String, dynamic> body,
@@ -41,7 +91,7 @@ class ApiService {
     throw Exception('Request failed: ${response.statusCode} ${response.body}');
   }
 
-  static Future<Map<String, dynamic>> getJson(
+  static Future<dynamic> getJsonDynamic(
     String path, {
     String? token,
   }) async {
@@ -54,9 +104,112 @@ class ApiService {
       if (response.body.isEmpty) {
         return {};
       }
+      return jsonDecode(response.body);
+    }
+
+    throw Exception('Request failed: ${response.statusCode} ${response.body}');
+  }
+
+  static Future<Map<String, dynamic>> deleteJson(
+    String path, {
+    String? token,
+  }) async {
+    final response = await http.delete(
+      Uri.parse(buildUrl(path)),
+      headers: {if (token != null) 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) {
+        return {};
+      }
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
 
     throw Exception('Request failed: ${response.statusCode} ${response.body}');
+  }
+
+  // ---------- NEW: list-returning variants ----------
+  // Use these for any endpoint whose JSON response is a raw array,
+  // e.g. GET /dependents  ->  [ {...}, {...} ]
+  // or   GET /dependents/:id/medications  ->  [ {...}, {...} ]
+
+  static Future<List<dynamic>> getJsonList(
+    String path, {
+    String? token,
+  }) async {
+    final response = await http.get(
+      Uri.parse(buildUrl(path)),
+      headers: {if (token != null) 'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) {
+        return [];
+      }
+      final decoded = jsonDecode(response.body);
+      // Defensive: some endpoints might wrap the array as { data: [...] }
+      // or { medications: [...] } — handle both shapes gracefully instead
+      // of crashing.
+      if (decoded is List) {
+        return decoded;
+      }
+      if (decoded is Map<String, dynamic>) {
+        final firstListValue = decoded.values.firstWhere(
+          (v) => v is List,
+          orElse: () => null,
+        );
+        if (firstListValue is List) return firstListValue;
+      }
+      throw Exception('Expected a JSON array from $path but got: $decoded');
+    }
+
+    throw Exception('Request failed: ${response.statusCode} ${response.body}');
+  }
+
+  static Future<List<dynamic>> postJsonList(
+    String path, {
+    required Map<String, dynamic> body,
+    String? token,
+  }) async {
+    final response = await http.post(
+      Uri.parse(buildUrl(path)),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) {
+        return [];
+      }
+      final decoded = jsonDecode(response.body);
+      if (decoded is List) return decoded;
+      throw Exception('Expected a JSON array from $path but got: $decoded');
+    }
+
+    throw Exception('Request failed: ${response.statusCode} ${response.body}');
+  }
+
+  // ✅✅✅ الدالة delete الآن داخل class ApiService ✅✅✅
+  static Future<void> delete(
+    String path, {
+    required String token,
+    Map<String, dynamic>? body,
+  }) async {
+    final response = await http.delete(
+      Uri.parse(buildUrl(path)),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: body != null ? jsonEncode(body) : null,
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('DELETE failed: ${response.statusCode} ${response.body}');
+    }
   }
 }

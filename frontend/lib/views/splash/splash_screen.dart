@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
+import '../dashboard/home_screen.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../dashboard/home_screen.dart';
 import '../../repositories/auth_repository.dart';
@@ -19,12 +21,12 @@ class _SplashScreenState extends State<SplashScreen> {
 
   static final _pages = [
     _SplashPage(
-      child: Image.asset(
-  'assets/app_icon.png',
-  width: 120,
-  height: 120,
-),
       title: 'دوائي',
+      child: Image.asset(
+        'assets/app_icon.png',
+        width: 120,
+        height: 120,
+      ),
     ),
     _SplashPage(
       child: Text(
@@ -53,7 +55,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 2), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 2), (timer) async {
       if (_currentPage < _pages.length - 1) {
         _currentPage++;
         _controller.animateToPage(
@@ -63,35 +65,21 @@ class _SplashScreenState extends State<SplashScreen> {
         );
       } else {
         timer.cancel();
-        _goToNextScreen();
+        final authService = AuthService();
+        final hasSession = await authService.hasSession();
+        final userName = hasSession ? await authService.getStoredUserName() : null;
+
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => hasSession
+                ? HomeScreen(userName: userName, photoUrl: null)
+                : const OnboardingScreen(),
+          ),
+        );
       }
     });
-  }
-
-  Future<void> _goToNextScreen() async {
-    final authRepository = AuthRepository();
-    final loggedIn = await authRepository.isLoggedIn();
-    if (!mounted) return;
-
-    if (loggedIn) {
-      final userName = await authRepository.getUserName();
-      final photoUrl = await authRepository.getPhotoUrl();
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => HomeScreen(userName: userName, photoUrl: photoUrl),
-        ),
-      );
-      return;
-    }
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const OnboardingScreen(),
-      ),
-    );
   }
 
   @override
