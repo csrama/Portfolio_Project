@@ -17,9 +17,6 @@ router.post('/', caregiverCheck, async (c) => {
 
     const { email, full_name, relationship, date_of_birth } = body;
 
-    if (!email || !email.includes('@')) {
-      return c.json({ error: 'البريد الإلكتروني مطلوب' }, 400);
-    }
     if (!full_name || full_name.trim() === '') {
       return c.json({ error: 'الاسم الكامل مطلوب' }, 400);
     }
@@ -27,49 +24,91 @@ router.post('/', caregiverCheck, async (c) => {
       return c.json({ error: 'العلاقة مطلوبة' }, 400);
     }
 
-    const existingUser = await pool.findUserByEmail(email);
-    if (existingUser) {
-      return c.json({ error: 'هذا البريد مستخدم بالفعل' }, 409);
-    }
+    // If email is provided → invitation flow (create user + send invite)
+    // If no email → simple local add (create placeholder user + auto-accept)
+    const isInvitation = email && email.includes('@');
 
-    const temporaryPassword = crypto.randomBytes(8).toString('hex');
-    const passwordHash = await bcrypt.hash(temporaryPassword, 10);
-
-    const newDependent = await pool.createUser({
-      email: email.toLowerCase(),
-      password_hash: passwordHash,
-      full_name: full_name.trim(),
-      user_type: 'dependent',
-      is_active: true,
-      is_onboarding_complete: false
-    });
-
-    const dependent = await pool.createDependent({
-      caregiver_user_id: user.id,
-      dependent_user_id: newDependent.id,
-      relationship: relationship,
-      invitation_status: 'pending',
-      invitation_token: crypto.randomBytes(32).toString('hex')
-    });
-
-
-    return c.json({
-      success: true,
-      message: 'تم إنشاء حساب التابع وإرسال الدعوة',
-      data: {
-        dependent: {
-          id: dependent.id,
-          relationship: dependent.relationship,
-          status: dependent.invitation_status
-        },
-        user: {
-          id: newDependent.id,
-          email: newDependent.email,
-          full_name: newDependent.full_name
-        },
-        temporaryPassword: temporaryPassword  
+    if (isInvitation) {
+      // --- INVITATION FLOW (existing behavior) ---
+      const existingUser = await pool.findUserByEmail(email);
+      if (existingUser) {
+        return c.json({ error: 'هذا البريد مستخدم بالفعل' }, 409);
       }
-    }, 201);
+
+      const temporaryPassword = crypto.randomBytes(8).toString('hex');
+      const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+
+      const newDependent = await pool.createUser({
+        email: email.toLowerCase(),
+        password_hash: passwordHash,
+        full_name: full_name.trim(),
+        user_type: 'dependent',
+        is_active: true,
+        is_onboarding_complete: false
+      });
+
+      const dependent = await pool.createDependent({
+        caregiver_user_id: user.id,
+        dependent_user_id: newDependent.id,
+        relationship: relationship,
+        invitation_status: 'pending',
+        invitation_token: crypto.randomBytes(32).toString('hex')
+      });
+
+      return c.json({
+        success: true,
+        message: 'تم إنشاء حساب التابع وإرسال الدعوة',
+        data: {
+          dependent: {
+            id: dependent.id,
+            relationship: dependent.relationship,
+            status: dependent.invitation_status
+          },
+          user: {
+            id: newDependent.id,
+            email: newDependent.email,
+            full_name: newDependent.full_name
+          },
+          temporaryPassword: temporaryPassword
+        }
+      }, 201);
+    } else {
+      // --- LOCAL ADD FLOW (no email, no invitation) ---
+      const placeholderEmail = `dependent_${user.id}_${Date.now()}@local.dawai`;
+
+      const newDependentUser = await pool.createUser({
+        email: placeholderEmail,
+        password_hash: '',
+        full_name: full_name.trim(),
+        user_type: 'dependent',
+        is_active: true,
+        is_onboarding_complete: true
+      });
+
+      const dependent = await pool.createDependent({
+        caregiver_user_id: user.id,
+        dependent_user_id: newDependentUser.id,
+        relationship: relationship,
+        invitation_status: 'accepted',
+        invitation_token: null
+      });
+
+      return c.json({
+        success: true,
+        message: 'تم إضافة التابع بنجاح',
+        data: {
+          dependent: {
+            id: dependent.id,
+            relationship: dependent.relationship,
+            status: 'accepted'
+          },
+          user: {
+            id: newDependentUser.id,
+            full_name: newDependentUser.full_name
+          }
+        }
+      }, 201);
+    }
 
   } catch (error) {
     console.error('Error creating dependent:', error);

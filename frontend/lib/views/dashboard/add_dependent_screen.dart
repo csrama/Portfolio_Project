@@ -12,8 +12,8 @@ class AddDependentScreen extends StatefulWidget {
 
 class _AddDependentScreenState extends State<AddDependentScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
   final _nameController = TextEditingController();
+  final _ageController = TextEditingController();
   String? _selectedRelationship;
   bool _isLoading = false;
 
@@ -27,13 +27,28 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
 
   @override
   void dispose() {
-    _emailController.dispose();
     _nameController.dispose();
+    _ageController.dispose();
     super.dispose();
   }
 
-  Future<void> _sendInvitation() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _addDependent() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    final fullName = _nameController.text.trim();
+    final relationship = _selectedRelationship;
+
+    if (fullName.isEmpty) {
+      _showSnackBar('الاسم الكامل مطلوب', Colors.red);
+      return;
+    }
+
+    if (relationship == null) {
+      _showSnackBar('الرجاء اختيار العلاقة', Colors.red);
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -46,138 +61,51 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
         return;
       }
 
+      // Convert age to approximate date of birth if provided
+      String? dateOfBirth;
+      final age = int.tryParse(_ageController.text.trim());
+      if (age != null && age > 0) {
+        final now = DateTime.now();
+        dateOfBirth = DateTime(now.year - age, now.month, now.day)
+            .toIso8601String();
+      }
+
+      final body = {
+        'full_name': fullName,
+        'relationship': relationship,
+        if (dateOfBirth != null) 'date_of_birth': dateOfBirth,
+      };
+
       final response = await ApiService.postJson(
         '/dependents',
-        body: {
-          'email': _emailController.text.trim(),
-          'full_name': _nameController.text.trim(),
-          'relationship': _selectedRelationship,
-        },
+        body: body,
         token: token,
       );
 
       if (response['success'] == true) {
-        final tempPassword = response['data']?['temporaryPassword'] ?? '';
-        _showInvitationSuccessDialog(tempPassword);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تم إضافة التابع بنجاح'),
+              backgroundColor: Color(0xFF085041),
+            ),
+          );
+          Navigator.pop(context);
+        }
       } else {
-        _showSnackBar(response['error'] ?? 'فشل إرسال الدعوة', Colors.red);
+        _showSnackBar(
+          response['error'] ?? 'فشل إضافة التابع',
+          Colors.red,
+        );
       }
     } catch (e) {
-      _showSnackBar('حدث خطأ: ${e.toString()}', Colors.red);
+      _showSnackBar(
+        'حدث خطأ: ${e.toString()}',
+        Colors.red,
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _showInvitationSuccessDialog(String tempPassword) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
-          children: const [
-            Icon(Icons.check_circle, color: Color(0xFF085041), size: 28),
-            SizedBox(width: 8),
-            Text('تم إرسال الدعوة!'),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'تم إنشاء حساب للتابع وإرسال الدعوة بنجاح.',
-                style: TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF6F6F6),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE0E0E0)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.email, color: Color(0xFF085041), size: 20),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'البريد الإلكتروني:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _emailController.text.trim(),
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(Icons.key, color: Color(0xFF085041), size: 20),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'كلمة المرور المؤقتة:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD9F2E7),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        tempPassword,
-                        style: const TextStyle(
-                          color: Color(0xFF085041),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(Icons.warning_amber, color: Colors.orange, size: 20),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'يجب على التابع تغيير كلمة المرور بعد تسجيل الدخول.',
-                          style: TextStyle(fontSize: 12, color: Colors.orange),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text(
-              'تم',
-              style: TextStyle(color: Color(0xFF085041), fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showSnackBar(String message, Color color) {
@@ -220,7 +148,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'أدخل بيانات التابع لإرسال دعوة للانضمام',
+                          'أدخل بيانات التابع لإضافته',
                           style: TextStyle(color: Color(0xFF085041)),
                         ),
                       ),
@@ -229,6 +157,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                 ),
                 const SizedBox(height: 24),
 
+                // اسم التابع
                 TextFormField(
                   controller: _nameController,
                   textAlign: TextAlign.right,
@@ -255,13 +184,13 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                 const SizedBox(height: 16),
 
                 TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
+                  controller: _ageController,
+                  keyboardType: TextInputType.number,
                   textAlign: TextAlign.right,
                   style: const TextStyle(color: Colors.black),
                   decoration: InputDecoration(
-                    labelText: 'البريد الإلكتروني',
-                    hintText: 'example@email.com',
+                    labelText: 'العمر (اختياري)',
+                    hintText: 'أدخل عمر التابع',
                     hintStyle: const TextStyle(color: Colors.grey),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -269,17 +198,8 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                     ),
                     filled: true,
                     fillColor: const Color(0xFFF6F6F6),
-                    prefixIcon: const Icon(Icons.email, color: Color(0xFF085041)),
+                    prefixIcon: const Icon(Icons.calendar_today, color: Color(0xFF085041)),
                   ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'البريد الإلكتروني مطلوب';
-                    }
-                    if (!value.contains('@') || !value.contains('.')) {
-                      return 'البريد الإلكتروني غير صحيح';
-                    }
-                    return null;
-                  },
                 ),
                 const SizedBox(height: 16),
 
@@ -316,7 +236,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                 SizedBox(
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _sendInvitation,
+                    onPressed: _isLoading ? null : _addDependent,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF085041),
                       shape: RoundedRectangleBorder(
@@ -334,7 +254,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                             ),
                           )
                         : const Text(
-                            'إرسال الدعوة',
+                            'إضافة التابع',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -345,7 +265,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'سيتم إنشاء حساب للتابع وسيتلقى رابط الدعوة عبر البريد الإلكتروني.',
+                  'سيتم إضافة التابع وتتمكن من إدارة أدويته وجدوله.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
