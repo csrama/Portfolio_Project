@@ -1,4 +1,4 @@
-name: frontend
+﻿name: frontend
 description: A Flutter project
 publish_to: 'none'
 
@@ -9,6 +9,8 @@ environment:
 
 dependencies:
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
   cupertino_icons: ^1.0.8
   google_sign_in: ^6.2.1
