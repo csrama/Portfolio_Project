@@ -474,22 +474,6 @@ const db = {
     return rows[0] || null;
   },
 
-  async listMedicationsByDependent(dependentUserId) {
-    if (useMemoryStore) {
-      return memoryStore.medications.filter(
-        (item) => item.user_id === Number(dependentUserId) || item.dependent_id === Number(dependentUserId)
-      );
-    }
-
-    const { rows } = await queryWithFallback(
-      `SELECT * FROM medications 
-       WHERE user_id = $1 OR dependent_id = $1 
-       ORDER BY created_at DESC`,
-      [dependentUserId]
-    );
-    return rows;
-  },
-
   async listMedications(userId, dependentId = null) {
     if (useMemoryStore) {
       return memoryStore.medications.filter((item) => {

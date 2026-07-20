@@ -26,14 +26,14 @@ class Dependent {
   factory Dependent.fromMap(Map<String, dynamic> map) {
     return Dependent(
       id: map['id'].toString(),
-      caregiverUserId: map['caregiver_user_id'].toString(),
-      fullName: map['full_name'] ?? '',
-      dateOfBirth: map['date_of_birth'] != null ? DateTime.parse(map['date_of_birth']) : null,
-      relationship: map['relationship'] ?? '',
-      profileImageUrl: map['profile_image_url'],
-      medicalConditions: List<String>.from(map['medical_conditions'] ?? []),
-      createdAt: DateTime.parse(map['created_at'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(map['updated_at'] ?? DateTime.now().toIso8601String()),
+      caregiverUserId: (map['caregiver_user_id'] ?? '').toString(),
+      fullName: (map['full_name'] ?? map['user_full_name'] ?? '').toString(),
+      dateOfBirth: map['date_of_birth'] != null ? DateTime.tryParse(map['date_of_birth'].toString()) : null,
+      relationship: (map['relationship'] ?? '').toString(),
+      profileImageUrl: map['profile_image_url']?.toString(),
+      medicalConditions: map['medical_conditions'] != null ? List<String>.from(map['medical_conditions']) : [],
+      createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
+      updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now() : DateTime.now(),
     );
   }
 

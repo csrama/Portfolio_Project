@@ -1,4 +1,3 @@
--- Enums used by the medication management backend
 CREATE SCHEMA IF NOT EXISTS public;
 SET search_path TO public, pg_catalog;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA public;
@@ -6,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA public;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_type_enum') THEN
-    CREATE TYPE public.user_type_enum AS ENUM ('patient', 'caregiver', 'doctor');
+    CREATE TYPE public.user_type_enum AS ENUM ('patient', 'caregiver', 'doctor', 'dependent');
   END IF;
 END
 $$;
@@ -26,4 +25,3 @@ BEGIN
   END IF;
 END
 $$;
-

@@ -23,6 +23,30 @@ router.get('/', async (c) => {
   }
 });
 
+router.get('/:id', async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'));
+    const user = c.get('user');
+
+    if (isNaN(id)) {
+      return c.json({ error: 'معرف التابع غير صحيح' }, 400);
+    }
+
+    const dependent = await pool.getDependentWithUser(id, user.id);
+    if (!dependent) {
+      return c.json({ error: 'التابع غير موجود' }, 404);
+    }
+
+    return c.json({
+      success: true,
+      data: dependent
+    });
+  } catch (error) {
+    console.error('Error fetching dependent:', error);
+    return c.json({ error: 'فشل جلب التابع' }, 500);
+  }
+});
+
 router.post('/', caregiverCheck, async (c) => {
   try {
     const user = c.get('user');
@@ -109,30 +133,6 @@ router.post('/', caregiverCheck, async (c) => {
   } catch (error) {
     console.error('Error creating dependent:', error);
     return c.json({ error: 'فشل إضافة التابع' }, 500);
-  }
-});
-
-router.get('/:id', async (c) => {
-  try {
-    const id = parseInt(c.req.param('id'));
-    const user = c.get('user');
-
-    if (isNaN(id)) {
-      return c.json({ error: 'معرف التابع غير صحيح' }, 400);
-    }
-
-    const dependent = await pool.getDependentWithUser(id, user.id);
-    if (!dependent) {
-      return c.json({ error: 'التابع غير موجود' }, 404);
-    }
-
-    return c.json({
-      success: true,
-      data: dependent
-    });
-  } catch (error) {
-    console.error('Error fetching dependent:', error);
-    return c.json({ error: 'فشل جلب التابع' }, 500);
   }
 });
 

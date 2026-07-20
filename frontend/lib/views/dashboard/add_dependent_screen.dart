@@ -1,3 +1,4 @@
+// lib/views/dashboard/add_dependent_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -12,8 +13,8 @@ class AddDependentScreen extends StatefulWidget {
 
 class _AddDependentScreenState extends State<AddDependentScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
   final _nameController = TextEditingController();
-  final _ageController = TextEditingController();
   String? _selectedRelationship;
   bool _isLoading = false;
 
@@ -27,28 +28,17 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
 
   @override
   void dispose() {
+    _emailController.dispose();
     _nameController.dispose();
-    _ageController.dispose();
     super.dispose();
   }
 
-  Future<void> _addDependent() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+  Future<void> _sendInvitation() async {
+    if (!_formKey.currentState!.validate()) return;
 
+    final email = _emailController.text.trim();
     final fullName = _nameController.text.trim();
     final relationship = _selectedRelationship;
-
-    if (fullName.isEmpty) {
-      _showSnackBar('الاسم الكامل مطلوب', Colors.red);
-      return;
-    }
-
-    if (relationship == null) {
-      _showSnackBar('الرجاء اختيار العلاقة', Colors.red);
-      return;
-    }
 
     setState(() => _isLoading = true);
 
@@ -61,19 +51,10 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
         return;
       }
 
-      // Convert age to approximate date of birth if provided
-      String? dateOfBirth;
-      final age = int.tryParse(_ageController.text.trim());
-      if (age != null && age > 0) {
-        final now = DateTime.now();
-        dateOfBirth = DateTime(now.year - age, now.month, now.day)
-            .toIso8601String();
-      }
-
       final body = {
+        'email': email,
         'full_name': fullName,
         'relationship': relationship,
-        if (dateOfBirth != null) 'date_of_birth': dateOfBirth,
       };
 
       final response = await ApiService.postJson(
@@ -83,26 +64,16 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
       );
 
       if (response['success'] == true) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('تم إضافة التابع بنجاح'),
-              backgroundColor: Color(0xFF085041),
-            ),
-          );
-          Navigator.pop(context);
-        }
+        _showSnackBar('تم إرسال الدعوة بنجاح', const Color(0xFF085041));
+        Navigator.pop(context, true);
       } else {
         _showSnackBar(
-          response['error'] ?? 'فشل إضافة التابع',
+          response['error'] ?? 'فشل إرسال الدعوة',
           Colors.red,
         );
       }
     } catch (e) {
-      _showSnackBar(
-        'حدث خطأ: ${e.toString()}',
-        Colors.red,
-      );
+      _showSnackBar('حدث خطأ: ${e.toString()}', Colors.red);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -122,7 +93,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إضافة تابع جديد'),
+        title: const Text('إرسال دعوة'),
         backgroundColor: const Color(0xFF085041),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -148,7 +119,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'أدخل بيانات التابع لإضافته',
+                          'سيتم إرسال دعوة للتابع عبر البريد الإلكتروني',
                           style: TextStyle(color: Color(0xFF085041)),
                         ),
                       ),
@@ -157,22 +128,15 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // اسم التابع
                 TextFormField(
                   controller: _nameController,
                   textAlign: TextAlign.right,
-                  style: const TextStyle(color: Colors.black),
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'الاسم الكامل',
                     hintText: 'أدخل اسم التابع',
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
+                    border: OutlineInputBorder(),
                     filled: true,
-                    fillColor: const Color(0xFFF6F6F6),
-                    prefixIcon: const Icon(Icons.person, color: Color(0xFF085041)),
+                    fillColor: Color(0xFFF6F6F6),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -184,35 +148,34 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                 const SizedBox(height: 16),
 
                 TextFormField(
-                  controller: _ageController,
-                  keyboardType: TextInputType.number,
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
                   textAlign: TextAlign.right,
-                  style: const TextStyle(color: Colors.black),
-                  decoration: InputDecoration(
-                    labelText: 'العمر (اختياري)',
-                    hintText: 'أدخل عمر التابع',
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
+                  decoration: const InputDecoration(
+                    labelText: 'البريد الإلكتروني',
+                    hintText: 'example@email.com',
+                    border: OutlineInputBorder(),
                     filled: true,
-                    fillColor: const Color(0xFFF6F6F6),
-                    prefixIcon: const Icon(Icons.calendar_today, color: Color(0xFF085041)),
+                    fillColor: Color(0xFFF6F6F6),
                   ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'البريد الإلكتروني مطلوب';
+                    }
+                    if (!value.contains('@') || !value.contains('.')) {
+                      return 'البريد الإلكتروني غير صحيح';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
 
                 DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    labelText: 'العلاقة',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
+                  decoration: const InputDecoration(
+                    labelText: 'صلة القرابة',
+                    border: OutlineInputBorder(),
                     filled: true,
-                    fillColor: const Color(0xFFF6F6F6),
-                    prefixIcon: const Icon(Icons.family_restroom, color: Color(0xFF085041)),
+                    fillColor: Color(0xFFF6F6F6),
                   ),
                   value: _selectedRelationship,
                   items: _relationships.map((item) {
@@ -236,13 +199,12 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                 SizedBox(
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _addDependent,
+                    onPressed: _isLoading ? null : _sendInvitation,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF085041),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      elevation: 0,
                     ),
                     child: _isLoading
                         ? const SizedBox(
@@ -254,7 +216,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                             ),
                           )
                         : const Text(
-                            'إضافة التابع',
+                            'إرسال الدعوة',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -262,12 +224,6 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                             ),
                           ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'سيتم إضافة التابع وتتمكن من إدارة أدويته وجدوله.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
