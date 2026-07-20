@@ -1380,22 +1380,50 @@ class _HomeScreenState extends State<HomeScreen> {
                           true,
                         )
                     : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: taken
-                      ? const Color(0xFF4CAF50)
-                      : Colors.white,
-                  foregroundColor: taken ? Colors.white : _Colors.darkGreen,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.resolveWith((states) {
+                    if (taken) {
+                      return const Color(0xFF1D9E75);
+                    }
+                    return const Color(0xFFE1F5EE).withValues(
+                      alpha: states.contains(WidgetState.disabled) ? 0.4 : 1.0,
+                    );
+                  }),
+                  foregroundColor: WidgetStateProperty.resolveWith((states) {
+                    if (taken) {
+                      return Colors.white;
+                    }
+                    return const Color(0xFF1D9E75).withValues(
+                      alpha: states.contains(WidgetState.disabled) ? 0.4 : 1.0,
+                    );
+                  }),
+                  side: WidgetStateProperty.resolveWith((states) {
+                    final color = const Color(0xFF1D9E75);
+                    return BorderSide(
+                      color: states.contains(WidgetState.disabled)
+                          ? color.withValues(alpha: 0.4)
+                          : color,
+                      width: 1.5,
+                    );
+                  }),
+                  minimumSize: WidgetStateProperty.all(const Size.fromHeight(30)),
+                  padding: WidgetStateProperty.all(
+                    const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 6,
+                    ),
+                  ),
+                  shape: WidgetStateProperty.all(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
                 ),
-                child: Text(
+                child: const Text(
                   'مأخوذة',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: taken ? Colors.white : _Colors.darkGreen,
                   ),
                 ),
               ),
@@ -1703,23 +1731,56 @@ class _MedicationCard extends StatelessWidget {
                                           true,
                                         )
                                     : null,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      taken ? const Color(0xFF4CAF50) : Colors.white,
-                                  foregroundColor:
-                                      taken ? Colors.white : _Colors.darkGreen,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 10),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                style: ButtonStyle(
+                                  backgroundColor: WidgetStateProperty.resolveWith(
+                                      (states) {
+                                    if (taken) {
+                                      return const Color(0xFF1D9E75);
+                                    }
+                                    return const Color(0xFFE1F5EE).withValues(
+                                      alpha: states.contains(WidgetState.disabled)
+                                          ? 0.4
+                                          : 1.0,
+                                    );
+                                  }),
+                                  foregroundColor: WidgetStateProperty.resolveWith(
+                                      (states) {
+                                    if (taken) {
+                                      return Colors.white;
+                                    }
+                                    return const Color(0xFF1D9E75).withValues(
+                                      alpha: states.contains(WidgetState.disabled)
+                                          ? 0.4
+                                          : 1.0,
+                                    );
+                                  }),
+                                  side: WidgetStateProperty.resolveWith((states) {
+                                    final color = const Color(0xFF1D9E75);
+                                    return BorderSide(
+                                      color: states.contains(WidgetState.disabled)
+                                          ? color.withValues(alpha: 0.4)
+                                          : color,
+                                      width: 1.5,
+                                    );
+                                  }),
+                                  minimumSize: WidgetStateProperty.all(const Size.fromHeight(30)),
+                                  padding: WidgetStateProperty.all(
+                                    const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 6,
+                                    ),
+                                  ),
+                                  shape: WidgetStateProperty.all(
+                                    RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
                                   ),
                                 ),
-                                child: Text(
+                                child: const Text(
                                   'تناولت',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.bold,
-                                    color: taken ? Colors.white : _Colors.darkGreen,
                                   ),
                                 ),
                               ),
@@ -1737,27 +1798,55 @@ class _MedicationCard extends StatelessWidget {
                                           false,
                                         )
                                     : null,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: notTaken
-                                      ? const Color(0xFFB85C5C)
-                                      : Colors.white,
-                                  foregroundColor: notTaken
-                                      ? Colors.white
-                                      : _Colors.darkGreen,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 10),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                style: ButtonStyle(
+                                  backgroundColor: WidgetStateProperty.resolveWith(
+                                      (states) {
+                                    if (notTaken) {
+                                      return const Color(0xFFB85C5C);
+                                    }
+                                    return Colors.white.withValues(
+                                        alpha: states.contains(WidgetState.disabled)
+                                            ? 0.4
+                                            : 1.0);
+                                  }),
+                                  foregroundColor: WidgetStateProperty.resolveWith(
+                                      (states) {
+                                    if (notTaken) {
+                                      return Colors.white;
+                                    }
+                                    return _Colors.darkGreen.withValues(
+                                        alpha: states.contains(WidgetState.disabled)
+                                            ? 0.4
+                                            : 1.0);
+                                  }),
+                                  side: WidgetStateProperty.resolveWith((states) {
+                                    final color = _Colors.darkGreen;
+                                    return BorderSide(
+                                      color: states.contains(WidgetState.disabled)
+                                          ? color.withValues(alpha: 0.4)
+                                          : color,
+                                      width: 1.5,
+                                    );
+                                  }),
+                                  minimumSize:
+                                      WidgetStateProperty.all(const Size.fromHeight(30)),
+                                  padding: WidgetStateProperty.all(
+                                    const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 6,
+                                    ),
+                                  ),
+                                  shape: WidgetStateProperty.all(
+                                    RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
                                   ),
                                 ),
-                                child: Text(
+                                child: const Text(
                                   'لم أتناول',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    color: notTaken
-                                        ? Colors.white
-                                        : _Colors.darkGreen,
                                   ),
                                 ),
                               ),
