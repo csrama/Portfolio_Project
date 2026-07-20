@@ -9,120 +9,10 @@ const router = new Hono();
 
 router.use('*', authMiddleware);
 
-
-router.post('/', caregiverCheck, async (c) => {
-  try {
-    const user = c.get('user'); 
-    const body = await c.req.json();
-
-    const { email, full_name, relationship, date_of_birth } = body;
-
-    if (!full_name || full_name.trim() === '') {
-      return c.json({ error: 'الاسم الكامل مطلوب' }, 400);
-    }
-    if (!relationship) {
-      return c.json({ error: 'العلاقة مطلوبة' }, 400);
-    }
-
-    // If email is provided → invitation flow (create user + send invite)
-    // If no email → simple local add (create placeholder user + auto-accept)
-    const isInvitation = email && email.includes('@');
-
-    if (isInvitation) {
-      // --- INVITATION FLOW (existing behavior) ---
-      const existingUser = await pool.findUserByEmail(email);
-      if (existingUser) {
-        return c.json({ error: 'هذا البريد مستخدم بالفعل' }, 409);
-      }
-
-      const temporaryPassword = crypto.randomBytes(8).toString('hex');
-      const passwordHash = await bcrypt.hash(temporaryPassword, 10);
-
-      const newDependent = await pool.createUser({
-        email: email.toLowerCase(),
-        password_hash: passwordHash,
-        full_name: full_name.trim(),
-        user_type: 'dependent',
-        is_active: true,
-        is_onboarding_complete: false
-      });
-
-      const dependent = await pool.createDependent({
-        caregiver_user_id: user.id,
-        dependent_user_id: newDependent.id,
-        relationship: relationship,
-        invitation_status: 'pending',
-        invitation_token: crypto.randomBytes(32).toString('hex')
-      });
-
-      return c.json({
-        success: true,
-        message: 'تم إنشاء حساب التابع وإرسال الدعوة',
-        data: {
-          dependent: {
-            id: dependent.id,
-            relationship: dependent.relationship,
-            status: dependent.invitation_status
-          },
-          user: {
-            id: newDependent.id,
-            email: newDependent.email,
-            full_name: newDependent.full_name
-          },
-          temporaryPassword: temporaryPassword
-        }
-      }, 201);
-    } else {
-      // --- LOCAL ADD FLOW (no email, no invitation) ---
-      const placeholderEmail = `dependent_${user.id}_${Date.now()}@local.dawai`;
-
-      const newDependentUser = await pool.createUser({
-        email: placeholderEmail,
-        password_hash: '',
-        full_name: full_name.trim(),
-        user_type: 'dependent',
-        is_active: true,
-        is_onboarding_complete: true
-      });
-
-      const dependent = await pool.createDependent({
-        caregiver_user_id: user.id,
-        dependent_user_id: newDependentUser.id,
-        relationship: relationship,
-        invitation_status: 'accepted',
-        invitation_token: null
-      });
-
-      return c.json({
-        success: true,
-        message: 'تم إضافة التابع بنجاح',
-        data: {
-          dependent: {
-            id: dependent.id,
-            relationship: dependent.relationship,
-            status: 'accepted'
-          },
-          user: {
-            id: newDependentUser.id,
-            full_name: newDependentUser.full_name
-          }
-        }
-      }, 201);
-    }
-
-  } catch (error) {
-    console.error('Error creating dependent:', error);
-    return c.json({ error: 'فشل إضافة التابع' }, 500);
-  }
-});
-
-
 router.get('/', async (c) => {
   try {
     const user = c.get('user');
-
     const dependents = await pool.listDependentsWithUsers(user.id);
-
     return c.json({
       success: true,
       data: dependents || []
@@ -133,6 +23,94 @@ router.get('/', async (c) => {
   }
 });
 
+router.post('/', caregiverCheck, async (c) => {
+  try {
+    const user = c.get('user');
+    const body = await c.req.json();
+
+    console.log('Received body:', body);
+
+    const { email, full_name, relationship, date_of_birth } = body;
+
+    if (!full_name || full_name.trim() === '') {
+      return c.json({ error: 'الاسم الكامل مطلوب' }, 400);
+    }
+    if (!relationship) {
+      return c.json({ error: 'العلاقة مطلوبة' }, 400);
+    }
+
+    let finalEmail = email;
+    let isTemporaryEmail = false;
+    
+    if (!email || email.trim() === '') {
+      finalEmail = `dependent_${Date.now()}_${Math.random().toString(36).substring(2, 8)}@temp.local`;
+      isTemporaryEmail = true;
+      console.log('Generated temporary email:', finalEmail);
+    }
+
+    if (!isTemporaryEmail) {
+      const existingUser = await pool.findUserByEmail(finalEmail);
+      if (existingUser) {
+        return c.json({ error: 'البريد الإلكتروني مستخدم بالفعل' }, 409);
+      }
+    }
+
+    const temporaryPassword = crypto.randomBytes(8).toString('hex');
+    const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+
+    const newDependent = await pool.createUser({
+      email: finalEmail.toLowerCase(),
+      password_hash: passwordHash,
+      full_name: full_name.trim(),
+      user_type: 'dependent',
+      is_active: true,
+      is_onboarding_complete: false
+    });
+
+    console.log('Created user:', newDependent.id, newDependent.email);
+
+    const dependent = await pool.createDependent({
+      caregiver_user_id: user.id,
+      dependent_user_id: newDependent.id,
+      full_name: full_name.trim(),
+      date_of_birth: date_of_birth || null,
+      relationship: relationship,
+      invitation_status: isTemporaryEmail ? 'accepted' : 'pending',
+      invitation_token: isTemporaryEmail ? null : crypto.randomBytes(32).toString('hex')
+    });
+
+    console.log('Created dependent relation:', dependent.id);
+
+    const responseData = {
+      success: true,
+      message: isTemporaryEmail 
+        ? 'تم إضافة التابع بنجاح' 
+        : 'تم إرسال الدعوة بنجاح',
+      data: {
+        dependent: {
+          id: dependent.id,
+          relationship: dependent.relationship,
+          status: dependent.invitation_status
+        },
+        user: {
+          id: newDependent.id,
+          email: newDependent.email,
+          full_name: newDependent.full_name
+        }
+      }
+    };
+
+    if (isTemporaryEmail) {
+      responseData.data.temporaryPassword = temporaryPassword;
+    }
+
+    return c.json(responseData, 201);
+
+  } catch (error) {
+    console.error('Error creating dependent:', error);
+    return c.json({ error: 'فشل إضافة التابع' }, 500);
+  }
+});
 
 router.get('/:id', async (c) => {
   try {
@@ -158,7 +136,6 @@ router.get('/:id', async (c) => {
   }
 });
 
-
 router.put('/:id', caregiverCheck, async (c) => {
   try {
     const id = parseInt(c.req.param('id'));
@@ -175,7 +152,7 @@ router.put('/:id', caregiverCheck, async (c) => {
     }
 
     const updated = await pool.updateDependent(id, user.id, {
-      relationship: body.relationship,
+      relationship: body.relationship
     });
 
     if (body.full_name) {
@@ -195,7 +172,6 @@ router.put('/:id', caregiverCheck, async (c) => {
   }
 });
 
-
 router.delete('/:id', caregiverCheck, async (c) => {
   try {
     const id = parseInt(c.req.param('id'));
@@ -213,12 +189,11 @@ router.delete('/:id', caregiverCheck, async (c) => {
     const dependentUserId = dependent.dependent_user_id;
 
     await pool.deleteDependent(id, user.id);
-
     await pool.deleteUser(dependentUserId);
 
     return c.json({
       success: true,
-      message: 'تم حذف التابع وحسابه بنجاح'
+      message: 'تم حذف التابع بنجاح'
     });
   } catch (error) {
     console.error('Error deleting dependent:', error);
@@ -226,11 +201,10 @@ router.delete('/:id', caregiverCheck, async (c) => {
   }
 });
 
-
 router.post('/invite/:token/accept', async (c) => {
   try {
     const token = c.req.param('token');
-    const user = c.get('user'); 
+    const user = c.get('user');
 
     const dependent = await pool.getDependentByInviteToken(token);
     if (!dependent) {
@@ -238,7 +212,18 @@ router.post('/invite/:token/accept', async (c) => {
     }
 
     if (dependent.dependent_user_id !== user.id) {
-      return c.json({ error: 'هذا الرابط ليس لك' }, 403);
+      return c.json({ error: 'هذه الدعوة ليست لك' }, 403);
+    }
+
+    if (dependent.invitation_status !== 'pending') {
+      return c.json({ error: 'تم معالجة هذه الدعوة مسبقاً' }, 400);
+    }
+
+    const invitedAt = new Date(dependent.invited_at);
+    const now = new Date();
+    const daysDiff = (now - invitedAt) / (1000 * 60 * 60 * 24);
+    if (daysDiff > 7) {
+      return c.json({ error: 'انتهت صلاحية الدعوة' }, 410);
     }
 
     await pool.acceptDependentInvite(dependent.id);
@@ -253,7 +238,6 @@ router.post('/invite/:token/accept', async (c) => {
   }
 });
 
-
 router.get('/:id/medications', async (c) => {
   try {
     const dependentId = parseInt(c.req.param('id'));
@@ -265,7 +249,7 @@ router.get('/:id/medications', async (c) => {
 
     const dependent = await pool.getDependentWithUser(dependentId, user.id);
     if (!dependent) {
-      return c.json({ error: 'التابع غير موجود أو لا يخصك' }, 404);
+      return c.json({ error: 'التابع غير موجود' }, 404);
     }
 
     const medications = await pool.listMedications(dependent.dependent_user_id);

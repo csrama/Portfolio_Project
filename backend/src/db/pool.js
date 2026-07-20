@@ -54,7 +54,7 @@ function normalizeUser(user) {
 
 async function queryWithFallback(text, params = []) {
   if (!pool) {
-    throw new Error('Database unavailable');
+    throw new Error('قاعدة البيانات غير متوفرة');
   }
 
   try {
@@ -75,8 +75,6 @@ const db = {
 
   async searchMedicines(term) {
     if (useMemoryStore) {
-      // لا يوجد كتالوج أدوية بالذاكرة المؤقتة؛ هذا البحث متاح فقط
-      // عند الاتصال بقاعدة PostgreSQL.
       return [];
     }
 
@@ -264,14 +262,17 @@ const db = {
     return rows[0];
   },
 
-  
   async createDependent(data) {
     if (useMemoryStore) {
       const dependent = {
         id: memoryStore.dependents.length + 1,
         caregiver_user_id: data.caregiver_user_id,
-        dependent_user_id: data.dependent_user_id,
+        dependent_user_id: data.dependent_user_id || null,
+        full_name: data.full_name,
+        date_of_birth: data.date_of_birth || null,
         relationship: data.relationship,
+        profile_image_url: data.profile_image_url || null,
+        medical_conditions: data.medical_conditions || [],
         invitation_status: data.invitation_status || 'pending',
         invitation_token: data.invitation_token || null,
         invited_at: new Date().toISOString(),
@@ -285,16 +286,22 @@ const db = {
 
     const { rows } = await queryWithFallback(
       `INSERT INTO dependents (
-        caregiver_user_id, dependent_user_id, relationship, 
-        invitation_status, invitation_token
-      ) VALUES ($1, $2, $3, $4, $5)
+        caregiver_user_id, dependent_user_id, full_name, date_of_birth, 
+        relationship, profile_image_url, medical_conditions,
+        invitation_status, invitation_token, invited_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *`,
       [
         data.caregiver_user_id,
-        data.dependent_user_id,
+        data.dependent_user_id || null,
+        data.full_name,
+        data.date_of_birth || null,
         data.relationship,
+        data.profile_image_url || null,
+        data.medical_conditions || [],
         data.invitation_status || 'pending',
-        data.invitation_token || null
+        data.invitation_token || null,
+        new Date().toISOString()
       ]
     );
     return rows[0];
@@ -365,16 +372,16 @@ const db = {
     return rows[0] || null;
   },
 
-  async getDependentById(dependentId, userId) {
+  async getDependentById(dependentId, caregiverId) {
     if (useMemoryStore) {
       return memoryStore.dependents.find(
-        (item) => item.id === Number(dependentId) && item.caregiver_user_id === Number(userId)
+        (item) => item.id === Number(dependentId) && item.caregiver_user_id === Number(caregiverId)
       ) || null;
     }
 
     const { rows } = await queryWithFallback(
       'SELECT * FROM dependents WHERE id = $1 AND caregiver_user_id = $2',
-      [dependentId, userId]
+      [dependentId, caregiverId]
     );
     return rows[0] || null;
   },
