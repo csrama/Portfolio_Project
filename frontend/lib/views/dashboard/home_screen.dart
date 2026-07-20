@@ -14,6 +14,7 @@ import '../../providers/app_settings_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/dependent_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/drug_interaction_service.dart';
 import '../../i18n/strings.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../profile/profile_screen.dart';
@@ -46,6 +47,9 @@ class _HomeScreenState extends State<HomeScreen> {
       []; // unlimited: just a growing list
   final Set<String> _takenMedications = {}; // medication name + date key
   final Map<String, int> _doseRecordIds = {}; // نفس المفتاح -> id السجل بالباك إند
+  List<DrugInteraction> _interactions = []; // تداخلات دوائية بين الأدوية الحالية
+  final DrugInteractionService _interactionService = DrugInteractionService();
+  bool _interactionsBannerExpanded = false; // مطوي افتراضياً، يفتح بالضغط
 
   late final List<DateTime> _dateStrip;
   late DateTime _selectedDate;
@@ -488,9 +492,256 @@ class _HomeScreenState extends State<HomeScreen> {
       });
 
       await _loadDoseRecords();
+      await _checkAllInteractions();
     } catch (e) {
       debugPrint("LOAD MEDICATION ERROR = $e");
     }
+  }
+
+  /// يفحص كل الأدوية الحالية (بعضها ببعض) ويخزّن أي تداخلات موجودة
+  /// في _interactions، عشان يعرضها البانر بأعلى الشاشة الرئيسية.
+  Future<void> _checkAllInteractions() async {
+    if (_medications.length < 2) {
+      if (mounted) setState(() => _interactions = []);
+      return;
+    }
+    try {
+      final found = await _interactionService
+          .checkInteractions(_medications.map((m) => m.name).toList());
+      if (mounted) setState(() => _interactions = found);
+    } catch (e) {
+      debugPrint('Interaction check failed: $e');
+    }
+  }
+
+  /// يفحص دواء معيّن (بالاسم) مقابل بقية الأدوية الحالية فقط،
+  /// يُستخدم لعرض تحذير فوري بعد إضافة دواء جديد.
+  Future<List<DrugInteraction>> _checkInteractionsFor(
+      String newMedName) async {
+    try {
+      return await _interactionService.checkNewMedication(
+        newMedName,
+        _medications.map((m) => m.name).toList(),
+      );
+    } catch (e) {
+      debugPrint('Interaction check failed: $e');
+      return [];
+    }
+  }
+
+  String _severityLabelAr(String severity) {
+    switch (severity) {
+      case 'contraindicated':
+        return 'خطر جداً - يمنع الجمع بينهما';
+      case 'major':
+        return 'خطورة عالية';
+      case 'moderate':
+        return 'خطورة متوسطة';
+      case 'minor':
+        return 'خطورة بسيطة';
+      default:
+        return severity;
+    }
+  }
+
+  Color _severityColor(String severity) {
+    switch (severity) {
+      case 'contraindicated':
+        return const Color(0xFF8B0000);
+      case 'major':
+        return const Color(0xFFD32F2F);
+      case 'moderate':
+        return const Color(0xFFF57C00);
+      case 'minor':
+        return const Color(0xFFFBC02D);
+      default:
+        return Colors.grey;
+    }
+  }
+
+  /// يبني نص + لون التفاصيل لتداخل واحد بالعربي (يرجع للإنجليزي لو ما لقى ترجمة).
+  Widget _buildInteractionDetailTile(DrugInteraction i,
+      {bool emphasize = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${i.ingredientAAr} + ${i.ingredientBAr}',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: emphasize ? 16 : 14,
+            ),
+          ),
+          Text(
+            _severityLabelAr(i.severity),
+            style: TextStyle(
+              color: _severityColor(i.severity),
+              fontWeight: FontWeight.bold,
+              fontSize: emphasize ? 13 : 12,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(i.descriptionAr,
+              style: TextStyle(fontSize: emphasize ? 14 : 13)),
+          if (i.recommendationAr.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'التوصية: ${i.recommendationAr}',
+              style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// يعرض نافذة تفاصيل تداخل (أو أكثر) بالعربي.
+  Future<void> _showInteractionDetailsDialog(
+      List<DrugInteraction> found) async {
+    if (found.isEmpty || !mounted) return;
+    await showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: Row(
+            children: const [
+              Icon(Icons.warning_amber_rounded, color: Color(0xFFD32F2F)),
+              SizedBox(width: 8),
+              Text('تنبيه: تداخل دوائي'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: found
+                  .map((i) => _buildInteractionDetailTile(i, emphasize: true))
+                  .toList(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('فهمت'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// يعرض نافذة تحذير فورية لو الدواء المُضاف حديثاً يتعارض مع أدوية موجودة.
+  Future<void> _showInteractionWarningIfNeeded(String newMedName) async {
+    final found = await _checkInteractionsFor(newMedName);
+    await _showInteractionDetailsDialog(found);
+  }
+
+  /// بانر قابل للطي بأعلى الشاشة الرئيسية يعرض كل التداخلات الموجودة حالياً.
+  /// مطوي افتراضياً (سطر ملخّص واحد)، يفتح بالضغط عليه، وكل عنصر بداخله
+  /// قابل للضغط لفتح تفاصيله الكاملة.
+  Widget _buildInteractionsBanner() {
+    if (_interactions.isEmpty) return const SizedBox.shrink();
+
+    final highest = _interactions.first; // مفروزة مسبقاً من الأخطر للأبسط
+    final highestSeverity = highest.severity;
+    final counts = <String, int>{};
+    for (final i in _interactions) {
+      counts[i.severity] = (counts[i.severity] ?? 0) + 1;
+    }
+    final summaryParts = ['contraindicated', 'major', 'moderate', 'minor']
+        .where((s) => counts.containsKey(s))
+        .map((s) => '${_arabicDigits(counts[s].toString())} ${_severityLabelAr(s).replaceFirst('خطر جداً - يمنع الجمع بينهما', 'ممنوع')}')
+        .join('، ');
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3F0),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _severityColor(highestSeverity).withOpacity(0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => setState(
+                () => _interactionsBannerExpanded = !_interactionsBannerExpanded),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      color: _severityColor(highestSeverity), size: 20),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'تداخلات دوائية (${_arabicDigits(_interactions.length.toString())})'
+                      '${summaryParts.isNotEmpty ? ' — $summaryParts' : ''}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: _severityColor(highestSeverity),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _interactionsBannerExpanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: _severityColor(highestSeverity),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_interactionsBannerExpanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: _interactions.map((i) {
+                  final isHighest = i.severity == highestSeverity;
+                  return InkWell(
+                    onTap: () => _showInteractionDetailsDialog([i]),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: isHighest ? 10 : 8,
+                            height: isHighest ? 10 : 8,
+                            decoration: BoxDecoration(
+                              color: _severityColor(i.severity),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '${i.ingredientAAr} + ${i.ingredientBAr} — ${_severityLabelAr(i.severity)}',
+                              style: TextStyle(
+                                fontSize: isHighest ? 13 : 12,
+                                fontWeight:
+                                    isHighest ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                          const Icon(Icons.chevron_left_rounded,
+                              size: 16, color: Colors.black45),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   Future<void> _saveTakenMedications() async {
@@ -578,6 +829,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 debugPrint('Error updating medication: $e');
               }
             }
+            // فحص التداخل بعد تحديث دواء موجود (قد يكون الاسم تغيّر)
+            await _showInteractionWarningIfNeeded(med.name);
           } else {
             // Add new medication
             if (selectedDep != null && authProvider.accessToken != null) {
@@ -609,6 +862,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   }
                 }
+                await _showInteractionWarningIfNeeded(med.name);
               } catch (e) {
                 debugPrint('Error saving medication for dependent: $e');
               }
@@ -639,6 +893,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   }
                 }
+                await _showInteractionWarningIfNeeded(med.name);
               } catch (e) {
                 debugPrint(e.toString());
               }
@@ -654,6 +909,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   minute: med.time.minute,
                 );
               }
+              await _showInteractionWarningIfNeeded(med.name);
             }
           }
         },
@@ -1047,66 +1303,71 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ------------------------- Day strip (fixed) -------------------------
   Widget _buildDateStrip() {
-    return SizedBox(
-      height: 100,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: _dateStrip.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
+    // شريط مرن يمتلئ بعرض الشاشة بنفس هوامش باقي عناصر التصميم (16px)
+    // بدل قائمة أفقية بعرض ثابت تترك فراغ على الشاشات الواسعة.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: List.generate(_dateStrip.length, (index) {
           final date = _dateStrip[index];
           final selected = date.year == _selectedDate.year &&
               date.month == _selectedDate.month &&
               date.day == _selectedDate.day;
           final hasMed = _hasAnyMedicationOnDate(date);
-          return GestureDetector(
-            onTap: () => setState(() => _selectedDate = date),
-            child: Container(
-              width: 64,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-              decoration: BoxDecoration(
-                color: selected ? _Colors.darkGreen : Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: selected ? _Colors.darkGreen : _Colors.borderGrey,
-                ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    _arabicDigits(date.day.toString()),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: selected ? Colors.white : _Colors.textPrimary,
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(left: index == _dateStrip.length - 1 ? 0 : 6),
+              child: GestureDetector(
+                onTap: () => setState(() => _selectedDate = date),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: selected ? _Colors.darkGreen : Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: selected ? _Colors.darkGreen : _Colors.borderGrey,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _weekdayNameFromDate(date),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: selected ? Colors.white : _Colors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  if (hasMed)
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF1D9E75),
-                        shape: BoxShape.circle,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _arabicDigits(date.day.toString()),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: selected ? Colors.white : _Colors.textPrimary,
+                        ),
                       ),
-                    ),
-                ],
+                      const SizedBox(height: 4),
+                      Text(
+                        _weekdayNameFromDate(date),
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: selected ? Colors.white : _Colors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      if (hasMed)
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF1D9E75),
+                            shape: BoxShape.circle,
+                          ),
+                        )
+                      else
+                        const SizedBox(height: 6),
+                    ],
+                  ),
+                ),
               ),
             ),
           );
-        },
+        }),
       ),
     );
   }
@@ -1116,6 +1377,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final todaysMeds = _medicationsForDate(_selectedDate);
     return Column(
       children: [
+        _buildInteractionsBanner(),
         _buildDateStrip(),
         const SizedBox(height: 24),
         Expanded(
