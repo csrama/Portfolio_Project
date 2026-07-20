@@ -51,24 +51,40 @@ function matchFallbackInteractions(pairs) {
 
 interactions.post('/check', async (c) => {
   const body = await c.req.json().catch(() => ({}));
-  const names = (body.generic_names || [])
-    .map((n) => String(n).trim().toLowerCase())
-    .filter(Boolean);
+  const rawNames = (body.generic_names || [])
+  .map((n) => String(n).trim().toLowerCase())
+  .filter(Boolean);
 
-  if (names.length < 2) {
-    return c.json({ error: 'Provide at least 2 generic_names to check.' }, 400);
-  }
+const names = rawNames.map((name) => {
+  return name
+    .replace(/-alex.*/i, '')
+    .replace(/-chemipharm.*/i, '')
+    .replace(/-vacsera.*/i, '')
+    .replace(/-bioton.*/i, '')
+    .replace(/-egyphar.*/i, '')
+    .replace(/\d.*$/, '')
+    .replace(/\..*$/, '')
+    .trim();
+});
 
-  const pairs = buildPairs(names);
+const uniqueNames = [...new Set(names)];
+  const pairs = buildPairs(uniqueNames);
   const values = pairs.map((_, idx) => `($${idx * 2 + 1}, $${idx * 2 + 2})`).join(', ');
   const params = pairs.flat();
   const query = `
-    SELECT di.ingredient_a, di.ingredient_b, di.severity, di.description, di.recommendation
+    SELECT
+      di.ingredient_a,
+      di.ingredient_b,
+      di.severity,
+      di.description,
+      di.recommendation,
+      di.description_ar,
+      di.recommendation_ar
     FROM drug_interactions di
     JOIN (VALUES ${values}) AS pair(a, b)
-      ON di.ingredient_a = pair.a AND di.ingredient_b = pair.b
-  `;
-
+      ON di.ingredient_a = pair.a
+     AND di.ingredient_b = pair.b
+`;
   try {
     let result = await dbPoolModule.pool.query(query, params);
     if (dbPoolModule.useMemoryStore) {
