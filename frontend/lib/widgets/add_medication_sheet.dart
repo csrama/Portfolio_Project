@@ -21,8 +21,7 @@ class _Colors {
 }
 
 class AddMedicationSheet extends StatefulWidget {
-  final void Function(MedicationItem medication) onSave;
-
+final Future<void> Function(MedicationItem medication) onSave;
   const AddMedicationSheet({super.key, required this.onSave});
 
   @override
@@ -92,7 +91,7 @@ class _AddMedicationSheetState extends State<AddMedicationSheet> {
   bool get _isValid =>
       _nameController.text.trim().isNotEmpty && _selectedDays.isNotEmpty;
 
-  void _save({required bool withReminder}) {
+  Future<void> _save({required bool withReminder}) async {
     if (!_isValid) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('الرجاء إدخال اسم الدواء واختيار الأيام')),
@@ -113,6 +112,7 @@ class _AddMedicationSheetState extends State<AddMedicationSheet> {
         reminderEnabled: withReminder,
       ),
     );
+    if (mounted) {}
     Navigator.of(context).pop();
   }
 

@@ -10,15 +10,19 @@ ALTER TABLE medicines ADD COLUMN IF NOT EXISTS generic_name TEXT;
 CREATE INDEX IF NOT EXISTS idx_medicines_generic_name ON medicines (generic_name);
 
 -- 2. Interaction reference table (ingredient-level, not brand-level)
-DROP TABLE IF EXISTS drug_interactions;
+
 CREATE TABLE drug_interactions (
     id SERIAL PRIMARY KEY,
     ingredient_a TEXT NOT NULL,
     ingredient_b TEXT NOT NULL,
     severity TEXT NOT NULL CHECK (severity IN ('minor','moderate','major','contraindicated')),
+
     description TEXT NOT NULL,
+    description_ar TEXT NOT NULL,
+
     recommendation TEXT,
-    -- canonical ordering so (A,B) and (B,A) are never stored twice
+    recommendation_ar TEXT,
+
     CONSTRAINT ordered_pair CHECK (ingredient_a < ingredient_b)
 );
 
@@ -27,7 +31,16 @@ CREATE INDEX idx_interactions_b ON drug_interactions (ingredient_b);
 
 -- 3. Curated interaction data
 -- Format: LOWER(ingredient_a) < LOWER(ingredient_b) alphabetically
-INSERT INTO drug_interactions (ingredient_a, ingredient_b, severity, description, recommendation) VALUES
+INSERT INTO drug_interactions (
+ingredient_a,
+ingredient_b,
+severity,
+description,
+description_ar,
+recommendation,
+recommendation_ar
+)
+VALUES
 ('amiodarone', 'digoxin', 'major', 'Amiodarone increases digoxin blood levels, raising risk of digoxin toxicity.', 'Monitor digoxin levels; may require dose reduction.'),
 ('amiodarone', 'warfarin', 'major', 'Amiodarone potentiates warfarin, increasing bleeding risk.', 'Monitor INR closely; warfarin dose often needs reduction.'),
 ('aspirin', 'warfarin', 'major', 'Combined use significantly increases risk of bleeding.', 'Avoid combination unless specifically directed; monitor for bleeding signs.'),
@@ -67,5 +80,6 @@ INSERT INTO drug_interactions (ingredient_a, ingredient_b, severity, description
 ('clarithromycin', 'simvastatin', 'major', 'Macrolide antibiotics inhibit statin metabolism, increasing risk of myopathy/rhabdomyolysis.', 'Consider temporary statin suspension during antibiotic course.'),
 ('diltiazem', 'simvastatin', 'moderate', 'Diltiazem inhibits statin metabolism, raising myopathy risk at higher statin doses.', 'Limit statin dose or use an alternative statin.'),
 ('phenelzine', 'tramadol', 'contraindicated', 'MAOIs combined with tramadol can cause life-threatening serotonin syndrome.', 'Absolute contraindication - do not combine; allow washout period between use.'),
-('trimethoprim-sulfamethoxazole', 'warfarin', 'major', 'This antibiotic combination markedly increases INR and bleeding risk.', 'Monitor INR closely; dose adjustment usually required.')
+('trimethoprim-sulfamethoxazole', 'warfarin', 'major', 'This antibiotic combination markedly increases INR and bleeding risk.', 'Monitor INR closely; dose adjustment usually required.'),
+('metformin', 'prednisone', 'moderate', 'Corticosteroids can raise blood glucose, reducing metformin effectiveness.', 'Monitor blood glucose more closely when starting/stopping steroids.')
 ;
