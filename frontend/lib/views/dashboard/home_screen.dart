@@ -45,6 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<MedicationItem> _medications =
       []; // unlimited: just a growing list
   final Set<String> _takenMedications = {}; // medication name + date key
+  final Set<String> _notTakenMedications = {}; // explicit not-taken state
   final Map<String, int> _doseRecordIds = {}; // نفس المفتاح -> id السجل بالباك إند
 
   late final List<DateTime> _dateStrip;
@@ -70,6 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _dateStrip = List.generate(7, (i) => today.add(Duration(days: i - 3)));
     _loadMedications();
     _loadTakenMedications();
+    _loadNotTakenMedications();
   }
 
   @override
@@ -133,6 +135,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  bool _isNotTaken(MedicationItem medication, DateTime date, int doseIndex) {
+    return _notTakenMedications.contains(
+      _medicationDoseKey(medication, date, doseIndex),
+    );
+  }
+
   DateTime _doseDateTime(MedicationItem medication, DateTime date, int doseIndex) {
     final intervalHours =
         medication.dosesPerDay > 1 ? 24 ~/ medication.dosesPerDay : 0;
@@ -164,19 +172,31 @@ class _HomeScreenState extends State<HomeScreen> {
     throw Exception('Request failed: ${response.statusCode} ${response.body}');
   }
 
-  Future<void> _toggleTaken(
-      MedicationItem medication, DateTime date, int doseIndex) async {
+  Future<void> _updateDoseStatus(
+      MedicationItem medication, DateTime date, int doseIndex, bool markTaken) async {
     final key = _medicationDoseKey(medication, date, doseIndex);
     final wasTaken = _takenMedications.contains(key);
+    final wasNotTaken = _notTakenMedications.contains(key);
+    final willBeTaken = markTaken ? !wasTaken : false;
+    final willBeNotTaken = markTaken ? false : !wasNotTaken;
 
     setState(() {
-      if (wasTaken) {
+      if (willBeTaken) {
+        _takenMedications.add(key);
+        _notTakenMedications.remove(key);
+      } else if (willBeNotTaken) {
+        _notTakenMedications.add(key);
         _takenMedications.remove(key);
       } else {
-        _takenMedications.add(key);
+        _takenMedications.remove(key);
+        _notTakenMedications.remove(key);
       }
     });
-    await _saveTakenMedications();
+
+    await Future.wait([
+      _saveTakenMedications(),
+      _saveNotTakenMedications(),
+    ]);
 
     final authProvider = context.read<AuthProvider>();
     final token = authProvider.accessToken;
@@ -188,8 +208,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final existingId = _doseRecordIds[key];
-      if (!wasTaken) {
-        // صارت مأخوذة الحين
+
+      if (willBeTaken) {
         if (existingId != null) {
           await _patchJson(
             '/dose-logs/$existingId',
@@ -218,8 +238,31 @@ class _HomeScreenState extends State<HomeScreen> {
                 newId is int ? newId : int.tryParse(newId.toString()) ?? -1;
           }
         }
+      } else if (willBeNotTaken) {
+        if (existingId != null) {
+          await _patchJson(
+            '/dose-logs/$existingId',
+            body: {'status': 'PENDING', 'dose_taken': false},
+            token: token,
+          );
+        } else {
+          final created = await ApiService.postJson(
+            '/dose-logs',
+            body: {
+              'medication_id': medId,
+              'scheduled_time': scheduledTime,
+              'status': 'PENDING',
+              'dose_taken': false,
+            },
+            token: token,
+          );
+          final newId = created['id'];
+          if (newId != null) {
+            _doseRecordIds[key] =
+                newId is int ? newId : int.tryParse(newId.toString()) ?? -1;
+          }
+        }
       } else if (existingId != null) {
-        // كانت مأخوذة وألغيناها
         await _patchJson(
           '/dose-logs/$existingId',
           body: {'status': 'PENDING', 'dose_taken': false},
@@ -498,12 +541,29 @@ class _HomeScreenState extends State<HomeScreen> {
     await prefs.setStringList('takenMedications', _takenMedications.toList());
   }
 
+  Future<void> _saveNotTakenMedications() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('notTakenMedications', _notTakenMedications.toList());
+  }
+
   Future<void> _loadTakenMedications() async {
     final prefs = await SharedPreferences.getInstance();
     final List<String>? saved = prefs.getStringList('takenMedications');
     if (saved != null) {
       setState(() {
         _takenMedications
+          ..clear()
+          ..addAll(saved);
+      });
+    }
+  }
+
+  Future<void> _loadNotTakenMedications() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String>? saved = prefs.getStringList('notTakenMedications');
+    if (saved != null) {
+      setState(() {
+        _notTakenMedications
           ..clear()
           ..addAll(saved);
       });
@@ -1114,6 +1174,10 @@ class _HomeScreenState extends State<HomeScreen> {
   // ------------------------- Tabs -------------------------
   Widget _buildTodayTab() {
     final todaysMeds = _medicationsForDate(_selectedDate);
+    final isToday = _selectedDate.year == DateTime.now().year &&
+        _selectedDate.month == DateTime.now().month &&
+        _selectedDate.day == DateTime.now().day;
+
     return Column(
       children: [
         _buildDateStrip(),
@@ -1183,6 +1247,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         itemBuilder: (context, index) =>
                             _MedicationCard(
                               medication: todaysMeds[index],
+                              showDoseActions: true,
+                              selectedDate: _selectedDate,
+                              isToday: isToday,
+                              isTaken: _isTaken,
+                              isNotTaken: _isNotTaken,
+                              onUpdateDoseStatus: _updateDoseStatus,
+                              doseTimeLabel: _doseTimeLabel,
                               onEdit: () => _openAddMedicationSheet(
                                 existingMedication: todaysMeds[index],
                               ),
@@ -1274,6 +1345,100 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildDoseActionRow(
+    MedicationItem medication,
+    DateTime date,
+    int doseIndex,
+    bool enabled,
+  ) {
+    final taken = _isTaken(medication, date, doseIndex);
+    final notTaken = _isNotTaken(medication, date, doseIndex);
+    final label = _doseTimeLabel(medication, doseIndex);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(end: 4),
+              child: ElevatedButton(
+                onPressed: enabled
+                    ? () => _updateDoseStatus(
+                          medication,
+                          date,
+                          doseIndex,
+                          true,
+                        )
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: taken
+                      ? const Color(0xFF4CAF50)
+                      : Colors.white,
+                  foregroundColor: taken ? Colors.white : _Colors.darkGreen,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'مأخوذة',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: taken ? Colors.white : _Colors.darkGreen,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(start: 4),
+              child: ElevatedButton(
+                onPressed: enabled
+                    ? () => _updateDoseStatus(
+                          medication,
+                          date,
+                          doseIndex,
+                          false,
+                        )
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: notTaken
+                      ? const Color(0xFFB85C5C)
+                      : Colors.white,
+                  foregroundColor: notTaken ? Colors.white : _Colors.darkGreen,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'لم تُؤخذ',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: notTaken ? Colors.white : _Colors.darkGreen,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRemindersTab() {
     final selectedMeds = _medicationsForDate(_selectedDate);
     final isToday = _selectedDate.year == DateTime.now().year &&
@@ -1313,8 +1478,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildReminderMedicationCard(MedicationItem medication, bool isToday) {
-    final checkboxBorder = Border.all(color: const Color(0xFFB85C5C), width: 2);
-
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -1340,41 +1503,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 12),
           ...List.generate(medication.dosesPerDay, (doseIndex) {
-            final taken = _isTaken(medication, _selectedDate, doseIndex);
-            final label = _doseTimeLabel(medication, doseIndex);
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: isToday
-                        ? () => _toggleTaken(medication, _selectedDate, doseIndex)
-                        : null,
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: taken ? const Color(0xFFB85C5C) : Colors.transparent,
-                        border: checkboxBorder,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: taken
-                          ? const Icon(Icons.check, size: 14, color: Colors.white)
-                          : null,
-                    ),
-                  ),
-                ],
-              ),
-            );
+            return _buildDoseActionRow(medication, _selectedDate, doseIndex, isToday);
           }),
         ],
       ),
@@ -1443,11 +1572,25 @@ class _HomeScreenState extends State<HomeScreen> {
 // ---------------------------------------------------------------------
 class _MedicationCard extends StatelessWidget {
   final MedicationItem medication;
+  final bool showDoseActions;
+  final DateTime? selectedDate;
+  final bool isToday;
+  final bool Function(MedicationItem medication, DateTime date, int doseIndex)? isTaken;
+  final bool Function(MedicationItem medication, DateTime date, int doseIndex)? isNotTaken;
+  final void Function(MedicationItem medication, DateTime date, int doseIndex, bool markTaken)? onUpdateDoseStatus;
+  final String Function(MedicationItem medication, int doseIndex)? doseTimeLabel;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
   const _MedicationCard({
     required this.medication,
+    this.showDoseActions = false,
+    this.selectedDate,
+    this.isToday = false,
+    this.isTaken,
+    this.isNotTaken,
+    this.onUpdateDoseStatus,
+    this.doseTimeLabel,
     this.onEdit,
     this.onDelete,
   });
@@ -1528,6 +1671,103 @@ class _MedicationCard extends StatelessWidget {
                   '${medication.timeLabel}. x${medication.dosesPerDay}/اليوم',
                   style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
+                if (showDoseActions && selectedDate != null && isTaken != null && isNotTaken != null && onUpdateDoseStatus != null) ...[
+                  const SizedBox(height: 12),
+                  ...List.generate(medication.dosesPerDay, (doseIndex) {
+                    final taken = isTaken!(medication, selectedDate!, doseIndex);
+                    final notTaken = isNotTaken!(medication, selectedDate!, doseIndex);
+                    final doseTime = doseTimeLabel!(medication, doseIndex);
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              doseTime,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsetsDirectional.only(end: 4),
+                              child: ElevatedButton(
+                                onPressed: isToday
+                                    ? () => onUpdateDoseStatus!(
+                                          medication,
+                                          selectedDate!,
+                                          doseIndex,
+                                          true,
+                                        )
+                                    : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      taken ? const Color(0xFF4CAF50) : Colors.white,
+                                  foregroundColor:
+                                      taken ? Colors.white : _Colors.darkGreen,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 10),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(
+                                  'تناولت',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: taken ? Colors.white : _Colors.darkGreen,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsetsDirectional.only(start: 4),
+                              child: ElevatedButton(
+                                onPressed: isToday
+                                    ? () => onUpdateDoseStatus!(
+                                          medication,
+                                          selectedDate!,
+                                          doseIndex,
+                                          false,
+                                        )
+                                    : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: notTaken
+                                      ? const Color(0xFFB85C5C)
+                                      : Colors.white,
+                                  foregroundColor: notTaken
+                                      ? Colors.white
+                                      : _Colors.darkGreen,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 10),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(
+                                  'لم أتناول',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: notTaken
+                                        ? Colors.white
+                                        : _Colors.darkGreen,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
               ],
             ),
           ),
