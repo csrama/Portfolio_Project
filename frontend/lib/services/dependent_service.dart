@@ -2,10 +2,7 @@ import 'api_service.dart';
 import '../models/dependent.dart';
 
 class DependentService {
-  final ApiService _apiService;
-
-  DependentService({required ApiService apiService})
-      : _apiService = apiService;
+  DependentService({required ApiService apiService});
 
   Future<List<Dependent>> getDependents(String token) async {
     final response = await ApiService.getJsonList(

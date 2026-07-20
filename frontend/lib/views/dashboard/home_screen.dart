@@ -17,7 +17,6 @@ import '../../services/notification_service.dart';
 import '../../i18n/strings.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../profile/profile_screen.dart';
-import '../settings/settings_screen.dart';
 import 'dependents_screen.dart';
 
 class _Colors {
@@ -42,10 +41,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  final List<MedicationItem> _medications =
-      []; // unlimited: just a growing list
-  final Set<String> _takenMedications = {}; // medication name + date key
-  final Map<String, int> _doseRecordIds = {}; // نفس المفتاح -> id السجل بالباك إند
+  final List<MedicationItem> _medications = [];
+  final Set<String> _takenMedications = {};
+  final Map<String, int> _doseRecordIds = {};
 
   late final List<DateTime> _dateStrip;
   late DateTime _selectedDate;
@@ -65,8 +63,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     final today = DateTime.now();
     _selectedDate = today;
-    // 7-day rolling strip centered on today, oldest first so it reads
-    // naturally left-to-right even inside an RTL Directionality.
     _dateStrip = List.generate(7, (i) => today.add(Duration(days: i - 3)));
     _loadMedications();
     _loadTakenMedications();
@@ -75,7 +71,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Re-load medications if the selected dependent changes
     _loadMedications();
   }
 
@@ -98,12 +93,6 @@ class _HomeScreenState extends State<HomeScreen> {
       final index = western.indexOf(char);
       return index >= 0 ? arabic[index] : char;
     }).join();
-  }
-
-  String _formatMedicationInfo(MedicationItem medication) {
-    final timeLabel = _arabicDigits(medication.timeLabel);
-    final count = _arabicDigits(medication.dosesPerDay.toString());
-    return '$timeLabel. في اليوم/x$count';
   }
 
   List<MedicationItem> _medicationsForDate(DateTime date) {
@@ -142,7 +131,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return DateTime(date.year, date.month, date.day, doseHour, baseMinute);
   }
 
-  // PATCH يدوي بدون تعديل api_service.dart (الـ ApiService الحالي ما فيه patch)
   Future<Map<String, dynamic>> _patchJson(
     String path, {
     required Map<String, dynamic> body,
@@ -181,7 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final authProvider = context.read<AuthProvider>();
     final token = authProvider.accessToken;
     final medId = int.tryParse(medication.id);
-    if (token == null || medId == null) return; // بدون تسجيل دخول: محلي بس
+    if (token == null || medId == null) return;
 
     final scheduledTime =
         _doseDateTime(medication, date, doseIndex).toIso8601String();
@@ -189,7 +177,6 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final existingId = _doseRecordIds[key];
       if (!wasTaken) {
-        // صارت مأخوذة الحين
         if (existingId != null) {
           await _patchJson(
             '/dose-logs/$existingId',
@@ -219,7 +206,6 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         }
       } else if (existingId != null) {
-        // كانت مأخوذة وألغيناها
         await _patchJson(
           '/dose-logs/$existingId',
           body: {'status': 'PENDING', 'dose_taken': false},
@@ -295,7 +281,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // ملخص متابعة الجرعات (يستخدم GET /adherence/rate الجاهز بالباك إند)
   void _showAdherenceSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -434,16 +419,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
       List<dynamic> rawList;
 
-      // أدوية التابع
       if (selectedDep != null) {
         rawList = await depService.getDependentMedications(
           token,
           selectedDep.id,
         );
-      }
-
-      // أدوية المستخدم الأساسي
-      else {
+      } else {
         rawList = await ApiService.getJsonList(
           '/medications',
           token: token,
@@ -546,7 +527,6 @@ class _HomeScreenState extends State<HomeScreen> {
           final selectedDep = depProvider.selectedDependent;
 
           if (existingMedication != null) {
-            // Update existing medication
             if (authProvider.accessToken != null) {
               try {
                 await ApiService.putJson(
@@ -579,9 +559,7 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             }
           } else {
-            // Add new medication
             if (selectedDep != null && authProvider.accessToken != null) {
-              // Save to API for dependent
               try {
                 await ApiService.postJson(
                   '/medications',
@@ -643,7 +621,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 debugPrint(e.toString());
               }
             } else {
-              // Fallback: local-only save
               setState(() => _medications.add(med));
               await _saveMedications();
               if (med.reminderEnabled) {
@@ -698,7 +675,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return;
   }
 
-  // قائمة المسارات المحتملة
   final List<Map<String, String>> tests = [
     {'method': 'DELETE', 'path': '/medications/${med.id}'},
     {'method': 'DELETE', 'path': '/medication/${med.id}'},
@@ -778,7 +754,6 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
   Future<void> _signOut(BuildContext context) async {
-    // Clear whatever kind of session is active (email token or Google).
     await AuthRepository().clearSession();
     await GoogleAuthService().signOut();
 
@@ -790,7 +765,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ------------------------- Top bar -------------------------
   Widget _buildTopBar() {
     final hasName =
         widget.userName != null && widget.userName!.trim().isNotEmpty;
@@ -801,13 +775,10 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Greeting + Profile avatar (rendered on the right in RTL)
           Expanded(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                // Profile avatar - dark green. Tap opens the account menu
-                // with improved items: حسابي, الإعدادات, تذكيراتي, أدويتي, التابعون, تسجيل الخروج
                 Consumer<DependentProvider>(
                   builder: (context, depProvider, _) {
                     final selectedDep = depProvider.selectedDependent;
@@ -819,7 +790,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       elevation: 4,
                       itemBuilder: (context) => [
-                        // Header
                         const PopupMenuItem<String>(
                           enabled: false,
                           child: Padding(
@@ -836,7 +806,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const PopupMenuDivider(height: 8),
-                        // حسابي
                         const PopupMenuItem<String>(
                           value: 'my_account',
                           child: Row(
@@ -848,7 +817,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
-                        // الإعدادات
                         const PopupMenuItem<String>(
                           value: 'settings',
                           child: Row(
@@ -860,7 +828,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
-                        // تذكيراتي
                         const PopupMenuItem<String>(
                           value: 'reminders',
                           child: Row(
@@ -872,7 +839,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
-                        // أدويتي
                         const PopupMenuItem<String>(
                           value: 'my_meds',
                           child: Row(
@@ -884,7 +850,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
-                        // متابعة الجرعات
                         const PopupMenuItem<String>(
                           value: 'adherence',
                           child: Row(
@@ -896,7 +861,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
-                        // التابعون
                         const PopupMenuItem<String>(
                           value: 'dependents',
                           child: Row(
@@ -909,7 +873,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const PopupMenuDivider(height: 8),
-                        // تسجيل الخروج
                         const PopupMenuItem<String>(
                           value: 'logout',
                           child: Row(
@@ -929,9 +892,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                       onSelected: (value) async {
                         if (value == 'my_account') {
-                          // TODO: Navigate to account screen
                         } else if (value == 'settings') {
-                          // TODO: Navigate to settings screen
                         } else if (value == 'reminders') {
                           setState(() => _selectedIndex = 2);
                         } else if (value == 'my_meds') {
@@ -964,7 +925,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(width: 12),
 
-                // Single source for the greeting/name/dependent-profile block.
                 Expanded(
                   child: Consumer<DependentProvider>(
                     builder: (context, depProvider, _) {
@@ -1022,7 +982,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          // "+" add button on the left side (rendered on the left in RTL)
           if (_selectedIndex == 1)
             GestureDetector(
               onTap: () => _openAddMedicationSheet(),
@@ -1045,7 +1004,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ------------------------- Day strip (fixed) -------------------------
   Widget _buildDateStrip() {
     return SizedBox(
       height: 100,
@@ -1111,7 +1069,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ------------------------- Tabs -------------------------
   Widget _buildTodayTab() {
     final todaysMeds = _medicationsForDate(_selectedDate);
     return Column(
@@ -1259,7 +1216,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 )
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: active.length, // unlimited
+                  itemCount: active.length,
                   itemBuilder: (context, index) =>
                       _MedicationCard(
                         medication: active[index],
@@ -1558,7 +1515,6 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _dosageController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
-  bool _reminderEnabled = true;
 
   static const List<String> _allDays = [
     'الاثنين',
@@ -1629,7 +1585,6 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
       final nameEn = (suggestion['name_en'] ?? '').toString();
       final nameAr = (suggestion['name_ar'] ?? '').toString();
 
-      // نحفظ الاسمين مع بعض بنفس الحقل عشان ما نحتاج نعدل قاعدة البيانات
       _nameController.text =
           nameAr.isNotEmpty ? '$nameEn — $nameAr' : nameEn;
 

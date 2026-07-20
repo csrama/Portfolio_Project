@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/dependent.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/dependent_provider.dart';
 import '../../services/dependent_service.dart';
 
 class DependentDashboardScreen extends StatefulWidget {
