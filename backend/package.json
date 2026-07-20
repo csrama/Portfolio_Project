@@ -17,12 +17,13 @@
     "google-auth-library": "^10.9.0",
     "hono": "^4.6.0",
     "jsonwebtoken": "^9.0.3",
+    "pg": "^8.22.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "jest": "^29.7.0",
     "node-pg-migrate": "^8.0.4",
-    "pg": "^8.22.0",
     "supertest": "^7.2.2"
+ 
   }
 }
