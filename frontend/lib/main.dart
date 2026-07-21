@@ -10,7 +10,7 @@ import 'providers/dependent_provider.dart';
 import 'services/dio_client.dart';
 import 'views/dashboard/home_screen.dart';
 import 'views/splash/splash_screen.dart';
-import 'package:frontend/services/notification_service.dart';
+import 'services/notification_service.dart';
 import 'package:app_links/app_links.dart';
 import 'views/dashboard/invite_screen.dart';
 
@@ -123,7 +123,6 @@ Future<void> _handleDeepLinks() async {
               colorScheme: ColorScheme.fromSeed(
                 seedColor: const Color.fromARGB(255, 2, 111, 38),
               ),
-              fontFamily: 'Cairo',
             ),
             darkTheme: ThemeData.dark().copyWith(
               colorScheme: ColorScheme.fromSeed(

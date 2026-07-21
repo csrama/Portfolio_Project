@@ -1,23 +1,18 @@
 # Bug Fixes TODO
 
-## ✅ Bugs Identified
+## ✅ Bugs Fixed
 
-### File: `frontend/lib/views/dashboard/home_screen.dart`
-1. **`_getGreeting()` is malformed** - contains leftover code from `_medicationsForDate()`
-2. **`_medicationsForDate()` is MISSING** - needed for filtering meds by day
-3. **`_arabicDigits()` is MISSING** - needed for Arabic numeral display
-4. **`_weekdayNameFromDate()` is MISSING** - needed for Arabic weekday names
-5. **`fetchDependents()` never called in initState** - dependent list stays empty
-
-### File: `frontend/lib/main.dart`
-6. **app_links v6.4.1 API changed** - `getInitialLink()` returns `Uri?` not `String`, and `linkStream` is now `uriStream`
+1. ✅ **`_MedicationCard` constructor malformed** - Fixed the invalid initializer list (`: showDoseActions = false : selectedDate : ...`) to proper parameter defaults with commas
+2. ✅ **Missing dependencies in pubspec.yaml** - Added `http`, `shared_preferences`, `provider`, `app_links`, `awesome_notifications`
+3. ✅ **Duplicate `assets:` key in pubspec.yaml** - Fixed YAML structure
+4. ✅ **Empty `adherence_service.dart`** - Implemented with `getAdherenceRate()` and `getDoseLogs()` methods
+5. ✅ **Wrong import path in `main.dart`** - Changed `package:frontend/services/notification_service.dart` to relative import
 
 ## Progress
-- [ ] 1. Fix `_getGreeting()` + add `_medicationsForDate()`
-- [ ] 2. Add `_arabicDigits()` + `_weekdayNameFromDate()`
-- [ ] 3. Add `_loadDependents()` call in initState
-- [ ] 4. Fix `main.dart` app_links API
-- [ ] 5. Run flutter pub get
-- [ ] 6. Run flutter analyze to verify
-- [ ] 7. Launch the app
+- [x] 1. Fix `_MedicationCard` constructor in home_screen.dart
+- [x] 2. Fix pubspec.yaml (dependencies + assets)
+- [x] 3. Implement adherence_service.dart
+- [ ] 4. Run flutter pub get
+- [ ] 5. Run flutter analyze to verify
+- [ ] 6. Launch the app
 

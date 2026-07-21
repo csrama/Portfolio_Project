@@ -320,7 +320,7 @@ class _AddMedicationSheetState extends State<AddMedicationSheet> {
                           const Text('الفترة', style: TextStyle(color: _Colors.textSecondary)),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
-                            value: _period,
+                            initialValue: _period,
                             alignment: AlignmentDirectional.centerEnd,
                             decoration: InputDecoration(
                               filled: true,
