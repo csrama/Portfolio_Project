@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA public;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_type_enum') THEN
-    CREATE TYPE public.user_type_enum AS ENUM ('patient', 'caregiver', 'doctor', 'dependent');
+    CREATE TYPE public.user_type_enum AS ENUM ('patient', 'caregiver', 'dependent');
   END IF;
 END
 $$;
