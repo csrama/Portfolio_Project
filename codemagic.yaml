@@ -6,14 +6,14 @@ workflows:
       vars:
         BASE_URL: "https://portfolioproject-production-2b3b.up.railway.app"
       flutter: stable
-      xcode: latest
-      cocoapods: default
     scripts:
       - name: Install dependencies
         script: |
+          cd frontend
           flutter pub get
       - name: Build Android APK
         script: |
+          cd frontend
           flutter build apk --release
     artifacts:
-      - build/app/outputs/flutter-apk/app-release.apk
+      - frontend/build/app/outputs/flutter-apk/app-release.apk
