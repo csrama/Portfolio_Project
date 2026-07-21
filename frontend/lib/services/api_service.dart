@@ -11,7 +11,7 @@ class ApiService {
       return 'https://portfolioproject-production-2b3b.up.railway.app';
     }
   }
-}
+
 
   static String buildUrl(String path) {
     if (path.startsWith('http')) {

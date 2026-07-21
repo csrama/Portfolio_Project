@@ -1,15 +1,8 @@
-﻿// lib/views/dashboard/adherence_screen.dart
-//
-// صفحة كاملة مستقلة لمتابعة الجرعات (نسبة الالتزام + سجل الجرعات).
-// تُستدعى من HomeScreen عبر Navigator.push، وتاخذ قائمة الأدوية
-// الحالية (المستخدم نفسه أو التابع المختار) عشان تربط كل سجل جرعة
-// باسم الدواء الصحيح.
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
-import '../models/medication_item.dart'; 
+import '../../models/medication_item.dart';
 
 class _Colors {
   static const Color primaryGreen = Color(0xFF1D9E75);
