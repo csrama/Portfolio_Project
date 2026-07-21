@@ -14,10 +14,25 @@ const dependentRoutes = require('./routes/dependents');
 const medicineRoutes = require('./routes/medicines');
 const { errorHandler } = require('./middleware/errorHandler');
 
+const { readFileSync } = require('fs');
+const { resolve } = require('path');
+
 const app = new Hono();
 const PORT = Number(process.env.PORT || (require.main === module ? 3000 : 0));
 
 app.use('*', cors());
+
+// Serve the invite HTML page at /invite
+app.get('/invite', async (c) => {
+  try {
+    const html = readFileSync(resolve(__dirname, '../public/invite.html'), 'utf-8');
+    return c.body(html, 200, { 'Content-Type': 'text/html; charset=utf-8' });
+  } catch (e) {
+    console.error('Failed to read invite.html:', e.message);
+    return c.text('صفحة الدعوة غير متوفرة', 500);
+  }
+});
+
 app.get('/health', (c) => c.json({ status: 'ok' }));
 app.route('/auth', authRoutes);
 app.route('/medications', medicationRoutes);

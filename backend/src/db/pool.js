@@ -54,7 +54,7 @@ function normalizeUser(user) {
 
 async function queryWithFallback(text, params = []) {
   if (!pool) {
-    throw new Error('Database unavailable');
+    throw new Error('قاعدة البيانات غير متوفرة');
   }
 
   try {
@@ -75,8 +75,6 @@ const db = {
 
   async searchMedicines(term) {
     if (useMemoryStore) {
-      // لا يوجد كتالوج أدوية بالذاكرة المؤقتة؛ هذا البحث متاح فقط
-      // عند الاتصال بقاعدة PostgreSQL.
       return [];
     }
 
@@ -150,6 +148,66 @@ const db = {
     return rows[0] || null;
   },
 
+  async updateUser(userId, updates) {
+    if (useMemoryStore) {
+      const user = memoryStore.users.find((u) => u.id === Number(userId));
+      if (!user) return null;
+      Object.assign(user, updates);
+      return user;
+    }
+
+    const fields = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (updates.full_name !== undefined) {
+      fields.push(`full_name = $${paramIndex++}`);
+      values.push(updates.full_name);
+    }
+    if (updates.age !== undefined) {
+      fields.push(`age = $${paramIndex++}`);
+      values.push(updates.age);
+    }
+    if (updates.sex !== undefined) {
+      fields.push(`sex = $${paramIndex++}`);
+      values.push(updates.sex);
+    }
+    if (updates.medical_condition !== undefined) {
+      fields.push(`medical_condition = $${paramIndex++}`);
+      values.push(updates.medical_condition);
+    }
+    if (updates.is_active !== undefined) {
+      fields.push(`is_active = $${paramIndex++}`);
+      values.push(updates.is_active);
+    }
+
+    if (fields.length === 0) return null;
+
+    fields.push(`updated_at = NOW()`);
+    values.push(userId);
+
+    const { rows } = await queryWithFallback(
+      `UPDATE users SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+      values
+    );
+    return rows[0] || null;
+  },
+
+  async deleteUser(userId) {
+    if (useMemoryStore) {
+      const index = memoryStore.users.findIndex((item) => item.id === Number(userId));
+      if (index === -1) return null;
+      memoryStore.users.splice(index, 1);
+      return { id: Number(userId) };
+    }
+
+    const { rows } = await queryWithFallback(
+      `DELETE FROM users WHERE id = $1 RETURNING id`,
+      [userId]
+    );
+    return rows[0] || null;
+  },
+
   async createMedication(data) {
     if (useMemoryStore) {
       const medication = {
@@ -164,6 +222,11 @@ const db = {
         total_quantity: data.total_quantity || 1,
         low_stock_threshold: data.low_stock_threshold || 1,
         is_active: data.is_active !== false,
+        type: data.type ?? 0,
+        days_of_week: data.days_of_week ?? [],
+        period: data.period ?? 'صباحا',
+        time: data.time ?? '08:00',
+        doses_per_day: data.doses_per_day ?? 1,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -172,60 +235,48 @@ const db = {
     }
 
     const { rows } = await queryWithFallback(
-  `INSERT INTO medications (
-      user_id,
-      dependent_id,
-      name,
-      dosage,
-      form,
-      instructions,
-      color,
-      total_quantity,
-      low_stock_threshold,
-      is_active,
-      type,
-      days_of_week,
-      period,
-      time,
-      doses_per_day
-   )
-   VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15
-   )
-   RETURNING *`,
-  [
-    data.user_id,
-    data.dependent_id || null,
-    data.name,
-    data.dosage || null,
-    data.form || 'tablet',
-    data.instructions || null,
-    data.color || null,
-    data.total_quantity || 1,
-    data.low_stock_threshold || 1,
-    data.is_active !== false,
-
-    data.type ?? 0,
-    data.days_of_week ?? [],
-    data.period ?? 'صباحا',
-    data.time ?? '08:00',
-    data.doses_per_day ?? 1
-  ]
-);
-
-return rows[0];
+      `INSERT INTO medications (
+        user_id, dependent_id, name, dosage, form, instructions, color,
+        total_quantity, low_stock_threshold, is_active,
+        type, days_of_week, period, time, doses_per_day
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      RETURNING *`,
+      [
+        data.user_id,
+        data.dependent_id || null,
+        data.name,
+        data.dosage || null,
+        data.form || 'tablet',
+        data.instructions || null,
+        data.color || null,
+        data.total_quantity || 1,
+        data.low_stock_threshold || 1,
+        data.is_active !== false,
+        data.type ?? 0,
+        data.days_of_week ?? [],
+        data.period ?? 'صباحا',
+        data.time ?? '08:00',
+        data.doses_per_day ?? 1
+      ]
+    );
+    return rows[0];
   },
 
-  async createDependent(data) {
+  async createDependentDirect(data) {
     if (useMemoryStore) {
       const dependent = {
         id: memoryStore.dependents.length + 1,
         caregiver_user_id: data.caregiver_user_id,
-        full_name: data.full_name,
+        dependent_user_id: data.dependent_user_id || null,
+        full_name: data.full_name || '',
         date_of_birth: data.date_of_birth || null,
         relationship: data.relationship,
         profile_image_url: data.profile_image_url || null,
         medical_conditions: data.medical_conditions || [],
+        invitation_status: 'accepted',
+        invitation_token: null,
+        invited_at: new Date().toISOString(),
+        accepted_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -234,16 +285,65 @@ return rows[0];
     }
 
     const { rows } = await queryWithFallback(
-      `INSERT INTO dependents (caregiver_user_id, full_name, date_of_birth, relationship, profile_image_url, medical_conditions)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
+      `INSERT INTO dependents (
+        caregiver_user_id, dependent_user_id, full_name, date_of_birth,
+        relationship, profile_image_url, medical_conditions,
+        invitation_status, invited_at, accepted_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'accepted', NOW(), NOW())
+      RETURNING *`,
       [
         data.caregiver_user_id,
-        data.full_name,
+        data.dependent_user_id || null,
+        data.full_name || '',
         data.date_of_birth || null,
         data.relationship,
         data.profile_image_url || null,
         data.medical_conditions || []
+      ]
+    );
+    return rows[0];
+  },
+
+  async createDependent(data) {
+    if (useMemoryStore) {
+      const dependent = {
+        id: memoryStore.dependents.length + 1,
+        caregiver_user_id: data.caregiver_user_id,
+        dependent_user_id: data.dependent_user_id || null,
+        full_name: data.full_name || '',
+        date_of_birth: data.date_of_birth || null,
+        relationship: data.relationship,
+        profile_image_url: data.profile_image_url || null,
+        medical_conditions: data.medical_conditions || [],
+        invitation_status: data.invitation_status || 'pending',
+        invitation_token: data.invitation_token || null,
+        invited_at: new Date().toISOString(),
+        accepted_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      memoryStore.dependents.push(dependent);
+      return dependent;
+    }
+
+    const { rows } = await queryWithFallback(
+      `INSERT INTO dependents (
+        caregiver_user_id, dependent_user_id, full_name, date_of_birth,
+        relationship, profile_image_url, medical_conditions,
+        invitation_status, invitation_token, invited_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING *`,
+      [
+        data.caregiver_user_id,
+        data.dependent_user_id || null,
+        data.full_name || '',
+        data.date_of_birth || null,
+        data.relationship,
+        data.profile_image_url || null,
+        data.medical_conditions || [],
+        data.invitation_status || 'pending',
+        data.invitation_token || null,
+        new Date().toISOString()
       ]
     );
     return rows[0];
@@ -254,24 +354,230 @@ return rows[0];
       return memoryStore.dependents.filter((item) => item.caregiver_user_id === Number(caregiverId));
     }
 
-    const { rows } = await queryWithFallback('SELECT * FROM dependents WHERE caregiver_user_id = $1 ORDER BY created_at DESC', [caregiverId]);
+    const { rows } = await queryWithFallback(
+      'SELECT * FROM dependents WHERE caregiver_user_id = $1 ORDER BY created_at DESC',
+      [caregiverId]
+    );
     return rows;
+  },
+
+  async listDependentsWithUsers(caregiverId) {
+    if (useMemoryStore) {
+      return memoryStore.dependents
+        .filter((item) => item.caregiver_user_id === Number(caregiverId))
+        .map((item) => {
+          const user = memoryStore.users.find((u) => u.id === item.dependent_user_id);
+          return { ...item, user };
+        });
+    }
+
+    const { rows } = await queryWithFallback(
+      `SELECT d.*, 
+              u.id as user_id,
+              u.email, 
+              u.full_name as user_full_name, 
+              u.user_type, 
+              u.is_active,
+              u.is_onboarding_complete
+       FROM dependents d
+       LEFT JOIN users u ON d.dependent_user_id = u.id
+       WHERE d.caregiver_user_id = $1
+       ORDER BY d.created_at DESC`,
+      [caregiverId]
+    );
+    return rows;
+  },
+
+  async getDependentWithUser(dependentId, caregiverId) {
+    if (useMemoryStore) {
+      const dependent = memoryStore.dependents.find(
+        (item) => item.id === Number(dependentId) && item.caregiver_user_id === Number(caregiverId)
+      );
+      if (!dependent) return null;
+      const user = memoryStore.users.find((u) => u.id === dependent.dependent_user_id);
+      return { ...dependent, user };
+    }
+
+    const { rows } = await queryWithFallback(
+      `SELECT d.*, 
+              u.id as user_id,
+              u.email, 
+              u.full_name as user_full_name, 
+              u.user_type, 
+              u.is_active,
+              u.is_onboarding_complete
+       FROM dependents d
+       LEFT JOIN users u ON d.dependent_user_id = u.id
+       WHERE d.id = $1 AND d.caregiver_user_id = $2`,
+      [dependentId, caregiverId]
+    );
+    return rows[0] || null;
+  },
+
+  async getDependentById(dependentId, caregiverId) {
+    if (useMemoryStore) {
+      return memoryStore.dependents.find(
+        (item) => item.id === Number(dependentId) && item.caregiver_user_id === Number(caregiverId)
+      ) || null;
+    }
+
+    const { rows } = await queryWithFallback(
+      'SELECT * FROM dependents WHERE id = $1 AND caregiver_user_id = $2',
+      [dependentId, caregiverId]
+    );
+    return rows[0] || null;
+  },
+
+  async getDependentByInviteToken(token) {
+    if (useMemoryStore) {
+      return memoryStore.dependents.find((item) => item.invitation_token === token) || null;
+    }
+
+    const { rows } = await queryWithFallback(
+      'SELECT * FROM dependents WHERE invitation_token = $1',
+      [token]
+    );
+    return rows[0] || null;
+  },
+
+  async updateDependent(dependentId, caregiverId, updates) {
+    if (useMemoryStore) {
+      const dependent = memoryStore.dependents.find(
+        (item) => item.id === Number(dependentId) && item.caregiver_user_id === Number(caregiverId)
+      );
+      if (!dependent) return null;
+
+      Object.assign(dependent, {
+        relationship: updates.relationship ?? dependent.relationship,
+        updated_at: new Date().toISOString()
+      });
+      return dependent;
+    }
+
+    const fields = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (updates.relationship !== undefined) {
+      fields.push(`relationship = $${paramIndex++}`);
+      values.push(updates.relationship);
+    }
+
+    if (fields.length === 0) {
+      return getDependentById(dependentId, caregiverId);
+    }
+
+    fields.push(`updated_at = NOW()`);
+    values.push(dependentId, caregiverId);
+
+    const { rows } = await queryWithFallback(
+      `UPDATE dependents
+       SET ${fields.join(', ')}
+       WHERE id = $${paramIndex} AND caregiver_user_id = $${paramIndex + 1}
+       RETURNING *`,
+      values
+    );
+    return rows[0] || null;
+  },
+
+  async deleteDependent(dependentId, caregiverId) {
+    if (useMemoryStore) {
+      const index = memoryStore.dependents.findIndex(
+        (item) => item.id === Number(dependentId) && item.caregiver_user_id === Number(caregiverId)
+      );
+      if (index === -1) return null;
+      memoryStore.dependents.splice(index, 1);
+      return { id: Number(dependentId) };
+    }
+
+    const { rows } = await queryWithFallback(
+      'DELETE FROM dependents WHERE id = $1 AND caregiver_user_id = $2 RETURNING id',
+      [dependentId, caregiverId]
+    );
+    return rows[0] || null;
+  },
+
+  async acceptDependentInvite(dependentId) {
+    if (useMemoryStore) {
+      const dependent = memoryStore.dependents.find((item) => item.id === Number(dependentId));
+      if (!dependent) return null;
+      dependent.invitation_status = 'accepted';
+      dependent.accepted_at = new Date().toISOString();
+      return dependent;
+    }
+
+    const { rows } = await queryWithFallback(
+      `UPDATE dependents
+       SET invitation_status = 'accepted', accepted_at = NOW(), updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [dependentId]
+    );
+    return rows[0] || null;
+  },
+
+  async claimDependentInvite(token, userId) {
+    if (useMemoryStore) {
+      const dependent = memoryStore.dependents.find((item) => item.invitation_token === token);
+      if (!dependent) return null;
+      if (dependent.invitation_status !== 'pending') return null;
+
+      // If there's an existing placeholder user, delete old user reference
+      if (dependent.dependent_user_id && dependent.dependent_user_id !== Number(userId)) {
+        const oldUserIndex = memoryStore.users.findIndex((u) => u.id === dependent.dependent_user_id);
+        if (oldUserIndex !== -1) {
+          memoryStore.users.splice(oldUserIndex, 1);
+        }
+      }
+
+      dependent.dependent_user_id = Number(userId);
+      dependent.invitation_status = 'accepted';
+      dependent.accepted_at = new Date().toISOString();
+      dependent.updated_at = new Date().toISOString();
+      return dependent;
+    }
+
+    // Start by getting the dependent record
+    const dependent = await this.getDependentByInviteToken(token);
+    if (!dependent) return null;
+    if (dependent.invitation_status !== 'pending') return null;
+    if (dependent.dependent_user_id && dependent.dependent_user_id !== userId) {
+      // Delete the old placeholder user
+      await queryWithFallback('DELETE FROM users WHERE id = $1', [dependent.dependent_user_id]);
+    }
+
+    const { rows } = await queryWithFallback(
+      `UPDATE dependents
+       SET dependent_user_id = $2, invitation_status = 'accepted', accepted_at = NOW(), updated_at = NOW()
+       WHERE invitation_token = $1 AND invitation_status = 'pending'
+       RETURNING *`,
+      [token, userId]
+    );
+    return rows[0] || null;
   },
 
   async listMedications(userId, dependentId = null) {
     if (useMemoryStore) {
       return memoryStore.medications.filter((item) => {
-        if (dependentId) return item.dependent_id === Number(dependentId);
+        if (dependentId) {
+          return item.user_id === Number(dependentId) || item.dependent_id === Number(dependentId);
+        }
         return item.user_id === Number(userId) && !item.dependent_id;
       });
     }
 
-    const query = dependentId 
-      ? 'SELECT * FROM medications WHERE dependent_id = $1 ORDER BY created_at DESC'
-      : 'SELECT * FROM medications WHERE user_id = $1 AND (dependent_id IS NULL OR $1 = -1) ORDER BY created_at DESC';
-    const params = dependentId ? [dependentId] : [userId];
-    
-    const { rows } = await queryWithFallback(query, params);
+    let queryText;
+    let params;
+
+    if (dependentId) {
+      queryText = `SELECT * FROM medications WHERE user_id = $1 OR dependent_id = $1 ORDER BY created_at DESC`;
+      params = [dependentId];
+    } else {
+      queryText = `SELECT * FROM medications WHERE user_id = $1 AND (dependent_id IS NULL) ORDER BY created_at DESC`;
+      params = [userId];
+    }
+
+    const { rows } = await queryWithFallback(queryText, params);
     return rows;
   },
 
@@ -287,7 +593,7 @@ return rows[0];
   async updateMedication({ id, userId, updates }) {
     if (useMemoryStore) {
       const medication = memoryStore.medications.find(
-        (item) => item.id === Number(id) && item.user_id === Number(userId)
+        (item) => item.id === Number(id) && (item.user_id === Number(userId) || item.dependent_id === Number(userId))
       );
       if (!medication) return null;
 
@@ -297,8 +603,8 @@ return rows[0];
         form: updates.form ?? medication.form,
         instructions: updates.instructions ?? medication.instructions,
         total_quantity: updates.total_quantity ?? medication.total_quantity,
-        updated_at: new Date().toISOString(),
-        is_active: updates.is_active ?? medication.is_active
+        is_active: updates.is_active ?? medication.is_active,
+        updated_at: new Date().toISOString()
       });
 
       return medication;
@@ -314,7 +620,7 @@ return rows[0];
          total_quantity = COALESCE($6, total_quantity),
          is_active = COALESCE($7, is_active),
          updated_at = NOW()
-       WHERE id = $1 AND user_id = $8
+       WHERE id = $1 AND (user_id = $8 OR dependent_id = $8)
        RETURNING *`,
       [
         id,
@@ -334,7 +640,7 @@ return rows[0];
   async deleteMedication({ id, userId }) {
     if (useMemoryStore) {
       const medication = memoryStore.medications.find(
-        (item) => item.id === Number(id) && item.user_id === Number(userId)
+        (item) => item.id === Number(id) && (item.user_id === Number(userId) || item.dependent_id === Number(userId))
       );
       if (!medication) return null;
       medication.is_active = false;
@@ -345,7 +651,7 @@ return rows[0];
     const { rows } = await queryWithFallback(
       `UPDATE medications
        SET is_active = FALSE, updated_at = NOW()
-       WHERE id = $1 AND user_id = $2
+       WHERE id = $1 AND (user_id = $2 OR dependent_id = $2)
        RETURNING *`,
       [id, userId]
     );

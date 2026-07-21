@@ -1,22 +1,23 @@
-# TODO - End-to-End Authentication + Home Page
+# Bug Fixes TODO
 
-## Completed
-- [x] Frontend AuthService: added login/register/logout helpers and fixed token getter return type.
-- [x] Backend auth endpoints: `/auth/register` and `/auth/login` now return `refreshToken`.
-- [x] Backend auth endpoints: added `/auth/refresh` and `/auth/logout`.
-- [x] Backend tests updated for refresh flow.
+## ✅ Bugs Identified
 
-## Still required (DB-backed invalidation)
-- [ ] Replace in-memory `refreshTokensStore` with Postgres-backed storage.
-  - Use existing tables in `backend/src/db/migrations/007_better_auth_tables.sql` (session/account) OR add a new migration.
-- [ ] Update `backend/src/db/pool.js` with queries for refresh token/session revocation.
-- [ ] Update backend `/auth/refresh` and `/auth/logout` to use DB.
-- [ ] Ensure `/auth/google` and offline auth flows also return `refreshToken` (or adapt frontend).
+### File: `frontend/lib/views/dashboard/home_screen.dart`
+1. **`_getGreeting()` is malformed** - contains leftover code from `_medicationsForDate()`
+2. **`_medicationsForDate()` is MISSING** - needed for filtering meds by day
+3. **`_arabicDigits()` is MISSING** - needed for Arabic numeral display
+4. **`_weekdayNameFromDate()` is MISSING** - needed for Arabic weekday names
+5. **`fetchDependents()` never called in initState** - dependent list stays empty
 
-## Testing
-- [ ] Fix inability to run npm/flutter tests under current shell restrictions (avoid && / || separators).
-- [ ] Run backend tests + frontend tests and ensure compilation passes.
+### File: `frontend/lib/main.dart`
+6. **app_links v6.4.1 API changed** - `getInitialLink()` returns `Uri?` not `String`, and `linkStream` is now `uriStream`
 
-## Home page end-to-end
-- [ ] Verify logout redirects to onboarding/splash and home page no longer uses API calls after logout.
+## Progress
+- [ ] 1. Fix `_getGreeting()` + add `_medicationsForDate()`
+- [ ] 2. Add `_arabicDigits()` + `_weekdayNameFromDate()`
+- [ ] 3. Add `_loadDependents()` call in initState
+- [ ] 4. Fix `main.dart` app_links API
+- [ ] 5. Run flutter pub get
+- [ ] 6. Run flutter analyze to verify
+- [ ] 7. Launch the app
 

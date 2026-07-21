@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS medications (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  dependent_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   dosage TEXT,
   form TEXT DEFAULT 'tablet',
@@ -26,6 +27,11 @@ CREATE TABLE IF NOT EXISTS medications (
   total_quantity INTEGER NOT NULL DEFAULT 1,
   low_stock_threshold INTEGER NOT NULL DEFAULT 1,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  type INTEGER DEFAULT 0,
+  days_of_week TEXT[] DEFAULT ARRAY[]::TEXT[],
+  period TEXT DEFAULT 'صباحا',
+  time TEXT DEFAULT '08:00',
+  doses_per_day INTEGER DEFAULT 1,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

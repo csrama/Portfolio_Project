@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>دعوة للانضمام - Dawai</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, 'Arabic Typesetting', sans-serif;
+      background: linear-gradient(135deg, #f0fff4 0%, #d9f2e7 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(8, 80, 65, 0.15);
+      padding: 48px 40px;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo {
+      width: 80px;
+      height: 80px;
+      background: #085041;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      font-size: 32px;
+      color: white;
+      font-weight: bold;
+    }
+
+    h1 {
+      color: #085041;
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 16px;
+      margin-bottom: 32px;
+      line-height: 1.5;
+    }
+
+    .invite-card {
+      background: #f8fff9;
+      border: 2px solid #d9f2e7;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .invite-icon {
+      width: 64px;
+      height: 64px;
+      background: #085041;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+
+    .invite-icon span {
+      color: white;
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .caregiver-name {
+      font-size: 20px;
+      font-weight: bold;
+      color: #085041;
+      margin-bottom: 8px;
+    }
+
+    .dependent-name {
+      color: #333;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    .relationship {
+      display: inline-block;
+      background: #d9f2e7;
+      color: #085041;
+      padding: 4px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+
+    .invited-date {
+      color: #999;
+      font-size: 13px;
+      margin-top: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 16px 32px;
+      border-radius: 14px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+      transition: all 0.3s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: #085041;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #0a6b54;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(8, 80, 65, 0.3);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #085041;
+      border: 2px solid #085041;
+      margin-top: 12px;
+    }
+
+    .btn-secondary:hover {
+      background: #f0fff4;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .loader {
+      width: 24px;
+      height: 24px;
+      border: 3px solid #e0e0e0;
+      border-top-color: #085041;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 40px auto;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error-state {
+      color: #e74c3c;
+      padding: 20px;
+    }
+
+    .error-state .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .success-state {
+      color: #085041;
+    }
+
+    .success-state .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .footer-text {
+      color: #999;
+      font-size: 13px;
+      margin-top: 24px;
+      line-height: 1.5;
+    }
+
+    /* Status badges */
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    .badge-success { background: #d4edda; color: #155724; }
+    .badge-danger { background: #f8d7da; color: #721c24; }
+    .badge-warning { background: #fff3cd; color: #856404; }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .container { padding: 32px 20px; }
+      h1 { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <!-- Loading State -->
+    <div id="loading-state">
+      <div class="logo">د</div>
+      <div class="loader"></div>
+      <p class="subtitle">جاري تحميل معلومات الدعوة...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error-state" style="display:none;">
+      <div class="logo">د</div>
+      <div class="error-state">
+        <h1>عذراً!</h1>
+        <p class="subtitle" id="error-message">رابط الدعوة غير صالح أو منتهي الصلاحية</p>
+      </div>
+      <a href="/" class="btn btn-primary">العودة للرئيسية</a>
+    </div>
+
+    <!-- Invite State (shows invite before accepting) -->
+    <div id="invite-state" style="display:none;">
+      <div class="logo">د</div>
+      <h1>مرحباً بك!</h1>
+      <p class="subtitle">تمت دعوتك للانضمام في تطبيق Dawai</p>
+
+      <div class="invite-card">
+        <div class="invite-icon">
+          <span id="caregiver-initial">م</span>
+        </div>
+        <div class="caregiver-name" id="caregiver-name">مقدم الرعاية</div>
+        <div class="dependent-name" id="dependent-name">التابع: —</div>
+        <div class="relationship" id="relationship">صلة القرابة</div>
+        <div class="invited-date" id="invited-date">تم الإرسال: —</div>
+      </div>
+
+      <p class="subtitle">يمكنك قبول الدعوة عبر فتح التطبيق</p>
+
+      <button class="btn btn-primary" id="open-app-btn" onclick="openApp()">
+         فتح التطبيق
+      </button>
+
+      <div id="fallback-hint" style="display:none; margin-top: 12px; padding: 12px; background: #fff3cd; border-radius: 8px; color: #856404; font-size: 14px;">
+        إذا لم يتم فتح التطبيق تلقائياً، يرجى فتح الرابط من المتصفح على هاتفك المحمول أو تحميل التطبيق أولاً
+      </div>
+
+      <div class="footer-text">
+        إذا لم يكن التطبيق مثبتاً لديك، يمكنك تحميله من المتجر<br>
+        أو <a href="#" id="web-link" style="color:#085041;font-weight:bold;">فتح نسخة الويب</a>
+      </div>
+    </div>
+
+    <!-- Already Accepted State -->
+    <div id="accepted-state" style="display:none;">
+      <div class="logo">د</div>
+      <div class="success-state">
+        <h1>تم قبول الدعوة مسبقاً</h1>
+        <p class="subtitle">هذه الدعوة تمت معالجتها بالفعل</p>
+      </div>
+      <a href="/" class="btn btn-primary">فتح التطبيق</a>
+    </div>
+
+    <!-- Expired State -->
+    <div id="expired-state" style="display:none;">
+      <div class="logo">د</div>
+      <div class="error-state">
+        <h1>انتهت صلاحية الدعوة</h1>
+        <p class="subtitle">الدعوات تنتهي بعد 7 أيام. اطلب من مقدم الرعاية إرسال دعوة جديدة.</p>
+      </div>
+      <a href="/" class="btn btn-primary">فتح التطبيق</a>
+    </div>
+  </div>
+
+  <script>
+    // Get token from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+
+    const API_BASE = window.location.origin;
+
+    // Relationship labels
+    const relationshipLabels = {
+      'spouse': 'زوج/زوجة',
+      'child': 'ابن/ابنة',
+      'parent': 'أب/أم',
+      'sibling': 'أخ/أخت',
+      'other': 'أخرى'
+    };
+
+    async function loadInvite() {
+      if (!token) {
+        showError('رابط الدعوة غير صالح - الرابط لا يحتوي على رمز الدعوة');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/dependents/invite/${token}`);
+        const data = await response.json();
+
+        if (!data.success) {
+          showError(data.error || 'رابط الدعوة غير صالح');
+          return;
+        }
+
+        const invite = data.data;
+        
+        // Show invite state
+        document.getElementById('loading-state').style.display = 'none';
+        document.getElementById('invite-state').style.display = 'block';
+
+        // Fill in invite info
+        const caregiverName = invite.caregiver_name || 'مقدم الرعاية';
+        document.getElementById('caregiver-name').textContent = caregiverName;
+        document.getElementById('caregiver-initial').textContent = caregiverName.charAt(0);
+        document.getElementById('dependent-name').textContent = `التابع: ${invite.dependent_name || '—'}`;
+        
+        const relLabel = relationshipLabels[invite.relationship] || invite.relationship || '—';
+        document.getElementById('relationship').textContent = relLabel;
+        
+        if (invite.invited_at) {
+          const date = new Date(invite.invited_at);
+          document.getElementById('invited-date').textContent = `تم الإرسال: ${date.toLocaleDateString('ar-SA')}`;
+        }
+
+        // Set deep link URL
+        const deepLink = `${API_BASE}/invite?token=${token}`;
+        document.getElementById('web-link').href = deepLink;
+
+      } catch (e) {
+        // Check if it's a 404
+        if (e.message && e.message.includes('404')) {
+          showError('رابط الدعوة غير صالح - لم نتمكن من العثور على هذه الدعوة');
+        } else {
+          showError('حدث خطأ في تحميل معلومات الدعوة');
+        }
+      }
+    }
+
+    function openApp() {
+      const btn = document.getElementById('open-app-btn');
+      btn.disabled = true;
+      btn.textContent = 'جاري فتح التطبيق...';
+
+      // Try deep linking - use custom URL scheme if available
+      const token = urlParams.get('token');
+      
+      // Try opening with a custom scheme first (Android/iOS deep linking)
+      window.location.href = `dawai://invite?token=${token}`;
+      
+      // Fallback: if the app didn't open, show a message and re-enable the button
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = ' فتح التطبيق';
+        // Show a small hint below the button
+        const hint = document.getElementById('fallback-hint');
+        if (hint) hint.style.display = 'block';
+      }, 3000);
+    }
+
+    function showError(message) {
+      document.getElementById('loading-state').style.display = 'none';
+      document.getElementById('error-state').style.display = 'block';
+      document.getElementById('error-message').textContent = message;
+    }
+
+    // Start loading
+    loadInvite();
+  </script>
+</body>
+</html>
+

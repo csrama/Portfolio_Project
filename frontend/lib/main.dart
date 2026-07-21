@@ -1,7 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'providers/app_settings_provider.dart';
-import 'views/settings/settings_screen.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'services/auth_service.dart';
@@ -12,16 +11,71 @@ import 'services/dio_client.dart';
 import 'views/dashboard/home_screen.dart';
 import 'views/splash/splash_screen.dart';
 import 'package:frontend/services/notification_service.dart';
+import 'package:app_links/app_links.dart';
+import 'views/dashboard/invite_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await NotificationService.init(); // Initialize the notification service
+  await NotificationService.init();
   await NotificationService.requestPermission();
   runApp(const DawaiApp());
 }
 
-class DawaiApp extends StatelessWidget {
+class DawaiApp extends StatefulWidget {
   const DawaiApp({super.key});
+
+  @override
+  State<DawaiApp> createState() => _DawaiAppState();
+}
+
+class _DawaiAppState extends State<DawaiApp> {
+  String? _initialRoute;
+  String? _inviteToken;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _handleDeepLinks();
+  }
+
+Future<void> _handleDeepLinks() async {
+    try {
+      final appLinks = AppLinks();
+      
+      // getInitialLink() returns Uri? in app_links v6.4.1
+      final initialLink = await appLinks.getInitialLink();
+      if (initialLink != null) {
+        _handleUri(initialLink);
+      }
+
+      // uriLinkStream emits Uri objects in app_links v6.4.1
+      appLinks.uriLinkStream.listen((uri) {
+        _handleUri(uri);
+      });
+    } catch (e) {
+      print('Deep Link Error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+    }
+  }
+
+  void _handleUri(Uri uri) {
+    final link = uri.toString();
+    print('Deep Link received: $link');
+    
+    if (link.contains('/invite/')) {
+      final token = link.split('/invite/').last;
+      setState(() {
+        _inviteToken = token;
+        _initialRoute = '/invite';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,22 +132,41 @@ class DawaiApp extends StatelessWidget {
               ),
             ),
             themeMode: settings.themeMode,
-            home: const _AuthGate(),
+            home: _buildHome(),
+            onGenerateRoute: _onGenerateRoute,
           );
         },
       ),
     );
   }
+
+  Widget _buildHome() {
+    if (!_isInitialized) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_initialRoute == '/invite' && _inviteToken != null && _inviteToken!.isNotEmpty) {
+      return InviteScreen(token: _inviteToken!);
+    }
+
+    return const _AuthGate();
+  }
+
+  Route? _onGenerateRoute(RouteSettings settings) {
+    if (settings.name == '/invite') {
+      final token = settings.arguments as String? ?? _inviteToken ?? '';
+      if (token.isNotEmpty) {
+        return MaterialPageRoute(
+          builder: (context) => InviteScreen(token: token),
+        );
+      }
+    }
+    return null;
+  }
 }
 
-/// Decides which screen to show at app start:
-///  - If a session already exists in secure storage -> HomeScreen
-///  - Otherwise -> SplashScreen (which walks through onboarding + login/signup)
-///
-/// Runs the storage read ONCE (Future is cached in initState). Previously
-/// FutureBuilder inside a Consumer created a new Future on every rebuild,
-/// which combined with notifyListeners() caused an infinite rebuild loop
-/// (blank spinner forever).
 class _AuthGate extends StatefulWidget {
   const _AuthGate();
 

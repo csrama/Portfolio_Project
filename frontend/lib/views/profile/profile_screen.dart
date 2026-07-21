@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/dependent_provider.dart';
 import '../settings/settings_screen.dart';
 import '../dashboard/dependents_screen.dart';
 import '../onboarding/onboarding_screen.dart';
