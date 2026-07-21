@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/dependent.dart';
 import '../../models/medication_item.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dependent_provider.dart';
@@ -19,6 +20,29 @@ import '../../i18n/strings.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../profile/profile_screen.dart';
 import 'dependents_screen.dart';
+import 'dependent_dashboard_screen.dart';
+
+const Map<String, String> _relationshipLabels = {
+  'spouse': 'زوج/زوجة',
+  'child': 'ابن/ابنة',
+  'parent': 'أب/أم',
+  'sibling': 'أخ/أخت',
+  'other': 'أخرى',
+};
+
+String _relationshipDisplay(String? relationship) {
+  if (relationship == null || relationship.isEmpty) return 'لا يوجد';
+  return _relationshipLabels[relationship] ?? relationship;
+}
+
+String _relationshipValue(String? arabicLabel) {
+  if (arabicLabel == null || arabicLabel.isEmpty) return 'other';
+  final reversedMap = _relationshipLabels.entries
+      .where((e) => e.value == arabicLabel)
+      .map((e) => e.key)
+      .toList();
+  return reversedMap.isNotEmpty ? reversedMap.first : 'other';
+}
 
 class _Colors {
   static const Color primaryGreen = Color(0xFF1D9E75);
@@ -54,16 +78,6 @@ class _HomeScreenState extends State<HomeScreen> {
   late final List<DateTime> _dateStrip;
   late DateTime _selectedDate;
 
-  static const List<String> _weekdayAr = [
-    'الاثنين',
-    'الثلاثاء',
-    'الأربعاء',
-    'الخميس',
-    'الجمعة',
-    'السبت',
-    'الأحد',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -72,7 +86,13 @@ class _HomeScreenState extends State<HomeScreen> {
     _dateStrip = List.generate(7, (i) => today.add(Duration(days: i - 3)));
     _loadMedications();
     _loadTakenMedications();
-    _loadNotTakenMedications();
+    // Load dependents list for the Today tab
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      if (auth.accessToken != null) {
+        context.read<DependentProvider>().fetchDependents(auth.accessToken!);
+      }
+    });
   }
 
   @override
@@ -83,31 +103,39 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) {
-      return 'صباح الخير';
-    }
+    if (hour >= 5 && hour < 12) return 'صباح الخير';
+    if (hour >= 12 && hour < 17) return 'مساء الخير';
     return 'مساء الخير';
   }
 
-  String _weekdayNameFromDate(DateTime date) {
-    return _weekdayAr[date.weekday - 1];
+  String _arabicDigits(String input) {
+    const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    return input.split('').map((c) {
+      final digit = int.tryParse(c);
+      return digit != null ? arabic[digit] : c;
+    }).join();
   }
 
-  String _arabicDigits(String input) {
-    const western = '0123456789';
-    const arabic = '٠١٢٣٤٥٦٧٨٩';
-    return input.split('').map((char) {
-      final index = western.indexOf(char);
-      return index >= 0 ? arabic[index] : char;
-    }).join();
+  String _weekdayNameFromDate(DateTime date) {
+    final weekday = date.weekday;
+    // DateTime.weekday: Monday=1, Tuesday=2, ..., Sunday=7
+    const names = [
+      'الاثنين',    // Monday (1)
+      'الثلاثاء',   // Tuesday (2)
+      'الأربعاء',   // Wednesday (3)
+      'الخميس',     // Thursday (4)
+      'الجمعة',     // Friday (5)
+      'السبت',      // Saturday (6)
+      'الأحد',      // Sunday (7)
+    ];
+    return names[weekday - 1];
   }
 
   List<MedicationItem> _medicationsForDate(DateTime date) {
     final dayName = _weekdayNameFromDate(date);
     return _medications.where((med) {
       final scheduledEveryDay = med.daysOfWeek.isEmpty;
-      return med.isActive &&
-          (scheduledEveryDay || med.daysOfWeek.contains(dayName));
+      return med.isActive && (scheduledEveryDay || med.daysOfWeek.contains(dayName));
     }).toList();
   }
 
@@ -1395,121 +1423,432 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildTodayTab() {
     final todaysMeds = _medicationsForDate(_selectedDate);
-    final isToday = _selectedDate.year == DateTime.now().year &&
-        _selectedDate.month == DateTime.now().month &&
-        _selectedDate.day == DateTime.now().day;
+    final depProvider = context.watch<DependentProvider>();
+    final dependentsList = depProvider.dependents;
 
     return Column(
       children: [
         _buildInteractionsBanner(),
         _buildDateStrip(),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         Expanded(
-          child: todaysMeds.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE1F5EE),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Icon(
-                              Icons.check_circle_outline,
-                              color: Color(0xFF1D9E75),
-                              size: 20,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'لا توجد أدوية مجدولة لهذا اليوم',
-                              style: TextStyle(
-                                color: Color(0xFF085041),
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              // --- Medications Section Links Row ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: () => _openAddMedicationSheet(),
+                    child: const Text(
+                      'إضافة دواء',
+                      style: TextStyle(
+                        color: _Colors.darkGreen,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
                       ),
-                      const SizedBox(height: 16),
-                      GestureDetector(
-                        onTap: () => _openAddMedicationSheet(),
-                        child: Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF085041),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          child: const Text(
-                            '+ إضافة دواء',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() => _selectedIndex = 1);
+                    },
+                    child: const Text(
+                      'عرض المزيد',
+                      style: TextStyle(
+                        color: _Colors.darkGreen,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // --- Medications Section Title ---
+              const Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'الأدوية المضافه',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: _Colors.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // --- Medications List ---
+              if (todaysMeds.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE1F5EE),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_outline, color: Color(0xFF1D9E75), size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'لا توجد أدوية مجدولة لهذا اليوم',
+                        style: TextStyle(color: Color(0xFF085041), fontSize: 14),
                       ),
                     ],
                   ),
                 )
-              : Column(
-                  children: [
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: todaysMeds.length,
-                        itemBuilder: (context, index) =>
-                            _MedicationCard(
-                              medication: todaysMeds[index],
-                              showDoseActions: true,
-                              selectedDate: _selectedDate,
-                              isToday: isToday,
-                              isTaken: _isTaken,
-                              isNotTaken: _isNotTaken,
-                              onUpdateDoseStatus: _updateDoseStatus,
-                              doseTimeLabel: _doseTimeLabel,
-                              onEdit: () => _openAddMedicationSheet(
-                                existingMedication: todaysMeds[index],
-                              ),
-                              onDelete: () => _deleteMedication(todaysMeds[index]),
-                            ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    GestureDetector(
-                      onTap: () => _openAddMedicationSheet(),
-                      child: Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF085041),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        child: const Text(
-                          '+ إضافة دواء',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+              else
+                ...todaysMeds.map((med) => _MedicationCard(
+                      medication: med,
+                      onEdit: () => _openAddMedicationSheet(existingMedication: med),
+                      onDelete: () => _deleteMedication(med),
+                    )),
+              const SizedBox(height: 16),
+              // --- Add Medication Button ---
+              GestureDetector(
+                onTap: () => _openAddMedicationSheet(),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF085041),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    '+ إضافة دواء',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white, fontSize: 15),
+                  ),
                 ),
+              ),
+              const SizedBox(height: 24),
+
+              // --- Dependents Section Links Row ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: () async {
+                      final changed = await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const DependentsScreen()),
+                      );
+                      if (changed == true) _loadMedications();
+                    },
+                    child: const Text(
+                      'إضافة تابعين',
+                      style: TextStyle(
+                        color: _Colors.darkGreen,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () async {
+                      final changed = await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const DependentsScreen()),
+                      );
+                      if (changed == true) _loadMedications();
+                    },
+                    child: const Text(
+                      'عرض المزيد',
+                      style: TextStyle(
+                        color: _Colors.darkGreen,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // --- Dependents Section Title ---
+              const Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'التابعين المضافين',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: _Colors.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // --- Dependents List ---
+              if (dependentsList.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF6F6F6),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.people_outline, color: _Colors.textSecondary, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'لا يوجد تابعين مضافين بعد',
+                        style: TextStyle(color: _Colors.textSecondary, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ...dependentsList.map((dep) => _buildDependentCard(dep)),
+              const SizedBox(height: 16),
+              // --- Add Dependent Button ---
+              GestureDetector(
+                onTap: () async {
+                  final changed = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const DependentsScreen()),
+                  );
+                  if (changed == true) _loadMedications();
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF085041), width: 1.5),
+                  ),
+                  child: const Text(
+                    '+ إضافة تابع',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFF085041),
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ],
     );
+  }
+
+  Widget _buildDependentCard(Dependent dependent) {
+    return GestureDetector(
+      onTap: () async {
+        final changed = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DependentDashboardScreen(dependent: dependent),
+          ),
+        );
+        if (changed == true && mounted) {
+          final auth = context.read<AuthProvider>();
+          if (auth.accessToken != null) {
+            context.read<DependentProvider>().fetchDependents(auth.accessToken!);
+          }
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF6F6F6),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE0E0E0)),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: const Color(0xFFC9932E),
+              child: Text(
+                dependent.fullName.isNotEmpty ? dependent.fullName[0] : '?',
+                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    dependent.fullName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: _Colors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    dependent.relationship,
+                    style: const TextStyle(color: _Colors.textSecondary, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            PopupMenuButton<String>(
+              color: Colors.white,
+              icon: const Icon(Icons.more_vert, color: _Colors.textSecondary),
+              onSelected: (value) {
+                if (value == 'edit') {
+                  _showEditDependentDialog(dependent);
+                } else if (value == 'delete') {
+                  _confirmDeleteDependent(dependent);
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: "edit",
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit, color: Colors.green),
+                      SizedBox(width: 8),
+                      Text("تعديل"),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: "delete",
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text("حذف"),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditDependentDialog(Dependent dependent) {
+    final nameController = TextEditingController(text: dependent.fullName);
+    String? selectedRelationship = dependent.relationship;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('تعديل بيانات التابع'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                textAlign: TextAlign.right,
+                decoration: const InputDecoration(
+                  labelText: 'الاسم الكامل',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: selectedRelationship,
+                decoration: const InputDecoration(
+                  labelText: 'صلة القرابة',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'spouse', child: Text('زوج/زوجة')),
+                  DropdownMenuItem(value: 'child', child: Text('ابن/ابنة')),
+                  DropdownMenuItem(value: 'parent', child: Text('أب/أم')),
+                  DropdownMenuItem(value: 'sibling', child: Text('أخ/أخت')),
+                  DropdownMenuItem(value: 'other', child: Text('أخرى')),
+                ],
+                onChanged: (value) => selectedRelationship = value,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.trim().isEmpty) return;
+                final auth = context.read<AuthProvider>();
+                if (auth.accessToken == null) return;
+                final success = await context.read<DependentProvider>().updateDependent(
+                  auth.accessToken!,
+                  dependent.id.toString(),
+                  {
+                    'full_name': nameController.text.trim(),
+                    'relationship': selectedRelationship ?? dependent.relationship,
+                  },
+                );
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(success ? 'تم التحديث بنجاح ✅' : 'فشل التحديث'),
+                      backgroundColor: success ? const Color(0xFF1D9E75) : Colors.red,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF085041),
+              ),
+              child: const Text('حفظ', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteDependent(Dependent dependent) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('حذف التابع'),
+          content: Text('هل أنت متأكد من حذف "${dependent.fullName}"؟ لا يمكن التراجع عن هذا الإجراء.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('حذف', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed == true) {
+      final auth = context.read<AuthProvider>();
+      if (auth.accessToken == null) return;
+      final success = await context.read<DependentProvider>().deleteDependent(
+        auth.accessToken!,
+        dependent.id.toString(),
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success ? 'تم حذف التابع بنجاح 🗑️' : 'فشل الحذف'),
+            backgroundColor: success ? const Color(0xFF1D9E75) : Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildMedicationsTab() {

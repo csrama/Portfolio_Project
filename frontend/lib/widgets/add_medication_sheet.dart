@@ -1,13 +1,3 @@
-// lib/widgets/add_medication_sheet.dart
-//
-// بوتم شيت إضافة دواء — مستخرجة من home_screen.dart لتكون Widget
-// عامة (Public) قابلة لإعادة الاستخدام من أي شاشة:
-//  - home_screen.dart          -> إضافة دواء للمستخدم نفسه
-//  - dependent_dashboard_screen.dart -> إضافة دواء لتابع محدد
-//
-// الشاشة اللي تستدعيها هي المسؤولة عن تحديد وجهة الحفظ (نفسي / تابع)
-// من خلال onSave، مو الـ Sheet نفسها — هذا هو الفصل المطلوب.
-
 import 'package:flutter/material.dart';
 import '../models/medication_item.dart';
 

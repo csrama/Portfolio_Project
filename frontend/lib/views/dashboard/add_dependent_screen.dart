@@ -1,5 +1,6 @@
 // lib/views/dashboard/add_dependent_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
@@ -13,10 +14,13 @@ class AddDependentScreen extends StatefulWidget {
 
 class _AddDependentScreenState extends State<AddDependentScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
   final _nameController = TextEditingController();
   String? _selectedRelationship;
   bool _isLoading = false;
+  String? _generatedLink;
+  bool _linkCopied = false;
+  bool _inviteMode = true;
+  String? _successMessage;
 
   final List<Map<String, String>> _relationships = [
     {'value': 'spouse', 'label': 'زوج/زوجة'},
@@ -28,15 +32,13 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
 
   @override
   void dispose() {
-    _emailController.dispose();
     _nameController.dispose();
     super.dispose();
   }
 
-  Future<void> _sendInvitation() async {
+  Future<void> _addDependent() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final email = _emailController.text.trim();
     final fullName = _nameController.text.trim();
     final relationship = _selectedRelationship;
 
@@ -51,24 +53,44 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
         return;
       }
 
-      final body = {
-        'email': email,
+      final Map<String, dynamic> body = {
         'full_name': fullName,
         'relationship': relationship,
       };
 
-      final response = await ApiService.postJson(
-        '/dependents',
-        body: body,
-        token: token,
-      );
+      Map<String, dynamic> response;
+      if (_inviteMode) {
+        response = await ApiService.postJson(
+          '/dependents',
+          body: body,
+          token: token,
+        );
+      } else {
+        body['invite'] = false;
+        response = await ApiService.postJson(
+          '/dependents',
+          body: body,
+          token: token,
+        );
+      }
 
       if (response['success'] == true) {
-        _showSnackBar('تم إرسال الدعوة بنجاح', const Color(0xFF085041));
-        Navigator.pop(context, true);
+        if (_inviteMode) {
+          final data = response['data'] as Map<String, dynamic>? ?? {};
+          final inviteLink = data['invite_link'] as String? ?? '';
+          setState(() {
+            _generatedLink = inviteLink;
+            _linkCopied = false;
+          });
+          _showSnackBar('تم إنشاء رابط الدعوة بنجاح', const Color(0xFF085041));
+        } else {
+          setState(() {
+            _successMessage = 'تم إضافة التابع بنجاح ';
+          });
+        }
       } else {
         _showSnackBar(
-          response['error'] ?? 'فشل إرسال الدعوة',
+          response['error'] ?? 'فشلت العملية',
           Colors.red,
         );
       }
@@ -76,6 +98,14 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
       _showSnackBar('حدث خطأ: ${e.toString()}', Colors.red);
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _copyToClipboard() {
+    if (_generatedLink != null && _generatedLink!.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: _generatedLink!));
+      setState(() => _linkCopied = true);
+      _showSnackBar('تم نسخ الرابط', const Color(0xFF085041));
     }
   }
 
@@ -93,14 +123,14 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إرسال دعوة'),
+        title: const Text('إضافة تابع'),
         backgroundColor: const Color(0xFF085041),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: Directionality(
         textDirection: TextDirection.rtl,
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Form(
             key: _formKey,
@@ -119,7 +149,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'سيتم إرسال دعوة للتابع عبر البريد الإلكتروني',
+                          'سيتم إنشاء رابط دعوة يمكنك نسخه وإرساله للتابع',
                           style: TextStyle(color: Color(0xFF085041)),
                         ),
                       ),
@@ -132,7 +162,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                   controller: _nameController,
                   textAlign: TextAlign.right,
                   decoration: const InputDecoration(
-                    labelText: 'الاسم الكامل',
+                    labelText: 'الاسم الكامل للتابع',
                     hintText: 'أدخل اسم التابع',
                     border: OutlineInputBorder(),
                     filled: true,
@@ -141,29 +171,6 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'الاسم الكامل مطلوب';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  textAlign: TextAlign.right,
-                  decoration: const InputDecoration(
-                    labelText: 'البريد الإلكتروني',
-                    hintText: 'example@email.com',
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: Color(0xFFF6F6F6),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'البريد الإلكتروني مطلوب';
-                    }
-                    if (!value.contains('@') || !value.contains('.')) {
-                      return 'البريد الإلكتروني غير صحيح';
                     }
                     return null;
                   },
@@ -196,10 +203,87 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                 ),
                 const SizedBox(height: 24),
 
+                if (_generatedLink != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FFF4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _linkCopied
+                            ? const Color(0xFF1D9E75)
+                            : const Color(0xFF085041),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              _linkCopied
+                                  ? Icons.check_circle
+                                  : Icons.link,
+                              color: _linkCopied
+                                  ? const Color(0xFF1D9E75)
+                                  : const Color(0xFF085041),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _linkCopied
+                                  ? 'تم النسخ!'
+                                  : 'رابط الدعوة',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: _linkCopied
+                                    ? const Color(0xFF1D9E75)
+                                    : const Color(0xFF085041),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        SelectableText(
+                          _generatedLink!,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF085041),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _copyToClipboard,
+                            icon: Icon(
+                              _linkCopied ? Icons.check : Icons.copy,
+                              size: 18,
+                            ),
+                            label: Text(
+                              _linkCopied ? 'تم النسخ' : 'نسخ الرابط',
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF085041),
+                              side: const BorderSide(
+                                color: Color(0xFF085041),
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 SizedBox(
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _sendInvitation,
+                    onPressed: _isLoading ? null : _addDependent,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF085041),
                       shape: RoundedRectangleBorder(
@@ -215,8 +299,8 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            'إرسال الدعوة',
+                        : Text(
+                            _inviteMode ? 'توليد رابط الدعوة' : 'إضافة التابع',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -225,6 +309,33 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                           ),
                   ),
                 ),
+                if (_generatedLink != null) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 56,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.pop(context, true);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF085041),
+                        side: const BorderSide(
+                          color: Color(0xFF085041),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        'تم، العودة للقائمة',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

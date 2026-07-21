@@ -32,19 +32,68 @@ class DependentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addDependent(String token, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> addDependent(String token, Map<String, dynamic> data) async {
     _isLoading = true;
     notifyListeners();
     try {
-      final newDependent = await _dependentService.addDependent(token, data);
-      _dependents.add(newDependent);
-      notifyListeners();
+      final response = await _dependentService.addDependent(token, data);
+      return response;
     } catch (e) {
       debugPrint('Error adding dependent: $e');
       rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  /// Add a dependent directly without sending an invite
+  Future<Map<String, dynamic>> addDependentDirect(String token, Map<String, dynamic> data) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _dependentService.addDependentDirect(token, data);
+      if (response['success'] == true) {
+        // Refresh the dependents list
+        await fetchDependents(token);
+      }
+      return response;
+    } catch (e) {
+      debugPrint('Error adding dependent directly: $e');
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Update a dependent's info
+  Future<bool> updateDependent(String token, String dependentId, Map<String, dynamic> data) async {
+    try {
+      final response = await _dependentService.updateDependent(token, dependentId, data);
+      if (response['success'] == true) {
+        await fetchDependents(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error updating dependent: $e');
+      return false;
+    }
+  }
+
+  /// Delete a dependent
+  Future<bool> deleteDependent(String token, String dependentId) async {
+    try {
+      final response = await _dependentService.deleteDependent(token, dependentId);
+      if (response['success'] == true) {
+        await fetchDependents(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error deleting dependent: $e');
+      return false;
     }
   }
 }
