@@ -7,6 +7,44 @@ const crypto = require('crypto');
 
 const router = new Hono();
 
+// Public endpoint - must be before auth middleware
+router.get('/invite/:token', async (c) => {
+  try {
+    const token = c.req.param('token');
+    const dependent = await pool.getDependentByInviteToken(token);
+    if (!dependent) {
+      return c.json({ error: 'رابط الدعوة غير صالح' }, 404);
+    }
+
+    if (dependent.invitation_status !== 'pending') {
+      return c.json({ error: 'تم معالجة هذه الدعوة مسبقاً' }, 400);
+    }
+
+    const invitedAt = new Date(dependent.invited_at);
+    const now = new Date();
+    const daysDiff = (now - invitedAt) / (1000 * 60 * 60 * 24);
+    if (daysDiff > 7) {
+      return c.json({ error: 'انتهت صلاحية الدعوة' }, 410);
+    }
+
+    // Get caregiver info
+    const caregiver = await pool.findUserById(dependent.caregiver_user_id);
+
+    return c.json({
+      success: true,
+      data: {
+        dependent_name: dependent.full_name,
+        relationship: dependent.relationship,
+        caregiver_name: caregiver ? caregiver.full_name : 'مقدم الرعاية',
+        invited_at: dependent.invited_at
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching invite info:', error);
+    return c.json({ error: 'فشل جلب معلومات الدعوة' }, 500);
+  }
+});
+
 router.use('*', authMiddleware);
 
 router.get('/', async (c) => {
@@ -54,7 +92,8 @@ router.post('/', caregiverCheck, async (c) => {
 
     console.log('Received body:', body);
 
-    const { email, full_name, relationship, date_of_birth } = body;
+    const { full_name, relationship, date_of_birth, invite } = body;
+    const sendInvite = invite !== false; // default to true (send invite)
 
     if (!full_name || full_name.trim() === '') {
       return c.json({ error: 'الاسم الكامل مطلوب' }, 400);
@@ -63,27 +102,13 @@ router.post('/', caregiverCheck, async (c) => {
       return c.json({ error: 'العلاقة مطلوبة' }, 400);
     }
 
-    let finalEmail = email;
-    let isTemporaryEmail = false;
-    
-    if (!email || email.trim() === '') {
-      finalEmail = `dependent_${Date.now()}_${Math.random().toString(36).substring(2, 8)}@temp.local`;
-      isTemporaryEmail = true;
-      console.log('Generated temporary email:', finalEmail);
-    }
-
-    if (!isTemporaryEmail) {
-      const existingUser = await pool.findUserByEmail(finalEmail);
-      if (existingUser) {
-        return c.json({ error: 'البريد الإلكتروني مستخدم بالفعل' }, 409);
-      }
-    }
-
+    // Create a placeholder user for the dependent
+    const placeholderEmail = `dep_${Date.now()}_${Math.random().toString(36).substring(2, 8)}@direct.local`;
     const temporaryPassword = crypto.randomBytes(8).toString('hex');
     const passwordHash = await bcrypt.hash(temporaryPassword, 10);
 
-    const newDependent = await pool.createUser({
-      email: finalEmail.toLowerCase(),
+    const newDependentUser = await pool.createUser({
+      email: placeholderEmail.toLowerCase(),
       password_hash: passwordHash,
       full_name: full_name.trim(),
       user_type: 'dependent',
@@ -91,44 +116,59 @@ router.post('/', caregiverCheck, async (c) => {
       is_onboarding_complete: false
     });
 
-    console.log('Created user:', newDependent.id, newDependent.email);
+    console.log('Created placeholder user:', newDependentUser.id);
 
-    const dependent = await pool.createDependent({
-      caregiver_user_id: user.id,
-      dependent_user_id: newDependent.id,
-      full_name: full_name.trim(),
-      date_of_birth: date_of_birth || null,
-      relationship: relationship,
-      invitation_status: isTemporaryEmail ? 'accepted' : 'pending',
-      invitation_token: isTemporaryEmail ? null : crypto.randomBytes(32).toString('hex')
-    });
+    let dependent;
+    let inviteLink = null;
+    let invitationToken = null;
+
+    if (sendInvite) {
+      // Generate invite token
+      invitationToken = crypto.randomBytes(32).toString('hex');
+
+      dependent = await pool.createDependent({
+        caregiver_user_id: user.id,
+        dependent_user_id: newDependentUser.id,
+        full_name: full_name.trim(),
+        date_of_birth: date_of_birth || null,
+        relationship: relationship,
+        invitation_status: 'pending',
+        invitation_token: invitationToken
+      });
+
+      // Build the invite link
+      const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+      inviteLink = `${baseUrl}/invite?token=${invitationToken}`;
+    } else {
+      // Add dependent directly - no invite needed
+      dependent = await pool.createDependentDirect({
+        caregiver_user_id: user.id,
+        dependent_user_id: newDependentUser.id,
+        full_name: full_name.trim(),
+        date_of_birth: date_of_birth || null,
+        relationship: relationship
+      });
+    }
 
     console.log('Created dependent relation:', dependent.id);
 
-    const responseData = {
+    return c.json({
       success: true,
-      message: isTemporaryEmail 
-        ? 'تم إضافة التابع بنجاح' 
-        : 'تم إرسال الدعوة بنجاح',
+      message: sendInvite ? 'تم إنشاء رابط الدعوة بنجاح' : 'تم إضافة التابع بنجاح',
       data: {
+        invite_link: inviteLink,
+        token: invitationToken,
         dependent: {
           id: dependent.id,
-          relationship: dependent.relationship,
+          full_name: full_name.trim(),
+          relationship: relationship,
           status: dependent.invitation_status
         },
-        user: {
-          id: newDependent.id,
-          email: newDependent.email,
-          full_name: newDependent.full_name
+        caregiver: {
+          full_name: user.full_name
         }
       }
-    };
-
-    if (isTemporaryEmail) {
-      responseData.data.temporaryPassword = temporaryPassword;
-    }
-
-    return c.json(responseData, 201);
+    }, 201);
 
   } catch (error) {
     console.error('Error creating dependent:', error);
@@ -201,18 +241,19 @@ router.delete('/:id', caregiverCheck, async (c) => {
   }
 });
 
+// Accept/claim an invite - links the logged-in user's account to this dependent
 router.post('/invite/:token/accept', async (c) => {
   try {
     const token = c.req.param('token');
     const user = c.get('user');
 
+    if (!user) {
+      return c.json({ error: 'الرجاء تسجيل الدخول أولاً' }, 401);
+    }
+
     const dependent = await pool.getDependentByInviteToken(token);
     if (!dependent) {
       return c.json({ error: 'رابط الدعوة غير صالح' }, 404);
-    }
-
-    if (dependent.dependent_user_id !== user.id) {
-      return c.json({ error: 'هذه الدعوة ليست لك' }, 403);
     }
 
     if (dependent.invitation_status !== 'pending') {
@@ -226,7 +267,11 @@ router.post('/invite/:token/accept', async (c) => {
       return c.json({ error: 'انتهت صلاحية الدعوة' }, 410);
     }
 
-    await pool.acceptDependentInvite(dependent.id);
+    // Claim the invite - link this user to the dependent record
+    const claimed = await pool.claimDependentInvite(token, user.id);
+    if (!claimed) {
+      return c.json({ error: 'فشل قبول الدعوة' }, 500);
+    }
 
     return c.json({
       success: true,

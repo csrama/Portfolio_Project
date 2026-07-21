@@ -262,13 +262,55 @@ const db = {
     return rows[0];
   },
 
+  async createDependentDirect(data) {
+    if (useMemoryStore) {
+      const dependent = {
+        id: memoryStore.dependents.length + 1,
+        caregiver_user_id: data.caregiver_user_id,
+        dependent_user_id: data.dependent_user_id || null,
+        full_name: data.full_name || '',
+        date_of_birth: data.date_of_birth || null,
+        relationship: data.relationship,
+        profile_image_url: data.profile_image_url || null,
+        medical_conditions: data.medical_conditions || [],
+        invitation_status: 'accepted',
+        invitation_token: null,
+        invited_at: new Date().toISOString(),
+        accepted_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      memoryStore.dependents.push(dependent);
+      return dependent;
+    }
+
+    const { rows } = await queryWithFallback(
+      `INSERT INTO dependents (
+        caregiver_user_id, dependent_user_id, full_name, date_of_birth,
+        relationship, profile_image_url, medical_conditions,
+        invitation_status, invited_at, accepted_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'accepted', NOW(), NOW())
+      RETURNING *`,
+      [
+        data.caregiver_user_id,
+        data.dependent_user_id || null,
+        data.full_name || '',
+        data.date_of_birth || null,
+        data.relationship,
+        data.profile_image_url || null,
+        data.medical_conditions || []
+      ]
+    );
+    return rows[0];
+  },
+
   async createDependent(data) {
     if (useMemoryStore) {
       const dependent = {
         id: memoryStore.dependents.length + 1,
         caregiver_user_id: data.caregiver_user_id,
         dependent_user_id: data.dependent_user_id || null,
-        full_name: data.full_name,
+        full_name: data.full_name || '',
         date_of_birth: data.date_of_birth || null,
         relationship: data.relationship,
         profile_image_url: data.profile_image_url || null,
@@ -286,7 +328,7 @@ const db = {
 
     const { rows } = await queryWithFallback(
       `INSERT INTO dependents (
-        caregiver_user_id, dependent_user_id, full_name, date_of_birth, 
+        caregiver_user_id, dependent_user_id, full_name, date_of_birth,
         relationship, profile_image_url, medical_conditions,
         invitation_status, invitation_token, invited_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -294,7 +336,7 @@ const db = {
       [
         data.caregiver_user_id,
         data.dependent_user_id || null,
-        data.full_name,
+        data.full_name || '',
         data.date_of_birth || null,
         data.relationship,
         data.profile_image_url || null,
@@ -470,6 +512,46 @@ const db = {
        WHERE id = $1
        RETURNING *`,
       [dependentId]
+    );
+    return rows[0] || null;
+  },
+
+  async claimDependentInvite(token, userId) {
+    if (useMemoryStore) {
+      const dependent = memoryStore.dependents.find((item) => item.invitation_token === token);
+      if (!dependent) return null;
+      if (dependent.invitation_status !== 'pending') return null;
+
+      // If there's an existing placeholder user, delete old user reference
+      if (dependent.dependent_user_id && dependent.dependent_user_id !== Number(userId)) {
+        const oldUserIndex = memoryStore.users.findIndex((u) => u.id === dependent.dependent_user_id);
+        if (oldUserIndex !== -1) {
+          memoryStore.users.splice(oldUserIndex, 1);
+        }
+      }
+
+      dependent.dependent_user_id = Number(userId);
+      dependent.invitation_status = 'accepted';
+      dependent.accepted_at = new Date().toISOString();
+      dependent.updated_at = new Date().toISOString();
+      return dependent;
+    }
+
+    // Start by getting the dependent record
+    const dependent = await this.getDependentByInviteToken(token);
+    if (!dependent) return null;
+    if (dependent.invitation_status !== 'pending') return null;
+    if (dependent.dependent_user_id && dependent.dependent_user_id !== userId) {
+      // Delete the old placeholder user
+      await queryWithFallback('DELETE FROM users WHERE id = $1', [dependent.dependent_user_id]);
+    }
+
+    const { rows } = await queryWithFallback(
+      `UPDATE dependents
+       SET dependent_user_id = $2, invitation_status = 'accepted', accepted_at = NOW(), updated_at = NOW()
+       WHERE invitation_token = $1 AND invitation_status = 'pending'
+       RETURNING *`,
+      [token, userId]
     );
     return rows[0] || null;
   },
