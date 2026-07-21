@@ -1,17 +1,9 @@
--- Migration 006: Drug-drug interaction reference table
--- IMPORTANT: This is a curated academic starter set of well-established,
--- textbook-level drug interactions. It is NOT clinically exhaustive and
--- must not be presented to end users as a substitute for pharmacist or
--- physician review. Intended for capstone/demo purposes.
-
--- 1. Add generic_name to medicines so brand-name rows can be linked to
---    the active ingredients used in the interactions table below.
 ALTER TABLE medicines ADD COLUMN IF NOT EXISTS generic_name TEXT;
 CREATE INDEX IF NOT EXISTS idx_medicines_generic_name ON medicines (generic_name);
 
 -- 2. Interaction reference table (ingredient-level, not brand-level)
 
-CREATE TABLE drug_interactions (
+CREATE TABLE IF NOT EXISTS drug_interactions (
     id SERIAL PRIMARY KEY,
     ingredient_a TEXT NOT NULL,
     ingredient_b TEXT NOT NULL,
@@ -25,9 +17,11 @@ CREATE TABLE drug_interactions (
 
     CONSTRAINT ordered_pair CHECK (ingredient_a < ingredient_b)
 );
+CREATE INDEX IF NOT EXISTS idx_interactions_a
+ON drug_interactions (ingredient_a);
 
-CREATE INDEX idx_interactions_a ON drug_interactions (ingredient_a);
-CREATE INDEX idx_interactions_b ON drug_interactions (ingredient_b);
+CREATE INDEX IF NOT EXISTS idx_interactions_b
+ON drug_interactions (ingredient_b);
 
 -- 3. Curated interaction data
 -- Format: LOWER(ingredient_a) < LOWER(ingredient_b) alphabetically

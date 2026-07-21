@@ -5,10 +5,13 @@ import 'package:http/http.dart' as http;
 class ApiService {
   static String get _baseUrl {
     if (kIsWeb) {
-      return 'http://localhost:3000';
+      return 'https://portfolioproject-production-2b3b.up.railway.app';
+    } else {
+      // للـ Android (محاكي)
+      return 'https://portfolioproject-production-2b3b.up.railway.app';
     }
-    return 'http://10.0.2.2:3000';
   }
+}
 
   static String buildUrl(String path) {
     if (path.startsWith('http')) {
