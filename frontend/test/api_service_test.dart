@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/services/api_service.dart';
+import 'package:mobile/services/api_service.dart';
 
 void main() {
   test('builds the backend URL correctly', () {

@@ -43,8 +43,12 @@ dependencies:
   go_router: ^17.3.0
   get_it: ^9.2.1
   equatable: ^2.0.7
-  zaytona_design_system:
-    path: packages/zaytona_design_system
+  http: ^1.2.1
+  shared_preferences: ^2.3.1
+  provider: ^6.1.2
+  app_links: ^6.4.1
+  awesome_notifications: ^0.10.0
+  google_sign_in: ^6.2.1
 
 dev_dependencies:
   flutter_test:
@@ -71,14 +75,7 @@ flutter:
   generate: true # gen-l10n: builds AppLocalizations from lib/l10n/*.arb
 
   assets:
-   assets:
     - assets/app_icon.png
     - assets/pill_logo.png
     
-  fonts:
-    - family: MADE Tommy Soft
-      fonts:
-        - asset: assets/fonts/MADETommySoft.otf
-    - family: Vazirmatn
-      fonts:
-        - asset: assets/fonts/Vazirmatn.ttf
+  # Fonts disabled — font files are not available in the repository

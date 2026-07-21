@@ -181,7 +181,7 @@ class _DependentsScreenState extends State<DependentsScreen> {
                   ),
                   const SizedBox(height: 15),
                   DropdownButtonFormField<String>(
-                    value: selectedRelationship,
+                    initialValue: selectedRelationship,
                     decoration: const InputDecoration(
                       labelText: 'صلة القرابة',
                       border: OutlineInputBorder(),
@@ -495,7 +495,7 @@ String _getSafeRelationship(String? relationship) {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: selectedRelationship,
+                initialValue: selectedRelationship,
                 decoration: const InputDecoration(
                   labelText: 'صلة القرابة',
                   border: OutlineInputBorder(),

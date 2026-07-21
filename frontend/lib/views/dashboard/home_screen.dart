@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import '../../repositories/auth_repository.dart';
 import '../../services/google_auth_service.dart';
 import 'package:http/http.dart' as http;
@@ -716,7 +716,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFFFFF3F0),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _severityColor(highestSeverity).withOpacity(0.35)),
+        border: Border.all(color: _severityColor(highestSeverity).withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1755,7 +1755,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: selectedRelationship,
+                initialValue: selectedRelationship,
                 decoration: const InputDecoration(
                   labelText: 'صلة القرابة',
                   border: OutlineInputBorder(),
@@ -2173,6 +2173,8 @@ class _MedicationCard extends StatelessWidget {
 
   const _MedicationCard({
     required this.medication,
+    this.onEdit,
+    this.onDelete,
     this.showDoseActions = false,
     this.selectedDate,
     this.isToday = false,
@@ -2180,8 +2182,6 @@ class _MedicationCard extends StatelessWidget {
     this.isNotTaken,
     this.onUpdateDoseStatus,
     this.doseTimeLabel,
-    this.onEdit,
-    this.onDelete,
   });
 
   @override
@@ -2809,7 +2809,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                           ),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
-                            value: _period,
+                            initialValue: _period,
                             alignment: AlignmentDirectional.centerEnd,
                             decoration: InputDecoration(
                               filled: true,
