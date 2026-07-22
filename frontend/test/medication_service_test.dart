@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/services/medication_service.dart';
+import 'package:mobile/services/medication_service.dart';
 
 void main() {
   test('maps backend medication payloads into UI medication items', () {
