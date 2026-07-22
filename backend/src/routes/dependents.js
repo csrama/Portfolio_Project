@@ -111,7 +111,7 @@ router.post('/', caregiverCheck, async (c) => {
       email: placeholderEmail.toLowerCase(),
       password_hash: passwordHash,
       full_name: full_name.trim(),
-      user_type: 'dependent',
+      user_type: 'patient',
       is_active: true,
       is_onboarding_complete: false
     });
