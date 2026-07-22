@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -208,7 +207,7 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
         '/medications',
         body: {
           'dependent_id': int.parse(widget.dependent.id.toString()),
-          'name': (med['name_ar']?.toString()?.isNotEmpty == true
+          'name': (med['name_ar']?.toString().isNotEmpty == true
               ? '${med['name_en']} — ${med['name_ar']}'
               : med['name_en'] ?? '').toString(),
           'dosage': med['dosage'] ?? '',
@@ -284,7 +283,7 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                       )
                     : const Icon(Icons.search, color: Colors.white60),
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.15),
+                fillColor: Colors.white.withValues(alpha: 0.15),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -300,7 +299,7 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -1001,7 +1000,7 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
                           const Text('الفترة', style: TextStyle(color: _Colors.textSecondary)),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
-                            value: _period,
+                            initialValue: _period,
                             alignment: AlignmentDirectional.centerEnd,
                             decoration: InputDecoration(
                               filled: true,

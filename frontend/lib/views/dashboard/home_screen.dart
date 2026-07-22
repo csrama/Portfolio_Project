@@ -70,8 +70,10 @@ class _HomeScreenState extends State<HomeScreen> {
       []; // unlimited: just a growing list
   final Set<String> _takenMedications = {}; // medication name + date key
   final Set<String> _notTakenMedications = {}; // explicit not-taken state
-  final Map<String, int> _doseRecordIds = {}; // نفس المفتاح -> id السجل بالباك إند
-  List<DrugInteraction> _interactions = []; // تداخلات دوائية بين الأدوية الحالية
+  final Map<String, int> _doseRecordIds =
+      {}; // نفس المفتاح -> id السجل بالباك إند
+  List<DrugInteraction> _interactions =
+      []; // تداخلات دوائية بين الأدوية الحالية
   final DrugInteractionService _interactionService = DrugInteractionService();
   bool _interactionsBannerExpanded = false; // مطوي افتراضياً، يفتح بالضغط
 
@@ -120,13 +122,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final weekday = date.weekday;
     // DateTime.weekday: Monday=1, Tuesday=2, ..., Sunday=7
     const names = [
-      'الاثنين',    // Monday (1)
-      'الثلاثاء',   // Tuesday (2)
-      'الأربعاء',   // Wednesday (3)
-      'الخميس',     // Thursday (4)
-      'الجمعة',     // Friday (5)
-      'السبت',      // Saturday (6)
-      'الأحد',      // Sunday (7)
+      'الاثنين', // Monday (1)
+      'الثلاثاء', // Tuesday (2)
+      'الأربعاء', // Wednesday (3)
+      'الخميس', // Thursday (4)
+      'الجمعة', // Friday (5)
+      'السبت', // Saturday (6)
+      'الأحد', // Sunday (7)
     ];
     return names[weekday - 1];
   }
@@ -135,7 +137,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final dayName = _weekdayNameFromDate(date);
     return _medications.where((med) {
       final scheduledEveryDay = med.daysOfWeek.isEmpty;
-      return med.isActive && (scheduledEveryDay || med.daysOfWeek.contains(dayName));
+      return med.isActive &&
+          (scheduledEveryDay || med.daysOfWeek.contains(dayName));
     }).toList();
   }
 
@@ -163,7 +166,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  DateTime _doseDateTime(MedicationItem medication, DateTime date, int doseIndex) {
+  DateTime _doseDateTime(
+      MedicationItem medication, DateTime date, int doseIndex) {
     final intervalHours =
         medication.dosesPerDay > 1 ? 24 ~/ medication.dosesPerDay : 0;
     final baseHour = medication.time.hour;
@@ -193,8 +197,8 @@ class _HomeScreenState extends State<HomeScreen> {
     throw Exception('Request failed: ${response.statusCode} ${response.body}');
   }
 
-  Future<void> _updateDoseStatus(
-      MedicationItem medication, DateTime date, int doseIndex, bool markTaken) async {
+  Future<void> _updateDoseStatus(MedicationItem medication, DateTime date,
+      int doseIndex, bool markTaken) async {
     final key = _medicationDoseKey(medication, date, doseIndex);
     final wasTaken = _takenMedications.contains(key);
     final wasNotTaken = _notTakenMedications.contains(key);
@@ -340,8 +344,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
         final recordId = r['id'];
         if (recordId != null) {
-          ids[key] =
-              recordId is int ? recordId : int.tryParse(recordId.toString()) ?? -1;
+          ids[key] = recordId is int
+              ? recordId
+              : int.tryParse(recordId.toString()) ?? -1;
         }
       }
 
@@ -375,7 +380,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 final authProvider = context.read<AuthProvider>();
                 final token = authProvider.accessToken;
                 if (token == null) return null;
-                return ApiService.getJsonDynamic('/adherence/rate', token: token);
+                return ApiService.getJsonDynamic('/adherence/rate',
+                    token: token);
               }(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
@@ -409,7 +415,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     const Text(
                       'متابعة الجرعات',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 20),
                     Text(
@@ -571,8 +578,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// يفحص دواء معيّن (بالاسم) مقابل بقية الأدوية الحالية فقط،
   /// يُستخدم لعرض تحذير فوري بعد إضافة دواء جديد.
-  Future<List<DrugInteraction>> _checkInteractionsFor(
-      String newMedName) async {
+  Future<List<DrugInteraction>> _checkInteractionsFor(String newMedName) async {
     try {
       return await _interactionService.checkNewMedication(
         newMedName,
@@ -708,7 +714,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     final summaryParts = ['contraindicated', 'major', 'moderate', 'minor']
         .where((s) => counts.containsKey(s))
-        .map((s) => '${_arabicDigits(counts[s].toString())} ${_severityLabelAr(s).replaceFirst('خطر جداً - يمنع الجمع بينهما', 'ممنوع')}')
+        .map((s) =>
+            '${_arabicDigits(counts[s].toString())} ${_severityLabelAr(s).replaceFirst('خطر جداً - يمنع الجمع بينهما', 'ممنوع')}')
         .join('، ');
 
     return Container(
@@ -716,15 +723,16 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFFFFF3F0),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _severityColor(highestSeverity).withOpacity(0.35)),
+        border: Border.all(
+            color: _severityColor(highestSeverity).withOpacity(0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InkWell(
             borderRadius: BorderRadius.circular(12),
-            onTap: () => setState(
-                () => _interactionsBannerExpanded = !_interactionsBannerExpanded),
+            onTap: () => setState(() =>
+                _interactionsBannerExpanded = !_interactionsBannerExpanded),
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
@@ -780,8 +788,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               '${i.ingredientAAr} + ${i.ingredientBAr} — ${_severityLabelAr(i.severity)}',
                               style: TextStyle(
                                 fontSize: isHighest ? 13 : 12,
-                                fontWeight:
-                                    isHighest ? FontWeight.bold : FontWeight.normal,
+                                fontWeight: isHighest
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                             ),
                           ),
@@ -806,7 +815,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _saveNotTakenMedications() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('notTakenMedications', _notTakenMedications.toList());
+    await prefs.setStringList(
+        'notTakenMedications', _notTakenMedications.toList());
   }
 
   Future<void> _loadTakenMedications() async {
@@ -834,9 +844,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _doseTimeLabel(MedicationItem medication, int doseIndex) {
-    final intervalHours = medication.dosesPerDay > 1
-        ? 24 ~/ medication.dosesPerDay
-        : 0;
+    final intervalHours =
+        medication.dosesPerDay > 1 ? 24 ~/ medication.dosesPerDay : 0;
     final baseHour = medication.time.hour;
     final baseMinute = medication.time.minute;
     final doseHour = (baseHour + intervalHours * doseIndex) % 24;
@@ -856,6 +865,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (hour < 18) return 'مساءً';
     return 'مساءً';
   }
+
   void _openAddMedicationSheet({MedicationItem? existingMedication}) {
     showModalBottomSheet(
       context: context,
@@ -886,7 +896,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
                 await _loadMedications();
                 if (med.reminderEnabled) {
-                  final idx = _medications.indexWhere((m) => m.name == med.name && m.time.hour == med.time.hour && m.time.minute == med.time.minute);
+                  final idx = _medications.indexWhere((m) =>
+                      m.name == med.name &&
+                      m.time.hour == med.time.hour &&
+                      m.time.minute == med.time.minute);
                   if (idx >= 0) {
                     await NotificationService.scheduleMedicineReminder(
                       id: idx,
@@ -921,7 +934,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
                 await _loadMedications();
                 if (med.reminderEnabled) {
-                  final idx = _medications.indexWhere((m) => m.name == med.name && m.time.hour == med.time.hour && m.time.minute == med.time.minute);
+                  final idx = _medications.indexWhere((m) =>
+                      m.name == med.name &&
+                      m.time.hour == med.time.hour &&
+                      m.time.minute == med.time.minute);
                   if (idx >= 0) {
                     await NotificationService.scheduleMedicineReminder(
                       id: idx,
@@ -952,7 +968,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
                 await _loadMedications();
                 if (med.reminderEnabled) {
-                  final idx = _medications.indexWhere((m) => m.name == med.name && m.time.hour == med.time.hour && m.time.minute == med.time.minute);
+                  final idx = _medications.indexWhere((m) =>
+                      m.name == med.name &&
+                      m.time.hour == med.time.hour &&
+                      m.time.minute == med.time.minute);
                   if (idx >= 0) {
                     await NotificationService.scheduleMedicineReminder(
                       id: idx,
@@ -985,120 +1004,128 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
- Future<void> _deleteMedication(MedicationItem med) async {
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text("حذف الدواء"),
-      content: Text("هل تريد حذف ${med.name} ؟"),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text("إلغاء"),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, true),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
+  Future<void> _deleteMedication(MedicationItem med) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("حذف الدواء"),
+        content: Text("هل تريد حذف ${med.name} ؟"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("إلغاء"),
           ),
-          child: const Text("حذف"),
-        ),
-      ],
-    ),
-  );
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text("حذف"),
+          ),
+        ],
+      ),
+    );
 
-  if (ok != true) return;
+    if (ok != true) return;
 
-  final auth = context.read<AuthProvider>();
-  if (auth.accessToken == null) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('الرجاء تسجيل الدخول أولاً'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-    }
-    return;
-  }
-
-  final List<Map<String, String>> tests = [
-    {'method': 'DELETE', 'path': '/medications/${med.id}'},
-    {'method': 'DELETE', 'path': '/medication/${med.id}'},
-    {'method': 'DELETE', 'path': '/medicines/${med.id}'},
-    {'method': 'DELETE', 'path': '/medicine/${med.id}'},
-    {'method': 'DELETE', 'path': '/api/medications/${med.id}'},
-    {'method': 'POST', 'path': '/medications/${med.id}', 'body': '{"_method":"DELETE"}'},
-    {'method': 'POST', 'path': '/medication/${med.id}', 'body': '{"_method":"DELETE"}'},
-    {'method': 'DELETE', 'path': '/medications/delete/${med.id}'},
-    {'method': 'DELETE', 'path': '/delete-medication/${med.id}'},
-  ];
-
-  String? workingPath;
-  int? lastStatusCode;
-
-  for (final test in tests) {
-    try {
-      final url = ApiService.buildUrl(test['path']!);
-      debugPrint('🔍 Trying: ${test['method']} $url');
-
-      http.Response response;
-
-      if (test['method'] == 'POST') {
-        response = await http.post(
-          Uri.parse(url),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ${auth.accessToken!}',
-          },
-          body: test['body'],
-        );
-      } else {
-        response = await http.delete(
-          Uri.parse(url),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ${auth.accessToken!}',
-          },
+    final auth = context.read<AuthProvider>();
+    if (auth.accessToken == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('الرجاء تسجيل الدخول أولاً'),
+            backgroundColor: Colors.orange,
+          ),
         );
       }
+      return;
+    }
 
-      debugPrint('🔍 Status: ${response.statusCode} for ${test['path']}');
+    final List<Map<String, String>> tests = [
+      {'method': 'DELETE', 'path': '/medications/${med.id}'},
+      {'method': 'DELETE', 'path': '/medication/${med.id}'},
+      {'method': 'DELETE', 'path': '/medicines/${med.id}'},
+      {'method': 'DELETE', 'path': '/medicine/${med.id}'},
+      {'method': 'DELETE', 'path': '/api/medications/${med.id}'},
+      {
+        'method': 'POST',
+        'path': '/medications/${med.id}',
+        'body': '{"_method":"DELETE"}'
+      },
+      {
+        'method': 'POST',
+        'path': '/medication/${med.id}',
+        'body': '{"_method":"DELETE"}'
+      },
+      {'method': 'DELETE', 'path': '/medications/delete/${med.id}'},
+      {'method': 'DELETE', 'path': '/delete-medication/${med.id}'},
+    ];
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        workingPath = test['path'];
-        break;
-      } else {
-        lastStatusCode = response.statusCode;
+    String? workingPath;
+    int? lastStatusCode;
+
+    for (final test in tests) {
+      try {
+        final url = ApiService.buildUrl(test['path']!);
+        debugPrint('🔍 Trying: ${test['method']} $url');
+
+        http.Response response;
+
+        if (test['method'] == 'POST') {
+          response = await http.post(
+            Uri.parse(url),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${auth.accessToken!}',
+            },
+            body: test['body'],
+          );
+        } else {
+          response = await http.delete(
+            Uri.parse(url),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${auth.accessToken!}',
+            },
+          );
+        }
+
+        debugPrint('🔍 Status: ${response.statusCode} for ${test['path']}');
+
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          workingPath = test['path'];
+          break;
+        } else {
+          lastStatusCode = response.statusCode;
+        }
+      } catch (e) {
+        debugPrint('❌ Error with ${test['path']}: $e');
       }
-    } catch (e) {
-      debugPrint('❌ Error with ${test['path']}: $e');
     }
-  }
 
-  if (workingPath != null) {
-    await _loadMedications();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ تم حذف الدواء بنجاح'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
-  } else {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ فشل الحذف: الكود $lastStatusCode'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
-        ),
-      );
+    if (workingPath != null) {
+      await _loadMedications();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ تم حذف الدواء بنجاح'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ فشل الحذف: الكود $lastStatusCode'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
-}
 
   Future<void> _signOut(BuildContext context) async {
     await AuthRepository().clearSession();
@@ -1129,149 +1156,26 @@ class _HomeScreenState extends State<HomeScreen> {
                 Consumer<DependentProvider>(
                   builder: (context, depProvider, _) {
                     final selectedDep = depProvider.selectedDependent;
-                    return PopupMenuButton<String>(
-                      tooltip: '',
-                      offset: const Offset(0, 56),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 4,
-                      itemBuilder: (context) => [
-                        const PopupMenuItem<String>(
-                          enabled: false,
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(vertical: 4),
-                            child: Text(
-                              ' حسابي',
-                              textAlign: TextAlign.right,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                color: _Colors.darkGreen,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const PopupMenuDivider(height: 8),
-                        const PopupMenuItem<String>(
-                          value: 'my_account',
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text('حسابي', style: TextStyle(fontSize: 16)),
-                              SizedBox(width: 12),
-                              Icon(Icons.person_outline_rounded, color: _Colors.darkGreen, size: 24),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem<String>(
-                          value: 'settings',
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text('الإعدادات', style: TextStyle(fontSize: 16)),
-                              SizedBox(width: 12),
-                              Icon(Icons.settings_outlined, color: _Colors.darkGreen, size: 24),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem<String>(
-                          value: 'reminders',
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text('تذكيراتي', style: TextStyle(fontSize: 16)),
-                              SizedBox(width: 12),
-                              Icon(Icons.notifications_outlined, color: _Colors.darkGreen, size: 24),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem<String>(
-                          value: 'my_meds',
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text('أدويتي', style: TextStyle(fontSize: 16)),
-                              SizedBox(width: 12),
-                              Icon(Icons.medication_outlined, color: _Colors.darkGreen, size: 24),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem<String>(
-                          value: 'adherence',
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text('متابعة الجرعات', style: TextStyle(fontSize: 16)),
-                              SizedBox(width: 12),
-                              Icon(Icons.fact_check_outlined, color: _Colors.darkGreen, size: 24),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem<String>(
-                          value: 'dependents',
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text('التابعون', style: TextStyle(fontSize: 16)),
-                              SizedBox(width: 12),
-                              Icon(Icons.people_outline_rounded, color: _Colors.darkGreen, size: 24),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuDivider(height: 8),
-                        const PopupMenuItem<String>(
-                          value: 'logout',
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text('تسجيل الخروج',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: Colors.redAccent,
-                                  )),
-                              SizedBox(width: 12),
-                              Icon(Icons.logout_rounded, color: Colors.redAccent, size: 24),
-                            ],
-                          ),
-                        ),
-                      ],
-                      onSelected: (value) async {
-                        if (value == 'my_account') {
-                        } else if (value == 'settings') {
-                        } else if (value == 'reminders') {
-                          setState(() => _selectedIndex = 2);
-                        } else if (value == 'my_meds') {
-                          setState(() => _selectedIndex = 1);
-                        } else if (value == 'adherence') {
-                          _showAdherenceSheet(context);
-                        } else if (value == 'dependents') {
-                          final changed = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const DependentsScreen(),
-                            ),
-                          );
-                          if (changed == true) {
-                            _loadMedications();
-                          }
-                        } else if (value == 'logout') {
-                          await _signOut(context);
-                        }
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() => _selectedIndex = 3);
                       },
                       child: CircleAvatar(
                         radius: 26,
-                        backgroundColor: selectedDep != null ? const Color(0xFFC9932E) : _Colors.darkGreen,
+                        backgroundColor: selectedDep != null
+                            ? const Color(0xFFC9932E)
+                            : _Colors.darkGreen,
                         child: selectedDep != null
-                            ? Text(selectedDep.fullName[0], style: const TextStyle(color: Colors.white, fontSize: 24))
-                            : const Icon(Icons.person, color: Colors.white, size: 38),
+                            ? Text(selectedDep.fullName[0],
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 24))
+                            : const Icon(Icons.person,
+                                color: Colors.white, size: 38),
                       ),
                     );
                   },
                 ),
                 const SizedBox(width: 12),
-
                 Expanded(
                   child: Consumer<DependentProvider>(
                     builder: (context, depProvider, _) {
@@ -1282,11 +1186,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(
                             selectedDep != null
                                 ? 'ملف: ${selectedDep.fullName}'
-                                : (hasName ? '${_getGreeting()}،' : _getGreeting()),
+                                : (hasName
+                                    ? '${_getGreeting()}،'
+                                    : _getGreeting()),
                             textAlign: TextAlign.right,
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: selectedDep != null ? FontWeight.bold : FontWeight.normal,
+                              fontWeight: selectedDep != null
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                               color: selectedDep != null
                                   ? const Color.fromARGB(255, 8, 78, 3)
                                   : _Colors.textSecondary,
@@ -1365,11 +1273,13 @@ class _HomeScreenState extends State<HomeScreen> {
           final hasMed = _hasAnyMedicationOnDate(date);
           return Expanded(
             child: Padding(
-              padding: EdgeInsets.only(left: index == _dateStrip.length - 1 ? 0 : 6),
+              padding:
+                  EdgeInsets.only(left: index == _dateStrip.length - 1 ? 0 : 6),
               child: GestureDetector(
                 onTap: () => setState(() => _selectedDate = date),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
                   decoration: BoxDecoration(
                     color: selected ? _Colors.darkGreen : Colors.white,
                     borderRadius: BorderRadius.circular(18),
@@ -1395,7 +1305,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 12,
-                          color: selected ? Colors.white : _Colors.textSecondary,
+                          color:
+                              selected ? Colors.white : _Colors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -1490,11 +1401,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.check_circle_outline, color: Color(0xFF1D9E75), size: 20),
+                      Icon(Icons.check_circle_outline,
+                          color: Color(0xFF1D9E75), size: 20),
                       SizedBox(width: 8),
                       Text(
                         'لا توجد أدوية مجدولة لهذا اليوم',
-                        style: TextStyle(color: Color(0xFF085041), fontSize: 14),
+                        style:
+                            TextStyle(color: Color(0xFF085041), fontSize: 14),
                       ),
                     ],
                   ),
@@ -1502,7 +1415,8 @@ class _HomeScreenState extends State<HomeScreen> {
               else
                 ...todaysMeds.map((med) => _MedicationCard(
                       medication: med,
-                      onEdit: () => _openAddMedicationSheet(existingMedication: med),
+                      onEdit: () =>
+                          _openAddMedicationSheet(existingMedication: med),
                       onDelete: () => _deleteMedication(med),
                     )),
               const SizedBox(height: 16),
@@ -1533,7 +1447,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () async {
                       final changed = await Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const DependentsScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const DependentsScreen()),
                       );
                       if (changed == true) _loadMedications();
                     },
@@ -1550,7 +1465,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () async {
                       final changed = await Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const DependentsScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const DependentsScreen()),
                       );
                       if (changed == true) _loadMedications();
                     },
@@ -1590,11 +1506,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.people_outline, color: _Colors.textSecondary, size: 20),
+                      Icon(Icons.people_outline,
+                          color: _Colors.textSecondary, size: 20),
                       SizedBox(width: 8),
                       Text(
                         'لا يوجد تابعين مضافين بعد',
-                        style: TextStyle(color: _Colors.textSecondary, fontSize: 14),
+                        style: TextStyle(
+                            color: _Colors.textSecondary, fontSize: 14),
                       ),
                     ],
                   ),
@@ -1617,7 +1535,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFF085041), width: 1.5),
+                    border:
+                        Border.all(color: const Color(0xFF085041), width: 1.5),
                   ),
                   child: const Text(
                     '+ إضافة تابع',
@@ -1650,7 +1569,9 @@ class _HomeScreenState extends State<HomeScreen> {
         if (changed == true && mounted) {
           final auth = context.read<AuthProvider>();
           if (auth.accessToken != null) {
-            context.read<DependentProvider>().fetchDependents(auth.accessToken!);
+            context
+                .read<DependentProvider>()
+                .fetchDependents(auth.accessToken!);
           }
         }
       },
@@ -1669,7 +1590,10 @@ class _HomeScreenState extends State<HomeScreen> {
               backgroundColor: const Color(0xFFC9932E),
               child: Text(
                 dependent.fullName.isNotEmpty ? dependent.fullName[0] : '?',
-                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
               ),
             ),
             const SizedBox(width: 12),
@@ -1688,7 +1612,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 4),
                   Text(
                     dependent.relationship,
-                    style: const TextStyle(color: _Colors.textSecondary, fontSize: 13),
+                    style: const TextStyle(
+                        color: _Colors.textSecondary, fontSize: 13),
                   ),
                 ],
               ),
@@ -1781,20 +1706,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (nameController.text.trim().isEmpty) return;
                 final auth = context.read<AuthProvider>();
                 if (auth.accessToken == null) return;
-                final success = await context.read<DependentProvider>().updateDependent(
+                final success =
+                    await context.read<DependentProvider>().updateDependent(
                   auth.accessToken!,
                   dependent.id.toString(),
                   {
                     'full_name': nameController.text.trim(),
-                    'relationship': selectedRelationship ?? dependent.relationship,
+                    'relationship':
+                        selectedRelationship ?? dependent.relationship,
                   },
                 );
                 if (dialogContext.mounted) Navigator.pop(dialogContext);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(success ? 'تم التحديث بنجاح ✅' : 'فشل التحديث'),
-                      backgroundColor: success ? const Color(0xFF1D9E75) : Colors.red,
+                      content:
+                          Text(success ? 'تم التحديث بنجاح ✅' : 'فشل التحديث'),
+                      backgroundColor:
+                          success ? const Color(0xFF1D9E75) : Colors.red,
                     ),
                   );
                 }
@@ -1817,7 +1746,8 @@ class _HomeScreenState extends State<HomeScreen> {
         textDirection: TextDirection.rtl,
         child: AlertDialog(
           title: const Text('حذف التابع'),
-          content: Text('هل أنت متأكد من حذف "${dependent.fullName}"؟ لا يمكن التراجع عن هذا الإجراء.'),
+          content: Text(
+              'هل أنت متأكد من حذف "${dependent.fullName}"؟ لا يمكن التراجع عن هذا الإجراء.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
@@ -1837,9 +1767,9 @@ class _HomeScreenState extends State<HomeScreen> {
       final auth = context.read<AuthProvider>();
       if (auth.accessToken == null) return;
       final success = await context.read<DependentProvider>().deleteDependent(
-        auth.accessToken!,
-        dependent.id.toString(),
-      );
+            auth.accessToken!,
+            dependent.id.toString(),
+          );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1892,14 +1822,13 @@ class _HomeScreenState extends State<HomeScreen> {
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: active.length,
-                  itemBuilder: (context, index) =>
-                      _MedicationCard(
-                        medication: active[index],
-                        onEdit: () => _openAddMedicationSheet(
-                          existingMedication: active[index],
-                        ),
-                        onDelete: () => _deleteMedication(active[index]),
-                      ),
+                  itemBuilder: (context, index) => _MedicationCard(
+                    medication: active[index],
+                    onEdit: () => _openAddMedicationSheet(
+                      existingMedication: active[index],
+                    ),
+                    onDelete: () => _deleteMedication(active[index]),
+                  ),
                 ),
         ),
       ],
@@ -1967,7 +1896,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 1.5,
                     );
                   }),
-                  minimumSize: WidgetStateProperty.all(const Size.fromHeight(30)),
+                  minimumSize:
+                      WidgetStateProperty.all(const Size.fromHeight(30)),
                   padding: WidgetStateProperty.all(
                     const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -2003,9 +1933,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         )
                     : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: notTaken
-                      ? const Color(0xFFB85C5C)
-                      : Colors.white,
+                  backgroundColor:
+                      notTaken ? const Color(0xFFB85C5C) : Colors.white,
                   foregroundColor: notTaken ? Colors.white : _Colors.darkGreen,
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
@@ -2054,7 +1983,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   itemCount: selectedMeds.length,
                   itemBuilder: (context, index) {
                     final medication = selectedMeds[index];
@@ -2092,7 +2022,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 12),
           ...List.generate(medication.dosesPerDay, (doseIndex) {
-            return _buildDoseActionRow(medication, _selectedDate, doseIndex, isToday);
+            return _buildDoseActionRow(
+                medication, _selectedDate, doseIndex, isToday);
           }),
         ],
       ),
@@ -2105,7 +2036,11 @@ class _HomeScreenState extends State<HomeScreen> {
       _buildTodayTab(),
       _buildMedicationsTab(),
       _buildRemindersTab(),
-      const ProfileScreen(),
+      ProfileScreen(
+        onNavigateToTab: (tabIndex) {
+          setState(() => _selectedIndex = tabIndex);
+        },
+      ),
     ];
 
     final settings = context.watch<AppSettingsProvider>();
@@ -2164,10 +2099,14 @@ class _MedicationCard extends StatelessWidget {
   final bool showDoseActions;
   final DateTime? selectedDate;
   final bool isToday;
-  final bool Function(MedicationItem medication, DateTime date, int doseIndex)? isTaken;
-  final bool Function(MedicationItem medication, DateTime date, int doseIndex)? isNotTaken;
-  final void Function(MedicationItem medication, DateTime date, int doseIndex, bool markTaken)? onUpdateDoseStatus;
-  final String Function(MedicationItem medication, int doseIndex)? doseTimeLabel;
+  final bool Function(MedicationItem medication, DateTime date, int doseIndex)?
+      isTaken;
+  final bool Function(MedicationItem medication, DateTime date, int doseIndex)?
+      isNotTaken;
+  final void Function(MedicationItem medication, DateTime date, int doseIndex,
+      bool markTaken)? onUpdateDoseStatus;
+  final String Function(MedicationItem medication, int doseIndex)?
+      doseTimeLabel;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
@@ -2260,11 +2199,17 @@ class _MedicationCard extends StatelessWidget {
                   '${medication.timeLabel}. x${medication.dosesPerDay}/اليوم',
                   style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
-                if (showDoseActions && selectedDate != null && isTaken != null && isNotTaken != null && onUpdateDoseStatus != null) ...[
+                if (showDoseActions &&
+                    selectedDate != null &&
+                    isTaken != null &&
+                    isNotTaken != null &&
+                    onUpdateDoseStatus != null) ...[
                   const SizedBox(height: 12),
                   ...List.generate(medication.dosesPerDay, (doseIndex) {
-                    final taken = isTaken!(medication, selectedDate!, doseIndex);
-                    final notTaken = isNotTaken!(medication, selectedDate!, doseIndex);
+                    final taken =
+                        isTaken!(medication, selectedDate!, doseIndex);
+                    final notTaken =
+                        isNotTaken!(medication, selectedDate!, doseIndex);
                     final doseTime = doseTimeLabel!(medication, doseIndex);
 
                     return Padding(
@@ -2293,38 +2238,43 @@ class _MedicationCard extends StatelessWidget {
                                         )
                                     : null,
                                 style: ButtonStyle(
-                                  backgroundColor: WidgetStateProperty.resolveWith(
-                                      (states) {
+                                  backgroundColor:
+                                      WidgetStateProperty.resolveWith((states) {
                                     if (taken) {
                                       return const Color(0xFF1D9E75);
                                     }
                                     return const Color(0xFFE1F5EE).withValues(
-                                      alpha: states.contains(WidgetState.disabled)
-                                          ? 0.4
-                                          : 1.0,
+                                      alpha:
+                                          states.contains(WidgetState.disabled)
+                                              ? 0.4
+                                              : 1.0,
                                     );
                                   }),
-                                  foregroundColor: WidgetStateProperty.resolveWith(
-                                      (states) {
+                                  foregroundColor:
+                                      WidgetStateProperty.resolveWith((states) {
                                     if (taken) {
                                       return Colors.white;
                                     }
                                     return const Color(0xFF1D9E75).withValues(
-                                      alpha: states.contains(WidgetState.disabled)
-                                          ? 0.4
-                                          : 1.0,
+                                      alpha:
+                                          states.contains(WidgetState.disabled)
+                                              ? 0.4
+                                              : 1.0,
                                     );
                                   }),
-                                  side: WidgetStateProperty.resolveWith((states) {
+                                  side:
+                                      WidgetStateProperty.resolveWith((states) {
                                     final color = const Color(0xFF1D9E75);
                                     return BorderSide(
-                                      color: states.contains(WidgetState.disabled)
-                                          ? color.withValues(alpha: 0.4)
-                                          : color,
+                                      color:
+                                          states.contains(WidgetState.disabled)
+                                              ? color.withValues(alpha: 0.4)
+                                              : color,
                                       width: 1.5,
                                     );
                                   }),
-                                  minimumSize: WidgetStateProperty.all(const Size.fromHeight(30)),
+                                  minimumSize: WidgetStateProperty.all(
+                                      const Size.fromHeight(30)),
                                   padding: WidgetStateProperty.all(
                                     const EdgeInsets.symmetric(
                                       horizontal: 16,
@@ -2349,7 +2299,8 @@ class _MedicationCard extends StatelessWidget {
                           ),
                           Expanded(
                             child: Padding(
-                              padding: const EdgeInsetsDirectional.only(start: 4),
+                              padding:
+                                  const EdgeInsetsDirectional.only(start: 4),
                               child: ElevatedButton(
                                 onPressed: isToday
                                     ? () => onUpdateDoseStatus!(
@@ -2360,37 +2311,41 @@ class _MedicationCard extends StatelessWidget {
                                         )
                                     : null,
                                 style: ButtonStyle(
-                                  backgroundColor: WidgetStateProperty.resolveWith(
-                                      (states) {
+                                  backgroundColor:
+                                      WidgetStateProperty.resolveWith((states) {
                                     if (notTaken) {
                                       return const Color(0xFFB85C5C);
                                     }
                                     return Colors.white.withValues(
-                                        alpha: states.contains(WidgetState.disabled)
+                                        alpha: states
+                                                .contains(WidgetState.disabled)
                                             ? 0.4
                                             : 1.0);
                                   }),
-                                  foregroundColor: WidgetStateProperty.resolveWith(
-                                      (states) {
+                                  foregroundColor:
+                                      WidgetStateProperty.resolveWith((states) {
                                     if (notTaken) {
                                       return Colors.white;
                                     }
                                     return _Colors.darkGreen.withValues(
-                                        alpha: states.contains(WidgetState.disabled)
+                                        alpha: states
+                                                .contains(WidgetState.disabled)
                                             ? 0.4
                                             : 1.0);
                                   }),
-                                  side: WidgetStateProperty.resolveWith((states) {
+                                  side:
+                                      WidgetStateProperty.resolveWith((states) {
                                     final color = _Colors.darkGreen;
                                     return BorderSide(
-                                      color: states.contains(WidgetState.disabled)
-                                          ? color.withValues(alpha: 0.4)
-                                          : color,
+                                      color:
+                                          states.contains(WidgetState.disabled)
+                                              ? color.withValues(alpha: 0.4)
+                                              : color,
                                       width: 1.5,
                                     );
                                   }),
-                                  minimumSize:
-                                      WidgetStateProperty.all(const Size.fromHeight(30)),
+                                  minimumSize: WidgetStateProperty.all(
+                                      const Size.fromHeight(30)),
                                   padding: WidgetStateProperty.all(
                                     const EdgeInsets.symmetric(
                                       horizontal: 16,
@@ -2518,11 +2473,9 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
       final nameEn = (suggestion['name_en'] ?? '').toString();
       final nameAr = (suggestion['name_ar'] ?? '').toString();
 
-      _nameController.text =
-          nameAr.isNotEmpty ? '$nameEn — $nameAr' : nameEn;
+      _nameController.text = nameAr.isNotEmpty ? '$nameEn — $nameAr' : nameEn;
 
-      _dosageController.text =
-          suggestion['dosage'] ?? '';
+      _dosageController.text = suggestion['dosage'] ?? '';
 
       _searchController.clear();
       _pharmacySuggestions.clear();
@@ -2549,7 +2502,8 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
 
     widget.onSave(
       MedicationItem(
-        id: widget.existingMedication?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        id: widget.existingMedication?.id ??
+            DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text.trim(),
         dosage: _dosageController.text.trim(),
         type: _selectedType,
@@ -2921,7 +2875,10 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                     ),
                     child: const Text(
                       'حفظ',
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -2931,7 +2888,8 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   child: OutlinedButton(
                     onPressed: () => _save(withReminder: false),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: _Colors.darkGreen, width: 1.5),
+                      side: const BorderSide(
+                          color: _Colors.darkGreen, width: 1.5),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),

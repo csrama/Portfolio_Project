@@ -19,7 +19,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
   bool _isLoading = false;
   String? _generatedLink;
   bool _linkCopied = false;
-  bool _inviteMode = true;
+  final bool _inviteMode = true;
   String? _successMessage;
 
   final List<Map<String, String>> _relationships = [
@@ -184,7 +184,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                     filled: true,
                     fillColor: Color(0xFFF6F6F6),
                   ),
-                  value: _selectedRelationship,
+                  initialValue: _selectedRelationship,
                   items: _relationships.map((item) {
                     return DropdownMenuItem<String>(
                       value: item['value'],

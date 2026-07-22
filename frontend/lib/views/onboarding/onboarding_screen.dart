@@ -282,11 +282,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: _userType,
+                        initialValue: _userType,
                         decoration: InputDecoration(
                           labelText: 'نوع الحساب',
                           filled: true,
-                          fillColor: Colors.white.withOpacity(0.85),
+                          fillColor: Colors.white.withValues(alpha: 0.85),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
