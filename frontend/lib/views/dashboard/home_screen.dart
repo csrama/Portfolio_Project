@@ -1081,7 +1081,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✅ تم حذف الدواء بنجاح'),
+          content: Text(' تم حذف الدواء بنجاح'),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 2),
         ),
@@ -1091,7 +1091,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('❌ فشل الحذف: الكود $lastStatusCode'),
+          content: Text(' فشل الحذف: الكود $lastStatusCode'),
           backgroundColor: Colors.red,
           duration: Duration(seconds: 3),
         ),
@@ -1843,7 +1843,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(success ? 'تم حذف التابع بنجاح 🗑️' : 'فشل الحذف'),
+            content: Text(success ? 'تم حذف التابع بنجاح ' : 'فشل الحذف'),
             backgroundColor: success ? const Color(0xFF1D9E75) : Colors.red,
           ),
         );
@@ -2171,7 +2171,8 @@ class _MedicationCard extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
-  const _MedicationCard({
+  const _MedicationCard(
+    {
     required this.medication,
     this.onEdit,
     this.onDelete,
