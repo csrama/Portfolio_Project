@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import '../../repositories/auth_repository.dart';
 import '../../services/google_auth_service.dart';
 import 'package:http/http.dart' as http;
@@ -2467,28 +2467,33 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   List<Map<String, dynamic>> _pharmacySuggestions = [];
 
   Future<void> _searchMedicines(String query) async {
-    if (query.trim().isEmpty) {
-      setState(() {
-        _pharmacySuggestions.clear();
-      });
-      return;
-    }
-
-    final auth = context.read<AuthProvider>();
-
-    try {
-      final result = await ApiService.getJsonList(
-        '/medicines/search?q=$query',
-        token: auth.accessToken!,
-      );
-
-      setState(() {
-        _pharmacySuggestions = List<Map<String, dynamic>>.from(result);
-      });
-    } catch (e) {
-      debugPrint(e.toString());
-    }
+  if (query.trim().isEmpty) {
+    setState(() {
+      _pharmacySuggestions.clear();
+    });
+    return;
   }
+
+  final auth = context.read<AuthProvider>();
+
+  try {
+    final result = await ApiService.getJsonList(
+      '/medicines/search?q=$query',
+      token: auth.accessToken!,
+    );
+
+    print('🟢 SEARCH RESULT LENGTH: ${result.length}');
+    print('🟢 SEARCH RESULT DATA: $result');
+
+    setState(() {
+      _pharmacySuggestions = List<Map<String, dynamic>>.from(result);
+    });
+
+    print('🟢 SUGGESTIONS AFTER SETSTATE: ${_pharmacySuggestions.length}');
+  } catch (e) {
+    print('🔴 SEARCH ERROR: $e');
+  }
+}
 
   @override
   void initState() {

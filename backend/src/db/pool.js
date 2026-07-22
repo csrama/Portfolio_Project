@@ -2,24 +2,15 @@ require('dotenv').config();
 const { Pool } = require('pg');
 
 const connectionString = process.env.DATABASE_URL;
-let pool;
-let useMemoryStore = false;
 
-try {
-  pool = new Pool({ connectionString });
-} catch (error) {
-  pool = null;
-  useMemoryStore = true;
-}
+const pool = new Pool({
+  connectionString,
+  ssl: { rejectUnauthorized: false },
+});
 
-const memoryStore = {
-  users: [],
-  medications: [],
-  schedules: [],
-  doseRecords: [],
-  notifications: [],
-  dependents: []
-};
+pool.on('error', (err) => {
+  console.error('❌ Unexpected DB pool error:', err);
+});
 
 function normalizeUserType(userType) {
   if (!userType) {
@@ -52,18 +43,12 @@ function normalizeUser(user) {
   };
 }
 
-async function queryWithFallback(text, params = []) {
-  if (!pool) {
-    throw new Error('قاعدة البيانات غير متوفرة');
-  }
-
+async function queryWithFallback(text, params = []) 
+{
   try {
     return await pool.query(text, params);
   } catch (error) {
-    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || error.message?.includes('getaddrinfo')) {
-      useMemoryStore = true;
-      return { rows: [] };
-    }
+    console.error(' DB query failed:', error.message);
     throw error;
   }
 }
@@ -73,11 +58,8 @@ const db = {
     return queryWithFallback(text, params);
   },
 
-  async searchMedicines(term) {
-    if (useMemoryStore) {
-      return [];
-    }
-
+  async searchMedicines(term)
+   {
     const { rows } = await queryWithFallback(
       `SELECT id, name_en, name_ar, dosage, category
        FROM medicines
@@ -90,26 +72,8 @@ const db = {
     return rows;
   },
 
-  async createUser(data) {
-    if (useMemoryStore) {
-      const user = {
-        id: memoryStore.users.length + 1,
-        email: (data.email || '').toLowerCase(),
-        password_hash: data.password_hash,
-        full_name: data.full_name || null,
-        user_type: normalizeUserType(data.user_type),
-        age: data.age || null,
-        sex: data.sex || null,
-        medical_condition: data.medical_condition || null,
-        is_onboarding_complete: data.is_onboarding_complete || false,
-        is_active: data.is_active !== false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      memoryStore.users.push(user);
-      return normalizeUser(user);
-    }
-
+  async createUser(data) 
+  {
     const { rows } = await queryWithFallback(
       `INSERT INTO users (email, password_hash, full_name, user_type, age, sex, medical_condition, is_onboarding_complete, is_active)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -129,33 +93,22 @@ const db = {
     return normalizeUser(rows[0]);
   },
 
-  async findUserByEmail(email) {
+  async findUserByEmail(email) 
+  {
     const normalizedEmail = (email || '').toLowerCase();
-    if (useMemoryStore) {
-      return memoryStore.users.find((user) => user.email === normalizedEmail) || null;
-    }
-
+    
     const { rows } = await queryWithFallback('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
     return rows[0] || null;
   },
 
-  async findUserById(id) {
-    if (useMemoryStore) {
-      return memoryStore.users.find((user) => user.id === Number(id)) || null;
-    }
-
+  async findUserById(id) 
+  {
     const { rows } = await queryWithFallback('SELECT * FROM users WHERE id = $1', [id]);
     return rows[0] || null;
   },
 
-  async updateUser(userId, updates) {
-    if (useMemoryStore) {
-      const user = memoryStore.users.find((u) => u.id === Number(userId));
-      if (!user) return null;
-      Object.assign(user, updates);
-      return user;
-    }
-
+  async updateUser(userId, updates) 
+  {
     const fields = [];
     const values = [];
     let paramIndex = 1;
@@ -193,14 +146,8 @@ const db = {
     return rows[0] || null;
   },
 
-  async deleteUser(userId) {
-    if (useMemoryStore) {
-      const index = memoryStore.users.findIndex((item) => item.id === Number(userId));
-      if (index === -1) return null;
-      memoryStore.users.splice(index, 1);
-      return { id: Number(userId) };
-    }
-
+  async deleteUser(userId) 
+  {
     const { rows } = await queryWithFallback(
       `DELETE FROM users WHERE id = $1 RETURNING id`,
       [userId]
@@ -208,32 +155,8 @@ const db = {
     return rows[0] || null;
   },
 
-  async createMedication(data) {
-    if (useMemoryStore) {
-      const medication = {
-        id: memoryStore.medications.length + 1,
-        user_id: data.user_id,
-        dependent_id: data.dependent_id || null,
-        name: data.name,
-        dosage: data.dosage || null,
-        form: data.form || 'tablet',
-        instructions: data.instructions || null,
-        color: data.color || null,
-        total_quantity: data.total_quantity || 1,
-        low_stock_threshold: data.low_stock_threshold || 1,
-        is_active: data.is_active !== false,
-        type: data.type ?? 0,
-        days_of_week: data.days_of_week ?? [],
-        period: data.period ?? 'صباحا',
-        time: data.time ?? '08:00',
-        doses_per_day: data.doses_per_day ?? 1,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      memoryStore.medications.push(medication);
-      return medication;
-    }
-
+  async createMedication(data) 
+  {
     const { rows } = await queryWithFallback(
       `INSERT INTO medications (
         user_id, dependent_id, name, dosage, form, instructions, color,
@@ -262,28 +185,8 @@ const db = {
     return rows[0];
   },
 
-  async createDependentDirect(data) {
-    if (useMemoryStore) {
-      const dependent = {
-        id: memoryStore.dependents.length + 1,
-        caregiver_user_id: data.caregiver_user_id,
-        dependent_user_id: data.dependent_user_id || null,
-        full_name: data.full_name || '',
-        date_of_birth: data.date_of_birth || null,
-        relationship: data.relationship,
-        profile_image_url: data.profile_image_url || null,
-        medical_conditions: data.medical_conditions || [],
-        invitation_status: 'accepted',
-        invitation_token: null,
-        invited_at: new Date().toISOString(),
-        accepted_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      memoryStore.dependents.push(dependent);
-      return dependent;
-    }
-
+  async createDependentDirect(data) 
+  {
     const { rows } = await queryWithFallback(
       `INSERT INTO dependents (
         caregiver_user_id, dependent_user_id, full_name, date_of_birth,
@@ -304,28 +207,8 @@ const db = {
     return rows[0];
   },
 
-  async createDependent(data) {
-    if (useMemoryStore) {
-      const dependent = {
-        id: memoryStore.dependents.length + 1,
-        caregiver_user_id: data.caregiver_user_id,
-        dependent_user_id: data.dependent_user_id || null,
-        full_name: data.full_name || '',
-        date_of_birth: data.date_of_birth || null,
-        relationship: data.relationship,
-        profile_image_url: data.profile_image_url || null,
-        medical_conditions: data.medical_conditions || [],
-        invitation_status: data.invitation_status || 'pending',
-        invitation_token: data.invitation_token || null,
-        invited_at: new Date().toISOString(),
-        accepted_at: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      memoryStore.dependents.push(dependent);
-      return dependent;
-    }
-
+  async createDependent(data) 
+  {
     const { rows } = await queryWithFallback(
       `INSERT INTO dependents (
         caregiver_user_id, dependent_user_id, full_name, date_of_birth,
@@ -349,11 +232,8 @@ const db = {
     return rows[0];
   },
 
-  async listDependents(caregiverId) {
-    if (useMemoryStore) {
-      return memoryStore.dependents.filter((item) => item.caregiver_user_id === Number(caregiverId));
-    }
-
+  async listDependents(caregiverId) 
+  {
     const { rows } = await queryWithFallback(
       'SELECT * FROM dependents WHERE caregiver_user_id = $1 ORDER BY created_at DESC',
       [caregiverId]
@@ -361,16 +241,8 @@ const db = {
     return rows;
   },
 
-  async listDependentsWithUsers(caregiverId) {
-    if (useMemoryStore) {
-      return memoryStore.dependents
-        .filter((item) => item.caregiver_user_id === Number(caregiverId))
-        .map((item) => {
-          const user = memoryStore.users.find((u) => u.id === item.dependent_user_id);
-          return { ...item, user };
-        });
-    }
-
+  async listDependentsWithUsers(caregiverId)
+   {
     const { rows } = await queryWithFallback(
       `SELECT d.*, 
               u.id as user_id,
@@ -388,16 +260,8 @@ const db = {
     return rows;
   },
 
-  async getDependentWithUser(dependentId, caregiverId) {
-    if (useMemoryStore) {
-      const dependent = memoryStore.dependents.find(
-        (item) => item.id === Number(dependentId) && item.caregiver_user_id === Number(caregiverId)
-      );
-      if (!dependent) return null;
-      const user = memoryStore.users.find((u) => u.id === dependent.dependent_user_id);
-      return { ...dependent, user };
-    }
-
+  async getDependentWithUser(dependentId, caregiverId) 
+  {
     const { rows } = await queryWithFallback(
       `SELECT d.*, 
               u.id as user_id,
@@ -414,13 +278,8 @@ const db = {
     return rows[0] || null;
   },
 
-  async getDependentById(dependentId, caregiverId) {
-    if (useMemoryStore) {
-      return memoryStore.dependents.find(
-        (item) => item.id === Number(dependentId) && item.caregiver_user_id === Number(caregiverId)
-      ) || null;
-    }
-
+  async getDependentById(dependentId, caregiverId) 
+  {
     const { rows } = await queryWithFallback(
       'SELECT * FROM dependents WHERE id = $1 AND caregiver_user_id = $2',
       [dependentId, caregiverId]
@@ -428,11 +287,8 @@ const db = {
     return rows[0] || null;
   },
 
-  async getDependentByInviteToken(token) {
-    if (useMemoryStore) {
-      return memoryStore.dependents.find((item) => item.invitation_token === token) || null;
-    }
-
+  async getDependentByInviteToken(token)
+  {
     const { rows } = await queryWithFallback(
       'SELECT * FROM dependents WHERE invitation_token = $1',
       [token]
@@ -440,20 +296,8 @@ const db = {
     return rows[0] || null;
   },
 
-  async updateDependent(dependentId, caregiverId, updates) {
-    if (useMemoryStore) {
-      const dependent = memoryStore.dependents.find(
-        (item) => item.id === Number(dependentId) && item.caregiver_user_id === Number(caregiverId)
-      );
-      if (!dependent) return null;
-
-      Object.assign(dependent, {
-        relationship: updates.relationship ?? dependent.relationship,
-        updated_at: new Date().toISOString()
-      });
-      return dependent;
-    }
-
+  async updateDependent(dependentId, caregiverId, updates)
+   {
     const fields = [];
     const values = [];
     let paramIndex = 1;
@@ -464,7 +308,7 @@ const db = {
     }
 
     if (fields.length === 0) {
-      return getDependentById(dependentId, caregiverId);
+      return this.getDependentById(dependentId, caregiverId);
     }
 
     fields.push(`updated_at = NOW()`);
@@ -480,16 +324,8 @@ const db = {
     return rows[0] || null;
   },
 
-  async deleteDependent(dependentId, caregiverId) {
-    if (useMemoryStore) {
-      const index = memoryStore.dependents.findIndex(
-        (item) => item.id === Number(dependentId) && item.caregiver_user_id === Number(caregiverId)
-      );
-      if (index === -1) return null;
-      memoryStore.dependents.splice(index, 1);
-      return { id: Number(dependentId) };
-    }
-
+  async deleteDependent(dependentId, caregiverId)
+   {
     const { rows } = await queryWithFallback(
       'DELETE FROM dependents WHERE id = $1 AND caregiver_user_id = $2 RETURNING id',
       [dependentId, caregiverId]
@@ -497,15 +333,8 @@ const db = {
     return rows[0] || null;
   },
 
-  async acceptDependentInvite(dependentId) {
-    if (useMemoryStore) {
-      const dependent = memoryStore.dependents.find((item) => item.id === Number(dependentId));
-      if (!dependent) return null;
-      dependent.invitation_status = 'accepted';
-      dependent.accepted_at = new Date().toISOString();
-      return dependent;
-    }
-
+  async acceptDependentInvite(dependentId) 
+  {
     const { rows } = await queryWithFallback(
       `UPDATE dependents
        SET invitation_status = 'accepted', accepted_at = NOW(), updated_at = NOW()
@@ -516,33 +345,13 @@ const db = {
     return rows[0] || null;
   },
 
-  async claimDependentInvite(token, userId) {
-    if (useMemoryStore) {
-      const dependent = memoryStore.dependents.find((item) => item.invitation_token === token);
-      if (!dependent) return null;
-      if (dependent.invitation_status !== 'pending') return null;
-
-      // If there's an existing placeholder user, delete old user reference
-      if (dependent.dependent_user_id && dependent.dependent_user_id !== Number(userId)) {
-        const oldUserIndex = memoryStore.users.findIndex((u) => u.id === dependent.dependent_user_id);
-        if (oldUserIndex !== -1) {
-          memoryStore.users.splice(oldUserIndex, 1);
-        }
-      }
-
-      dependent.dependent_user_id = Number(userId);
-      dependent.invitation_status = 'accepted';
-      dependent.accepted_at = new Date().toISOString();
-      dependent.updated_at = new Date().toISOString();
-      return dependent;
-    }
-
-    // Start by getting the dependent record
+  async claimDependentInvite(token, userId)
+   {
     const dependent = await this.getDependentByInviteToken(token);
     if (!dependent) return null;
     if (dependent.invitation_status !== 'pending') return null;
-    if (dependent.dependent_user_id && dependent.dependent_user_id !== userId) {
-      // Delete the old placeholder user
+    if (dependent.dependent_user_id && dependent.dependent_user_id !== userId) 
+      {
       await queryWithFallback('DELETE FROM users WHERE id = $1', [dependent.dependent_user_id]);
     }
 
@@ -556,16 +365,8 @@ const db = {
     return rows[0] || null;
   },
 
-  async listMedications(userId, dependentId = null) {
-    if (useMemoryStore) {
-      return memoryStore.medications.filter((item) => {
-        if (dependentId) {
-          return item.user_id === Number(dependentId) || item.dependent_id === Number(dependentId);
-        }
-        return item.user_id === Number(userId) && !item.dependent_id;
-      });
-    }
-
+  async listMedications(userId, dependentId = null) 
+  {
     let queryText;
     let params;
 
@@ -581,35 +382,14 @@ const db = {
     return rows;
   },
 
-  async getMedicationById(id) {
-    if (useMemoryStore) {
-      return memoryStore.medications.find((item) => item.id === Number(id)) || null;
-    }
-
+  async getMedicationById(id) 
+  {
     const { rows } = await queryWithFallback('SELECT * FROM medications WHERE id = $1', [id]);
     return rows[0] || null;
   },
 
-  async updateMedication({ id, userId, updates }) {
-    if (useMemoryStore) {
-      const medication = memoryStore.medications.find(
-        (item) => item.id === Number(id) && (item.user_id === Number(userId) || item.dependent_id === Number(userId))
-      );
-      if (!medication) return null;
-
-      Object.assign(medication, {
-        name: updates.name ?? medication.name,
-        dosage: updates.dosage ?? medication.dosage,
-        form: updates.form ?? medication.form,
-        instructions: updates.instructions ?? medication.instructions,
-        total_quantity: updates.total_quantity ?? medication.total_quantity,
-        is_active: updates.is_active ?? medication.is_active,
-        updated_at: new Date().toISOString()
-      });
-
-      return medication;
-    }
-
+  async updateMedication({ id, userId, updates }) 
+  {
     const { rows } = await queryWithFallback(
       `UPDATE medications
        SET
@@ -637,17 +417,8 @@ const db = {
     return rows[0] || null;
   },
 
-  async deleteMedication({ id, userId }) {
-    if (useMemoryStore) {
-      const medication = memoryStore.medications.find(
-        (item) => item.id === Number(id) && (item.user_id === Number(userId) || item.dependent_id === Number(userId))
-      );
-      if (!medication) return null;
-      medication.is_active = false;
-      medication.updated_at = new Date().toISOString();
-      return medication;
-    }
-
+  async deleteMedication({ id, userId }) 
+  {
     const { rows } = await queryWithFallback(
       `UPDATE medications
        SET is_active = FALSE, updated_at = NOW()
@@ -659,22 +430,8 @@ const db = {
     return rows[0] || null;
   },
 
-  async createSchedule(data) {
-    if (useMemoryStore) {
-      const schedule = {
-        id: memoryStore.schedules.length + 1,
-        user_id: data.user_id,
-        medication_id: data.medication_id || null,
-        days_of_week: data.days_of_week || ['Monday'],
-        time_of_day: data.time_of_day || '08:00',
-        is_active: data.is_active !== false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      memoryStore.schedules.push(schedule);
-      return schedule;
-    }
-
+  async createSchedule(data) 
+  {
     const { rows } = await queryWithFallback(
       `INSERT INTO schedules (user_id, medication_id, days_of_week, time_of_day, is_active)
        VALUES ($1, $2, $3, $4, $5)
@@ -690,33 +447,14 @@ const db = {
     return rows[0];
   },
 
-  async listSchedules(userId) {
-    if (useMemoryStore) {
-      return memoryStore.schedules.filter((item) => item.user_id === Number(userId));
-    }
-
+  async listSchedules(userId) 
+  {
     const { rows } = await queryWithFallback('SELECT * FROM schedules WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
     return rows;
   },
 
-  async createDoseRecord(data) {
-    if (useMemoryStore) {
-      const record = {
-        id: memoryStore.doseRecords.length + 1,
-        user_id: data.user_id,
-        medication_id: data.medication_id || null,
-        schedule_id: data.schedule_id || null,
-        scheduled_time: data.scheduled_time || new Date().toISOString(),
-        taken_time: data.taken_time || null,
-        status: data.status || 'PENDING',
-        dose_taken: Boolean(data.dose_taken),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      memoryStore.doseRecords.push(record);
-      return record;
-    }
-
+  async createDoseRecord(data)
+   {
     const { rows } = await queryWithFallback(
       `INSERT INTO dose_records (user_id, medication_id, schedule_id, scheduled_time, taken_time, status, dose_taken)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -734,23 +472,14 @@ const db = {
     return rows[0];
   },
 
-  async listDoseRecords(userId) {
-    if (useMemoryStore) {
-      return memoryStore.doseRecords.filter((item) => item.user_id === Number(userId));
-    }
-
+  async listDoseRecords(userId)
+   {
     const { rows } = await queryWithFallback('SELECT * FROM dose_records WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
     return rows;
   },
 
-  async updateDoseRecord(id, updates) {
-    if (useMemoryStore) {
-      const record = memoryStore.doseRecords.find((item) => item.id === Number(id));
-      if (!record) return null;
-      Object.assign(record, updates, { updated_at: new Date().toISOString() });
-      return record;
-    }
-
+  async updateDoseRecord(id, updates)
+   {
     const { rows } = await queryWithFallback(
       `UPDATE dose_records SET status = COALESCE($2, status), taken_time = COALESCE($3, taken_time), dose_taken = COALESCE($4, dose_taken), updated_at = NOW()
        WHERE id = $1 RETURNING *`,
@@ -759,22 +488,8 @@ const db = {
     return rows[0] || null;
   },
 
-  async createNotification(data) {
-    if (useMemoryStore) {
-      const notification = {
-        id: memoryStore.notifications.length + 1,
-        user_id: data.user_id,
-        type: data.type || 'info',
-        title: data.title || 'Reminder',
-        body: data.body || '',
-        data: data.data || {},
-        sent_at: new Date().toISOString(),
-        delivered: true
-      };
-      memoryStore.notifications.push(notification);
-      return notification;
-    }
-
+  async createNotification(data) 
+  {
     const { rows } = await queryWithFallback(
       `INSERT INTO notification_logs (user_id, type, title, body, data, sent_at, delivered)
        VALUES ($1, $2, $3, $4, $5, NOW(), TRUE)
@@ -795,8 +510,5 @@ module.exports = {
   pool: db,
   db,
   normalizeUser,
-  pgPool: pool,
-  get useMemoryStore() {
-    return useMemoryStore;
-  }
+  pgPool: pool
 };
