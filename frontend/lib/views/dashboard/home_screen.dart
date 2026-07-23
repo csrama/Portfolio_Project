@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import '../../repositories/auth_repository.dart';
 import '../../services/google_auth_service.dart';
 import 'package:http/http.dart' as http;
@@ -44,6 +44,15 @@ String _relationshipValue(String? arabicLabel) {
   return reversedMap.isNotEmpty ? reversedMap.first : 'other';
 }
 
+String _medicineDisplayName(Map<String, dynamic> medicine, String langCode) {
+  final nameEn = (medicine['name_en'] ?? '').toString();
+  final nameAr = (medicine['name_ar'] ?? '').toString();
+  if (langCode == 'en') {
+    return nameEn.isNotEmpty ? nameEn : nameAr;
+  }
+  return nameAr.isNotEmpty ? nameAr : nameEn;
+}
+
 class _Colors {
   static const Color primaryGreen = Color(0xFF1D9E75);
   static const Color darkGreen = Color(0xFF085041);
@@ -67,13 +76,13 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final List<MedicationItem> _medications =
-      []; // unlimited: just a growing list
-  final Set<String> _takenMedications = {}; // medication name + date key
-  final Set<String> _notTakenMedications = {}; // explicit not-taken state
-  final Map<String, int> _doseRecordIds = {}; // نفس المفتاح -> id السجل بالباك إند
-  List<DrugInteraction> _interactions = []; // تداخلات دوائية بين الأدوية الحالية
+      []; 
+  final Set<String> _takenMedications = {}; 
+  final Set<String> _notTakenMedications = {}; 
+  final Map<String, int> _doseRecordIds = {}; 
+  List<DrugInteraction> _interactions = []; 
   final DrugInteractionService _interactionService = DrugInteractionService();
-  bool _interactionsBannerExpanded = false; // مطوي افتراضياً، يفتح بالضغط
+  bool _interactionsBannerExpanded = false; 
 
   late final List<DateTime> _dateStrip;
   late DateTime _selectedDate;
@@ -86,7 +95,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _dateStrip = List.generate(7, (i) => today.add(Duration(days: i - 3)));
     _loadMedications();
     _loadTakenMedications();
-    // Load dependents list for the Today tab
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = context.read<AuthProvider>();
       if (auth.accessToken != null) {
@@ -553,8 +561,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// يفحص كل الأدوية الحالية (بعضها ببعض) ويخزّن أي تداخلات موجودة
-  /// في _interactions، عشان يعرضها البانر بأعلى الشاشة الرئيسية.
   Future<void> _checkAllInteractions() async {
     if (_medications.length < 2) {
       if (mounted) setState(() => _interactions = []);
@@ -569,8 +575,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// يفحص دواء معيّن (بالاسم) مقابل بقية الأدوية الحالية فقط،
-  /// يُستخدم لعرض تحذير فوري بعد إضافة دواء جديد.
   Future<List<DrugInteraction>> _checkInteractionsFor(
       String newMedName) async {
     try {
@@ -614,7 +618,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// يبني نص + لون التفاصيل لتداخل واحد بالعربي (يرجع للإنجليزي لو ما لقى ترجمة).
   Widget _buildInteractionDetailTile(DrugInteraction i,
       {bool emphasize = false}) {
     return Padding(
@@ -652,7 +655,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// يعرض نافذة تفاصيل تداخل (أو أكثر) بالعربي.
   Future<void> _showInteractionDetailsDialog(
       List<DrugInteraction> found) async {
     if (found.isEmpty || !mounted) return;
@@ -688,19 +690,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// يعرض نافذة تحذير فورية لو الدواء المُضاف حديثاً يتعارض مع أدوية موجودة.
   Future<void> _showInteractionWarningIfNeeded(String newMedName) async {
     final found = await _checkInteractionsFor(newMedName);
     await _showInteractionDetailsDialog(found);
   }
 
-  /// بانر قابل للطي بأعلى الشاشة الرئيسية يعرض كل التداخلات الموجودة حالياً.
-  /// مطوي افتراضياً (سطر ملخّص واحد)، يفتح بالضغط عليه، وكل عنصر بداخله
-  /// قابل للضغط لفتح تفاصيله الكاملة.
+  
   Widget _buildInteractionsBanner() {
     if (_interactions.isEmpty) return const SizedBox.shrink();
 
-    final highest = _interactions.first; // مفروزة مسبقاً من الأخطر للأبسط
+    final highest = _interactions.first; 
     final highestSeverity = highest.severity;
     final counts = <String, int>{};
     for (final i in _interactions) {
@@ -900,7 +899,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 debugPrint('Error updating medication: $e');
               }
             }
-            // فحص التداخل بعد تحديث دواء موجود (قد يكون الاسم تغيّر)
             await _showInteractionWarningIfNeeded(med.name);
           } else {
             if (selectedDep != null && authProvider.accessToken != null) {
@@ -1072,7 +1070,7 @@ class _HomeScreenState extends State<HomeScreen> {
         lastStatusCode = response.statusCode;
       }
     } catch (e) {
-      debugPrint('❌ Error with ${test['path']}: $e');
+      debugPrint(' Error with ${test['path']}: $e');
     }
   }
 
@@ -1352,8 +1350,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildDateStrip() {
-    // شريط مرن يمتلئ بعرض الشاشة بنفس هوامش باقي عناصر التصميم (16px)
-    // بدل قائمة أفقية بعرض ثابت تترك فراغ على الشاشات الواسعة.
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
@@ -1435,7 +1431,6 @@ class _HomeScreenState extends State<HomeScreen> {
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             children: [
-              // --- Medications Section Links Row ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -1466,7 +1461,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              // --- Medications Section Title ---
               const Align(
                 alignment: Alignment.centerRight,
                 child: Text(
@@ -1479,7 +1473,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              // --- Medications List ---
               if (todaysMeds.isEmpty)
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -1506,7 +1499,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       onDelete: () => _deleteMedication(med),
                     )),
               const SizedBox(height: 16),
-              // --- Add Medication Button ---
               GestureDetector(
                 onTap: () => _openAddMedicationSheet(),
                 child: Container(
@@ -1525,7 +1517,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 24),
 
-              // --- Dependents Section Links Row ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -1566,7 +1557,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              // --- Dependents Section Title ---
               const Align(
                 alignment: Alignment.centerRight,
                 child: Text(
@@ -1579,7 +1569,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              // --- Dependents List ---
               if (dependentsList.isEmpty)
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -1602,7 +1591,6 @@ class _HomeScreenState extends State<HomeScreen> {
               else
                 ...dependentsList.map((dep) => _buildDependentCard(dep)),
               const SizedBox(height: 16),
-              // --- Add Dependent Button ---
               GestureDetector(
                 onTap: () async {
                   final changed = await Navigator.push(
@@ -1793,7 +1781,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(success ? 'تم التحديث بنجاح ✅' : 'فشل التحديث'),
+                      content: Text(success ? 'تم التحديث بنجاح ' : 'فشل التحديث'),
                       backgroundColor: success ? const Color(0xFF1D9E75) : Colors.red,
                     ),
                   );
@@ -2156,9 +2144,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ---------------------------------------------------------------------
-// Medication card (used in both tabs)
-// ---------------------------------------------------------------------
 class _MedicationCard extends StatelessWidget {
   final MedicationItem medication;
   final bool showDoseActions;
@@ -2171,8 +2156,7 @@ class _MedicationCard extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
-  const _MedicationCard(
-    {
+  const _MedicationCard({
     required this.medication,
     this.onEdit,
     this.onDelete,
@@ -2428,9 +2412,6 @@ class _MedicationCard extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------
-// Add medication bottom sheet
-// ---------------------------------------------------------------------
 class _AddMedicationSheet extends StatefulWidget {
   final MedicationItem? existingMedication;
   final void Function(MedicationItem medication) onSave;
@@ -2483,16 +2464,16 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
       token: auth.accessToken!,
     );
 
-    print('🟢 SEARCH RESULT LENGTH: ${result.length}');
-    print('🟢 SEARCH RESULT DATA: $result');
+    print(' SEARCH RESULT LENGTH: ${result.length}');
+    print(' SEARCH RESULT DATA: $result');
 
     setState(() {
       _pharmacySuggestions = List<Map<String, dynamic>>.from(result);
     });
 
-    print('🟢 SUGGESTIONS AFTER SETSTATE: ${_pharmacySuggestions.length}');
+    print(' SUGGESTIONS AFTER SETSTATE: ${_pharmacySuggestions.length}');
   } catch (e) {
-    print('🔴 SEARCH ERROR: $e');
+    print(' SEARCH ERROR: $e');
   }
 }
 
@@ -2520,12 +2501,9 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   }
 
   void _selectSuggestion(Map<String, dynamic> suggestion) {
+    final langCode = context.read<AppSettingsProvider>().languageCode;
     setState(() {
-      final nameEn = (suggestion['name_en'] ?? '').toString();
-      final nameAr = (suggestion['name_ar'] ?? '').toString();
-
-      _nameController.text =
-          nameAr.isNotEmpty ? '$nameEn — $nameAr' : nameEn;
+      _nameController.text = _medicineDisplayName(suggestion, langCode);
 
       _dosageController.text =
           suggestion['dosage'] ?? '';
@@ -2686,12 +2664,12 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                       itemCount: _pharmacySuggestions.length,
                       itemBuilder: (context, index) {
                         final item = _pharmacySuggestions[index];
-                        final nameEn = (item['name_en'] ?? '').toString();
-                        final nameAr = (item['name_ar'] ?? '').toString();
+                        final langCode =
+                            context.watch<AppSettingsProvider>().languageCode;
 
                         return ListTile(
                           title: Text(
-                            nameAr.isNotEmpty ? '$nameEn — $nameAr' : nameEn,
+                            _medicineDisplayName(item, langCode),
                             textAlign: TextAlign.right,
                           ),
                           subtitle: Text(
