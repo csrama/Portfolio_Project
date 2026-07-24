@@ -4,9 +4,19 @@ import 'package:provider/provider.dart';
 import '../../models/dependent.dart';
 import '../../models/medication_item.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/app_settings_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/dependent_service.dart';
 import '../../services/notification_service.dart';
+
+String _medicineDisplayName(Map<String, dynamic> medicine, String langCode) {
+  final nameEn = (medicine['name_en'] ?? '').toString();
+  final nameAr = (medicine['name_ar'] ?? '').toString();
+  if (langCode == 'en') {
+    return nameEn.isNotEmpty ? nameEn : nameAr;
+  }
+  return nameAr.isNotEmpty ? nameAr : nameEn;
+}
 
 class _Colors {
   static const Color primaryGreen = Color(0xFF1D9E75);
@@ -202,14 +212,14 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
     final auth = context.read<AuthProvider>();
     if (auth.accessToken == null) return;
 
+    final langCode = context.read<AppSettingsProvider>().languageCode;
+
     try {
       await ApiService.postJson(
         '/medications',
         body: {
           'dependent_id': int.parse(widget.dependent.id.toString()),
-          'name': (med['name_ar']?.toString().isNotEmpty == true
-              ? '${med['name_en']} — ${med['name_ar']}'
-              : med['name_en'] ?? '').toString(),
+          'name': _medicineDisplayName(med, langCode),
           'dosage': med['dosage'] ?? '',
           'type': 0,
           'days_of_week': [],
@@ -258,7 +268,6 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
       ),
       body: Column(
         children: [
-          // --- Search Section ---
           Container(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             color: _Colors.darkGreen,
@@ -291,7 +300,6 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
               ),
             ),
           ),
-          // --- Search Results Dropdown ---
           if (_searchResults.isNotEmpty)
             Container(
               constraints: const BoxConstraints(maxHeight: 200),
@@ -310,11 +318,11 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                 itemCount: _searchResults.length,
                 itemBuilder: (context, index) {
                   final item = _searchResults[index];
-                  final nameEn = (item['name_en'] ?? '').toString();
-                  final nameAr = (item['name_ar'] ?? '').toString();
+                  final langCode =
+                      context.watch<AppSettingsProvider>().languageCode;
                   return ListTile(
                     title: Text(
-                      nameAr.isNotEmpty ? '$nameEn — $nameAr' : nameEn,
+                      _medicineDisplayName(item, langCode),
                       textAlign: TextAlign.right,
                     ),
                     subtitle: Text(
@@ -328,7 +336,6 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
               ),
             ),
 
-          // --- Content ---
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -417,7 +424,6 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                             ),
                             const SizedBox(height: 24),
 
-                            // --- Medications Section Header ---
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -455,7 +461,6 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                             ),
                             const SizedBox(height: 12),
 
-                            // --- Medications List ---
                             if (_medications.isEmpty)
                               Container(
                                 padding: const EdgeInsets.all(16),
@@ -483,7 +488,6 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                               ..._medications.map((med) => _buildMedicationCard(med)),
                             const SizedBox(height: 16),
 
-                            // --- Add Medication Button ---
                             GestureDetector(
                               onTap: () => _openAddMedicationSheet(),
                               child: Container(
@@ -674,10 +678,9 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
   }
 
   void _selectSuggestion(Map<String, dynamic> suggestion) {
+    final langCode = context.read<AppSettingsProvider>().languageCode;
     setState(() {
-      final nameEn = (suggestion['name_en'] ?? '').toString();
-      final nameAr = (suggestion['name_ar'] ?? '').toString();
-      _nameController.text = nameAr.isNotEmpty ? '$nameEn — $nameAr' : nameEn;
+      _nameController.text = _medicineDisplayName(suggestion, langCode);
       _dosageController.text = suggestion['dosage'] ?? '';
       _searchController.clear();
       _pharmacySuggestions.clear();
@@ -706,7 +709,6 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
 
     try {
       if (widget.existingMedication != null) {
-        // Update existing medication
         await ApiService.putJson(
           '/medications/${widget.existingMedication!.id}',
           body: {
@@ -721,7 +723,6 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
           token: auth.accessToken!,
         );
       } else {
-        // Add new medication for dependent
         await ApiService.postJson(
           '/medications',
           body: {
@@ -887,11 +888,11 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
                       itemCount: _pharmacySuggestions.length,
                       itemBuilder: (context, index) {
                         final item = _pharmacySuggestions[index];
-                        final nameEn = (item['name_en'] ?? '').toString();
-                        final nameAr = (item['name_ar'] ?? '').toString();
+                        final langCode =
+                            context.watch<AppSettingsProvider>().languageCode;
                         return ListTile(
                           title: Text(
-                            nameAr.isNotEmpty ? '$nameEn — $nameAr' : nameEn,
+                            _medicineDisplayName(item, langCode),
                             textAlign: TextAlign.right,
                           ),
                           subtitle: Text(
@@ -1129,4 +1130,3 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
     );
   }
 }
-
