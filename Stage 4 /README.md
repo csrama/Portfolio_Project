@@ -188,5 +188,5 @@ Links to be completed by the team before submission:
 
 ●      Testing evidence and results: \[Insert link — QA checklist results, screenshots, or test reports\]
 
-●      Production environment: \[http://localhost:56417/\]
+●      Production environment: \[http://localhost:56417/\][<img width="1600" height="900" alt="QR code APK " src="https://github.com/user-attachments/assets/4268c0dc-cecb-4c86-910f-60df27f13053" />]
 
