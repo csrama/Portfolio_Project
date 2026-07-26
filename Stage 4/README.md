@@ -186,7 +186,91 @@ Links to be completed by the team before submission:
 
 ●      Bug tracking: \[https://github.com/janabakri/Portfolio\_Project/issues\]
 
-●      Testing evidence and results: \[Insert link — QA checklist results, screenshots, or test reports\]
+●      Testing evidence and results: \[<img width="960" height="540" alt="Screenshot 2026-07-26 105203" src="https://github.com/user-attachments/assets/d92c8b60-9028-4c1d-aae7-601c33fd8382" />
+ ]
+   
+    PS C:\Users\nayya\Portfolio_Project\backend> npm test            
+
+    > portfolio-project-backend@1.0.0 test
+    > npm run migrate:reset && jest --runInBand
+
+
+    > portfolio-project-backend@1.0.0 migrate:reset
+    > node scripts/runSqlMigrations.js --reset
+
+    Connected to database. Running SQL migrations...
+    Resetting public schema...
+    Applying migration: 001_create_enums.sql
+    Applying migration: 002_create_tables.sql
+    Applying migration: 003_create_indexes.sql
+    Applying migration: 004_create_triggers.sql
+    Applying migration: 005_seed_medicines.sql
+    Applying migration: 006_seed_drug_interactions.sql
+    Applying migration: 007_update_user_type_enum.sql
+    Applying migration: 008_create_dependents_table.sql
+    Applying migration: 009_add_dependent_to_medications.sql
+    Applying migration: 010_add_medication_schedule_fields.sql
+    SQL migrations completed successfully.
+    PASS  tests/auth.test.js
+    ● Console
+
+    console.log
+      JWT_SECRET = test-secret
+
+      at Object.log (src/server.js:2:9)
+
+    console.log
+       DATABASE_URL exists: true
+
+      at Object.log (src/db/pool.js:5:9)
+
+    console.log
+       DATABASE_URL starts with: postgresql://postgres:12345ra@
+
+      at Object.log (src/db/pool.js:6:9)
+
+    PASS  tests/interactions.test.js
+    ● Console
+
+    console.log
+      JWT_SECRET = test-secret
+
+      at Object.log (src/server.js:2:9)
+
+    console.log
+       DATABASE_URL exists: true
+
+      at Object.log (src/db/pool.js:5:9)
+
+    console.log
+       DATABASE_URL starts with: postgresql://postgres:12345ra@
+
+      at Object.log (src/db/pool.js:6:9)
+
+    PASS  tests/offlineAuth.test.js
+    ● Console
+
+    console.log
+      JWT_SECRET = test-secret
+
+      at Object.log (src/server.js:2:9)
+
+    console.log
+       DATABASE_URL exists: true
+
+      at Object.log (src/db/pool.js:5:9)
+
+    console.log
+       DATABASE_URL starts with: postgresql://postgres:12345ra@
+
+      at Object.log (src/db/pool.js:6:9)
+
+
+    Test Suites: 3 passed, 3 total
+    Tests:       9 passed, 9 total
+    Snapshots:   0 total
+    Time:        2.301 s, estimated 3 s
+    Ran all test suites.
 
 ●      Production environment: \[http://localhost:56417/\][<img width="1600" height="900" alt="QR code APK " src="https://github.com/user-attachments/assets/4268c0dc-cecb-4c86-910f-60df27f13053" />]
 

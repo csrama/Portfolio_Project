@@ -1,13 +1,3 @@
-// backend/src/routes/interactions.js
-//
-// POST /interactions/check
-// Body: { "generic_names": ["warfarin", "ibuprofen", "digoxin"] }
-//
-// Checks every pair in the given list against drug_interactions.
-// Matching is done on generic_name (active ingredient), not brand name,
-// so the caller is responsible for resolving each medicine_id -> generic_name
-// first (via the medications/medicines join) before calling this endpoint.
-
 const { Hono } = require('hono');
 const dbPoolModule = require('../db/pool');
 
@@ -68,6 +58,12 @@ const names = rawNames.map((name) => {
 });
 
 const uniqueNames = [...new Set(names)];
+
+
+  if (uniqueNames.length < 2) {
+    return c.json({ error: 'Provide at least 2 generic_names to check.' }, 400);
+  }
+
   const pairs = buildPairs(uniqueNames);
   const values = pairs.map((_, idx) => `($${idx * 2 + 1}, $${idx * 2 + 2})`).join(', ');
   const params = pairs.flat();
@@ -77,9 +73,7 @@ const uniqueNames = [...new Set(names)];
       di.ingredient_b,
       di.severity,
       di.description,
-      di.recommendation,
-      di.description_ar,
-      di.recommendation_ar
+      di.description_ar
     FROM drug_interactions di
     JOIN (VALUES ${values}) AS pair(a, b)
       ON di.ingredient_a = pair.a
