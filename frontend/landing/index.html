@@ -71,6 +71,7 @@
     display:flex; align-items:center; justify-content:space-between;
     padding:16px 28px;
     max-width:1180px; margin:0 auto;
+    position:relative;
   }
   .logo{
     display:flex; align-items:center; gap:10px;
@@ -96,15 +97,56 @@
     background:var(--amber); transition:width .25s ease;
   }
   .nav-links a:hover::after{ width:100%; }
+  .nav-right{
+    display:flex; align-items:center; gap:14px;
+  }
   .nav-cta{
     display:inline-flex; align-items:center; gap:8px;
     background:var(--green-deep); color:#fff;
     padding:11px 22px; border-radius:999px; font-weight:700; font-size:14.5px;
     box-shadow:0 8px 18px -8px rgba(15,92,52,.55);
     transition:transform .2s ease, box-shadow .2s ease;
+    white-space:nowrap;
   }
   .nav-cta:hover{ transform:translateY(-2px); box-shadow:0 12px 22px -8px rgba(15,92,52,.6); }
-  .burger{ display:none; }
+
+  .burger{
+    display:none;
+    flex-direction:column;
+    justify-content:center;
+    gap:5px;
+    width:38px;height:38px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--card);
+    align-items:center;
+  }
+  .burger span{
+    display:block; width:18px; height:2px; background:var(--ink);
+    border-radius:2px; transition:transform .25s ease, opacity .25s ease;
+  }
+  .burger.open span:nth-child(1){ transform:translateY(7px) rotate(45deg); }
+  .burger.open span:nth-child(2){ opacity:0; }
+  .burger.open span:nth-child(3){ transform:translateY(-7px) rotate(-45deg); }
+
+  .mobile-panel{
+    display:none;
+    position:absolute;
+    top:calc(100% + 1px);
+    left:0; right:0;
+    background:var(--card);
+    border-bottom:1px solid var(--line);
+    box-shadow:var(--shadow);
+    padding:10px 28px 20px;
+    flex-direction:column;
+    gap:4px;
+  }
+  .mobile-panel.open{ display:flex; }
+  .mobile-panel a{
+    padding:12px 4px; font-size:15.5px; font-weight:600; color:var(--ink);
+    border-bottom:1px dashed var(--line);
+  }
+  .mobile-panel a:last-child{ border-bottom:none; }
 
   /* ---------- HERO ---------- */
   .hero{
@@ -204,11 +246,47 @@
   .cap{
     flex:1; display:flex; flex-direction:column; align-items:center; gap:10px;
   }
-  
-  
-  .cap.today .cap-label{ color:var(--green-dark); }
-  .cap.done .mark{ background:#fff; }
-  .cap.pending .mark{ background:rgba(255,255,255,.35); border:1.5px dashed rgba(255,255,255,.7); }
+
+  /* dose "capsule" icon — base state (upcoming, no info yet) */
+  .cap-bottle{
+    width:100%;
+    max-width:34px;
+    aspect-ratio:1 / 1.35;
+    border-radius:10px;
+    background:var(--paper-2);
+    border:1.5px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:background .2s ease, border-color .2s ease, transform .2s ease;
+  }
+  .mark{
+    width:13px;height:13px;
+    border-radius:50%;
+    background:transparent;
+    border:1.5px solid var(--ink-soft);
+    opacity:.4;
+  }
+  .cap-label{
+    font-size:12px; font-weight:600; color:var(--ink-soft);
+  }
+
+  /* done: solid green capsule with a filled white mark */
+  .cap.done .cap-bottle{ background:var(--green-deep); border-color:var(--green-deep); }
+  .cap.done .mark{ background:#fff; border-color:#fff; opacity:1; }
+
+  /* today: highlighted amber capsule, slightly larger */
+  .cap.today .cap-bottle{
+    background:var(--amber); border-color:var(--amber);
+    transform:scale(1.08);
+  }
+  .cap.today .mark{ background:#fff; border-color:#fff; opacity:1; }
+  .cap.today .cap-label{ color:var(--green-dark); font-weight:800; }
+
+  /* pending: dashed outline, not yet due */
+  .cap.pending .cap-bottle{ background:var(--card); }
+  .cap.pending .mark{ background:transparent; border:1.5px dashed var(--ink-soft); opacity:.55; }
+
   .strip-foot{
     display:flex; justify-content:space-between; align-items:center;
     margin-top:22px; padding-top:18px; border-top:1px dashed var(--line);
@@ -460,6 +538,7 @@
   }
   @media (max-width: 640px){
     .nav-links{ display:none; }
+    .burger{ display:flex; }
     .features-grid{ grid-template-columns:1fr; }
     .steps{ grid-template-columns:1fr; }
     .foot-grid{ grid-template-columns:1fr; }
@@ -483,7 +562,18 @@
       <a href="#family">للعائلة</a>
       <a href="#interactions">الأمان الدوائي</a>
     </div>
-    <a href="#cta" class="nav-cta">جرّب دوائي</a>
+    <div class="nav-right">
+      <a href="#cta" class="nav-cta">جرّب دوائي</a>
+      <button class="burger" id="burgerBtn" aria-label="فتح القائمة" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="mobile-panel" id="mobilePanel">
+      <a href="#features">المميزات</a>
+      <a href="#how">كيف يعمل</a>
+      <a href="#family">للعائلة</a>
+      <a href="#interactions">الأمان الدوائي</a>
+    </div>
   </nav>
 </header>
 
@@ -781,6 +871,23 @@
     els.forEach(el=> io.observe(el));
   } else {
     els.forEach(el=> el.classList.add('in'));
+  }
+
+  const burgerBtn = document.getElementById('burgerBtn');
+  const mobilePanel = document.getElementById('mobilePanel');
+  if (burgerBtn && mobilePanel){
+    burgerBtn.addEventListener('click', () => {
+      const isOpen = mobilePanel.classList.toggle('open');
+      burgerBtn.classList.toggle('open', isOpen);
+      burgerBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+    mobilePanel.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => {
+        mobilePanel.classList.remove('open');
+        burgerBtn.classList.remove('open');
+        burgerBtn.setAttribute('aria-expanded', 'false');
+      });
+    });
   }
 </script>
 
