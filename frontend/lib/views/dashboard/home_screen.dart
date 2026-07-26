@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import '../../repositories/auth_repository.dart';
 import '../../services/google_auth_service.dart';
 import 'package:http/http.dart' as http;
@@ -75,14 +75,13 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  final List<MedicationItem> _medications =
-      []; 
-  final Set<String> _takenMedications = {}; 
-  final Set<String> _notTakenMedications = {}; 
-  final Map<String, int> _doseRecordIds = {}; 
-  List<DrugInteraction> _interactions = []; 
+  final List<MedicationItem> _medications = [];
+  final Set<String> _takenMedications = {};
+  final Set<String> _notTakenMedications = {};
+  final Map<String, int> _doseRecordIds = {};
+  List<DrugInteraction> _interactions = [];
   final DrugInteractionService _interactionService = DrugInteractionService();
-  bool _interactionsBannerExpanded = false; 
+  bool _interactionsBannerExpanded = false;
 
   late final List<DateTime> _dateStrip;
   late DateTime _selectedDate;
@@ -126,15 +125,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _weekdayNameFromDate(DateTime date) {
     final weekday = date.weekday;
-    // DateTime.weekday: Monday=1, Tuesday=2, ..., Sunday=7
     const names = [
-      'الاثنين',    // Monday (1)
-      'الثلاثاء',   // Tuesday (2)
-      'الأربعاء',   // Wednesday (3)
-      'الخميس',     // Thursday (4)
-      'الجمعة',     // Friday (5)
-      'السبت',      // Saturday (6)
-      'الأحد',      // Sunday (7)
+      'الاثنين',
+      'الثلاثاء',
+      'الأربعاء',
+      'الخميس',
+      'الجمعة',
+      'السبت',
+      'الأحد',
     ];
     return names[weekday - 1];
   }
@@ -695,11 +693,10 @@ class _HomeScreenState extends State<HomeScreen> {
     await _showInteractionDetailsDialog(found);
   }
 
-  
   Widget _buildInteractionsBanner() {
     if (_interactions.isEmpty) return const SizedBox.shrink();
 
-    final highest = _interactions.first; 
+    final highest = _interactions.first;
     final highestSeverity = highest.severity;
     final counts = <String, int>{};
     for (final i in _interactions) {
@@ -855,6 +852,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (hour < 18) return 'مساءً';
     return 'مساءً';
   }
+
   void _openAddMedicationSheet({MedicationItem? existingMedication}) {
     showModalBottomSheet(
       context: context,
@@ -983,120 +981,120 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
- Future<void> _deleteMedication(MedicationItem med) async {
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text("حذف الدواء"),
-      content: Text("هل تريد حذف ${med.name} ؟"),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text("إلغاء"),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, true),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
+  Future<void> _deleteMedication(MedicationItem med) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("حذف الدواء"),
+        content: Text("هل تريد حذف ${med.name} ؟"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("إلغاء"),
           ),
-          child: const Text("حذف"),
-        ),
-      ],
-    ),
-  );
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text("حذف"),
+          ),
+        ],
+      ),
+    );
 
-  if (ok != true) return;
+    if (ok != true) return;
 
-  final auth = context.read<AuthProvider>();
-  if (auth.accessToken == null) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('الرجاء تسجيل الدخول أولاً'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-    }
-    return;
-  }
-
-  final List<Map<String, String>> tests = [
-    {'method': 'DELETE', 'path': '/medications/${med.id}'},
-    {'method': 'DELETE', 'path': '/medication/${med.id}'},
-    {'method': 'DELETE', 'path': '/medicines/${med.id}'},
-    {'method': 'DELETE', 'path': '/medicine/${med.id}'},
-    {'method': 'DELETE', 'path': '/api/medications/${med.id}'},
-    {'method': 'POST', 'path': '/medications/${med.id}', 'body': '{"_method":"DELETE"}'},
-    {'method': 'POST', 'path': '/medication/${med.id}', 'body': '{"_method":"DELETE"}'},
-    {'method': 'DELETE', 'path': '/medications/delete/${med.id}'},
-    {'method': 'DELETE', 'path': '/delete-medication/${med.id}'},
-  ];
-
-  String? workingPath;
-  int? lastStatusCode;
-
-  for (final test in tests) {
-    try {
-      final url = ApiService.buildUrl(test['path']!);
-      debugPrint('🔍 Trying: ${test['method']} $url');
-
-      http.Response response;
-
-      if (test['method'] == 'POST') {
-        response = await http.post(
-          Uri.parse(url),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ${auth.accessToken!}',
-          },
-          body: test['body'],
-        );
-      } else {
-        response = await http.delete(
-          Uri.parse(url),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ${auth.accessToken!}',
-          },
+    final auth = context.read<AuthProvider>();
+    if (auth.accessToken == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('الرجاء تسجيل الدخول أولاً'),
+            backgroundColor: Colors.orange,
+          ),
         );
       }
+      return;
+    }
 
-      debugPrint('🔍 Status: ${response.statusCode} for ${test['path']}');
+    final List<Map<String, String>> tests = [
+      {'method': 'DELETE', 'path': '/medications/${med.id}'},
+      {'method': 'DELETE', 'path': '/medication/${med.id}'},
+      {'method': 'DELETE', 'path': '/medicines/${med.id}'},
+      {'method': 'DELETE', 'path': '/medicine/${med.id}'},
+      {'method': 'DELETE', 'path': '/api/medications/${med.id}'},
+      {'method': 'POST', 'path': '/medications/${med.id}', 'body': '{"_method":"DELETE"}'},
+      {'method': 'POST', 'path': '/medication/${med.id}', 'body': '{"_method":"DELETE"}'},
+      {'method': 'DELETE', 'path': '/medications/delete/${med.id}'},
+      {'method': 'DELETE', 'path': '/delete-medication/${med.id}'},
+    ];
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        workingPath = test['path'];
-        break;
-      } else {
-        lastStatusCode = response.statusCode;
+    String? workingPath;
+    int? lastStatusCode;
+
+    for (final test in tests) {
+      try {
+        final url = ApiService.buildUrl(test['path']!);
+        debugPrint('🔍 Trying: ${test['method']} $url');
+
+        http.Response response;
+
+        if (test['method'] == 'POST') {
+          response = await http.post(
+            Uri.parse(url),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${auth.accessToken!}',
+            },
+            body: test['body'],
+          );
+        } else {
+          response = await http.delete(
+            Uri.parse(url),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${auth.accessToken!}',
+            },
+          );
+        }
+
+        debugPrint('🔍 Status: ${response.statusCode} for ${test['path']}');
+
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          workingPath = test['path'];
+          break;
+        } else {
+          lastStatusCode = response.statusCode;
+        }
+      } catch (e) {
+        debugPrint(' Error with ${test['path']}: $e');
       }
-    } catch (e) {
-      debugPrint(' Error with ${test['path']}: $e');
     }
-  }
 
-  if (workingPath != null) {
-    await _loadMedications();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(' تم حذف الدواء بنجاح'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
-  } else {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(' فشل الحذف: الكود $lastStatusCode'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
-        ),
-      );
+    if (workingPath != null) {
+      await _loadMedications();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(' تم حذف الدواء بنجاح'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(' فشل الحذف: الكود $lastStatusCode'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
-}
 
   Future<void> _signOut(BuildContext context) async {
     await AuthRepository().clearSession();
@@ -2448,34 +2446,38 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
 
   List<Map<String, dynamic>> _pharmacySuggestions = [];
 
+  final Map<MedicationType, String> _typeLabels = {
+    MedicationType.tablets: 'أقراص',
+    MedicationType.capsule: 'كبسولات',
+    MedicationType.bottle: 'شراب',
+    MedicationType.injection: 'حقن',
+    MedicationType.cream: 'كريم',
+    MedicationType.drops: 'قطرات',
+  };
+
   Future<void> _searchMedicines(String query) async {
-  if (query.trim().isEmpty) {
-    setState(() {
-      _pharmacySuggestions.clear();
-    });
-    return;
+    if (query.trim().isEmpty) {
+      setState(() {
+        _pharmacySuggestions.clear();
+      });
+      return;
+    }
+
+    final auth = context.read<AuthProvider>();
+
+    try {
+      final result = await ApiService.getJsonList(
+        '/medicines/search?q=$query',
+        token: auth.accessToken!,
+      );
+
+      setState(() {
+        _pharmacySuggestions = List<Map<String, dynamic>>.from(result);
+      });
+    } catch (e) {
+      print(' SEARCH ERROR: $e');
+    }
   }
-
-  final auth = context.read<AuthProvider>();
-
-  try {
-    final result = await ApiService.getJsonList(
-      '/medicines/search?q=$query',
-      token: auth.accessToken!,
-    );
-
-    print(' SEARCH RESULT LENGTH: ${result.length}');
-    print(' SEARCH RESULT DATA: $result');
-
-    setState(() {
-      _pharmacySuggestions = List<Map<String, dynamic>>.from(result);
-    });
-
-    print(' SUGGESTIONS AFTER SETSTATE: ${_pharmacySuggestions.length}');
-  } catch (e) {
-    print(' SEARCH ERROR: $e');
-  }
-}
 
   @override
   void initState() {
@@ -2504,10 +2506,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
     final langCode = context.read<AppSettingsProvider>().languageCode;
     setState(() {
       _nameController.text = _medicineDisplayName(suggestion, langCode);
-
-      _dosageController.text =
-          suggestion['dosage'] ?? '';
-
+      _dosageController.text = suggestion['dosage'] ?? '';
       _searchController.clear();
       _pharmacySuggestions.clear();
     });
@@ -2545,6 +2544,101 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
       ),
     );
     Navigator.of(context).pop();
+  }
+
+  Widget _buildDaysSelector() {
+    final firstRow = _allDays.sublist(0, 4);
+    final secondRow = _allDays.sublist(4);
+
+    Widget dayChip(String day) {
+      final selected = _selectedDays.contains(day);
+      return Expanded(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: GestureDetector(
+            onTap: () => setState(() {
+              selected ? _selectedDays.remove(day) : _selectedDays.add(day);
+            }),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: selected ? _Colors.darkGreen : Colors.white,
+                border: Border.all(
+                  color: selected ? _Colors.darkGreen : _Colors.borderGrey,
+                  width: selected ? 1.5 : 1,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: _Colors.darkGreen.withValues(alpha: 0.25),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Center(
+                child: Text(
+                  day,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: selected ? Colors.white : _Colors.textPrimary,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final allSelected = _selectedDays.length == _allDays.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(children: firstRow.map(dayChip).toList()),
+        const SizedBox(height: 8),
+        Row(children: [
+          ...secondRow.map(dayChip),
+          const Expanded(child: SizedBox()),
+        ]),
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerRight,
+          child: GestureDetector(
+            onTap: () => setState(() {
+              if (allSelected) {
+                _selectedDays.clear();
+              } else {
+                _selectedDays
+                  ..clear()
+                  ..addAll(_allDays);
+              }
+            }),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: _Colors.lightGreenBg,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                allSelected ? 'إلغاء تحديد الكل' : 'كل أيام الأسبوع',
+                style: const TextStyle(
+                  color: _Colors.darkGreen,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -2587,42 +2681,74 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'حدد نوع الدواء:',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: _Colors.textSecondary),
+                const Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    'حدد نوع الدواء:',
+                    style: TextStyle(fontSize: 14, color: _Colors.textSecondary),
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 SizedBox(
-                  height: 64,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    reverse: true,
-                    itemCount: MedicationType.values.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
-                    itemBuilder: (context, index) {
-                      final type = MedicationType.values[index];
-                      final selected = type == _selectedType;
-                      return GestureDetector(
-                        onTap: () => setState(() => _selectedType = type),
-                        child: Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: selected ? _Colors.darkGreen : Colors.white,
-                            border: Border.all(
-                              color: selected
-                                  ? _Colors.darkGreen
-                                  : _Colors.borderGrey,
-                              width: selected ? 2 : 1,
+                  height: 90,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final itemWidth = constraints.maxWidth / 3.5;
+                      return Row(
+                        children: MedicationType.values.map((type) {
+                          final selected = type == _selectedType;
+                          final label = _typeLabels[type] ?? type.toString();
+                          return Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: GestureDetector(
+                                onTap: () => setState(() => _selectedType = type),
+                                child: Container(
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    color: selected ? _Colors.darkGreen : Colors.white,
+                                    border: Border.all(
+                                      color: selected
+                                          ? _Colors.darkGreen
+                                          : _Colors.borderGrey,
+                                      width: selected ? 2 : 1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(14),
+                                    boxShadow: selected
+                                        ? [
+                                            BoxShadow(
+                                              color: _Colors.darkGreen.withValues(alpha: 0.2),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        type.icon,
+                                        color: selected ? Colors.white : _Colors.darkGreen,
+                                        size: 28,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        label,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: selected ? Colors.white : Colors.grey[600],
+                                          fontSize: 10,
+                                          fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Icon(
-                            type.icon,
-                            color: selected ? Colors.white : _Colors.darkGreen,
-                          ),
-                        ),
+                          );
+                        }).toList(),
                       );
                     },
                   ),
@@ -2642,6 +2768,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   textAlign: TextAlign.right,
                   decoration: InputDecoration(
                     hintText: 'ابحث عن الدواء من نفس الصيدلية',
+                    hintStyle: TextStyle(color: Colors.grey[400]),
                     filled: true,
                     fillColor: const Color(0xFFF6F6F6),
                     border: OutlineInputBorder(
@@ -2695,6 +2822,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                         textAlign: TextAlign.right,
                         decoration: InputDecoration(
                           hintText: 'مثال: Eltroxin',
+                          hintStyle: TextStyle(color: Colors.grey[400]),
                           filled: true,
                           fillColor: const Color(0xFFF6F6F6),
                           border: OutlineInputBorder(
@@ -2711,6 +2839,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                         textAlign: TextAlign.right,
                         decoration: InputDecoration(
                           hintText: '100mcg',
+                          hintStyle: TextStyle(color: Colors.grey[400]),
                           filled: true,
                           fillColor: const Color(0xFFF6F6F6),
                           border: OutlineInputBorder(
@@ -2723,63 +2852,15 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                SizedBox(
-                  height: 64,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    reverse: true,
-                    itemCount: _allDays.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      final day = _allDays[index];
-                      final selected = _selectedDays.contains(day);
-                      return GestureDetector(
-                        onTap: () => setState(() {
-                          selected
-                              ? _selectedDays.remove(day)
-                              : _selectedDays.add(day);
-                        }),
-                        child: Container(
-                          width: 64,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: selected ? _Colors.darkGreen : Colors.white,
-                            border: Border.all(
-                              color: selected
-                                  ? _Colors.darkGreen
-                                  : _Colors.borderGrey,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                day,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: selected
-                                      ? Colors.white
-                                      : _Colors.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Icon(
-                                selected
-                                    ? Icons.check_circle
-                                    : Icons.circle_outlined,
-                                size: 14,
-                                color: selected
-                                    ? Colors.white
-                                    : _Colors.borderGrey,
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                const Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    'أيام الأسبوع',
+                    style: TextStyle(color: _Colors.textSecondary),
                   ),
                 ),
+                const SizedBox(height: 8),
+                _buildDaysSelector(),
                 const SizedBox(height: 20),
                 Row(
                   children: [
@@ -2787,34 +2868,47 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text(
-                            'الفترة',
-                            style: TextStyle(color: _Colors.textSecondary),
-                          ),
-                          const SizedBox(height: 6),
-                          DropdownButtonFormField<String>(
-                            initialValue: _period,
-                            alignment: AlignmentDirectional.centerEnd,
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: const Color(0xFFF6F6F6),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
+                          const Padding(
+                            padding: EdgeInsets.only(right: 4),
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                'الوقت',
+                                style: TextStyle(
+                                  color: _Colors.textSecondary,
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'صباحا',
-                                child: Text('صباحا'),
+                          ),
+                          const SizedBox(height: 6),
+                          GestureDetector(
+                            onTap: _pickTime,
+                            child: Container(
+                              height: 50,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF6F6F6),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              DropdownMenuItem(
-                                value: 'مساء',
-                                child: Text('مساء'),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Icon(
+                                    Icons.access_time,
+                                    color: Colors.grey,
+                                    size: 20,
+                                  ),
+                                  Text(
+                                    _time.format(context),
+                                    style: const TextStyle(
+                                      color: Colors.black87,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                            onChanged: (value) =>
-                                setState(() => _period = value!),
+                            ),
                           ),
                         ],
                       ),
@@ -2824,25 +2918,64 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text(
-                            'الوقت',
-                            style: TextStyle(color: _Colors.textSecondary),
+                          const Padding(
+                            padding: EdgeInsets.only(right: 4),
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                'الفترة',
+                                style: TextStyle(
+                                  color: _Colors.textSecondary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 6),
-                          GestureDetector(
-                            onTap: _pickTime,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 14,
-                                horizontal: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF6F6F6),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                _time.format(context),
-                                textAlign: TextAlign.center,
+                          Container(
+                            height: 50,
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF6F6F6),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _period,
+                                isExpanded: true,
+                                alignment: AlignmentDirectional.centerEnd,
+                                dropdownColor: Colors.white,
+                                style: const TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 14,
+                                ),
+                                icon: const Icon(
+                                  Icons.arrow_drop_down,
+                                  color: Colors.grey,
+                                ),
+                                iconSize: 24,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'صباحا',
+                                    child: Text(
+                                      'صباحا',
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'مساء',
+                                    child: Text(
+                                      'مساء',
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ),
+                                ],
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setState(() => _period = value);
+                                  }
+                                },
                               ),
                             ),
                           ),
@@ -2864,6 +2997,12 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   children: List.generate(4, (i) {
                     final value = i + 1;
                     final selected = _dosesPerDay == value;
+                    final doseLabels = [
+                      'مرة واحدة',
+                      'مرتين',
+                      '3 مرات',
+                      '4 مرات',
+                    ];
                     return Expanded(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -2878,10 +3017,10 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              'x$value',
+                              doseLabels[i],
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: selected ? Colors.white : Colors.grey[300],
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -2905,7 +3044,11 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                     ),
                     child: const Text(
                       'حفظ',
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -2923,7 +3066,10 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                     ),
                     child: const Text(
                       'حفظ الدواء بدون التنبيه',
-                      style: TextStyle(color: _Colors.darkGreen, fontSize: 15),
+                      style: TextStyle(
+                        color: _Colors.darkGreen,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
                 ),

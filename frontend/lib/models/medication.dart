@@ -4,7 +4,7 @@ enum MedicationType {
   pill(Icons.medication),
   syrup(Icons.local_drink),
   injection(Icons.vaccines);
-
+  
   final IconData icon;
   const MedicationType(this.icon);
 }
