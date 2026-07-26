@@ -2,15 +2,19 @@ require('dotenv').config();
 const { Pool } = require('pg');
 
 const connectionString = process.env.DATABASE_URL;
-console.log('🔍 DATABASE_URL exists:', !!connectionString);
-console.log('🔍 DATABASE_URL starts with:', connectionString ? connectionString.substring(0, 30) : 'UNDEFINED');
+console.log(' DATABASE_URL exists:', !!connectionString);
+console.log(' DATABASE_URL starts with:', connectionString ? connectionString.substring(0, 30) : 'UNDEFINED');
+
+
+const isLocalDb = !connectionString || /localhost|127\.0\.0\.1/.test(connectionString);
+
 const pool = new Pool({
   connectionString,
-  ssl: { rejectUnauthorized: false },
+  ssl: isLocalDb ? false : { rejectUnauthorized: false },
 });
 
 pool.on('error', (err) => {
-  console.error('❌ Unexpected DB pool error:', err);
+  console.error(' Unexpected DB pool error:', err);
 });
 
 function normalizeUserType(userType) {
