@@ -6,6 +6,7 @@ import '../../providers/dependent_provider.dart';
 import '../../models/dependent.dart';
 import 'dependent_dashboard_screen.dart';
 import 'add_dependent_screen.dart';
+import '../../i18n/strings.dart';
 
 class DependentsScreen extends StatefulWidget {
   const DependentsScreen({super.key});
@@ -35,7 +36,7 @@ class _DependentsScreenState extends State<DependentsScreen> {
     bool showInviteLink = false;
     String? generatedLink;
     bool linkCopied = false;
-    bool inviteMode = true; // true = send invite, false = add directly
+    bool inviteMode = true;
 
     showModalBottomSheet(
       context: context,
@@ -56,14 +57,16 @@ class _DependentsScreenState extends State<DependentsScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'إضافة تابع جديد',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Text(
+                  Strings.tr(context, 'add_dependent_title'),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
 
-                // Toggle: Invite mode vs Direct add
                 Container(
                   decoration: BoxDecoration(
                     color: const Color(0xFFF0F0F0),
@@ -83,14 +86,18 @@ class _DependentsScreenState extends State<DependentsScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             decoration: BoxDecoration(
-                              color: inviteMode ? const Color(0xFF085041) : Colors.transparent,
+                              color: inviteMode
+                                  ? const Color(0xFF085041)
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
-                              'إرسال دعوة',
+                              Strings.tr(context, 'send_invite'),
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: inviteMode ? Colors.white : Colors.black54,
+                                color: inviteMode
+                                    ? Colors.white
+                                    : Colors.black54,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
@@ -109,14 +116,18 @@ class _DependentsScreenState extends State<DependentsScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             decoration: BoxDecoration(
-                              color: !inviteMode ? const Color(0xFF085041) : Colors.transparent,
+                              color: !inviteMode
+                                  ? const Color(0xFF085041)
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
-                              'إضافة مباشرة',
+                              Strings.tr(context, 'add_directly'),
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: !inviteMode ? Colors.white : Colors.black54,
+                                color: !inviteMode
+                                    ? Colors.white
+                                    : Colors.black54,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
@@ -129,29 +140,36 @@ class _DependentsScreenState extends State<DependentsScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Info banner
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: inviteMode ? const Color(0xFFD9F2E7) : const Color(0xFFFFF3CD),
+                    color: inviteMode
+                        ? const Color(0xFFD9F2E7)
+                        : const Color(0xFFFFF3CD),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
                     children: [
                       Icon(
-                        inviteMode ? Icons.mail_outline : Icons.person_add_alt_1,
+                        inviteMode
+                            ? Icons.mail_outline
+                            : Icons.person_add_alt_1,
                         size: 18,
-                        color: inviteMode ? const Color(0xFF085041) : const Color(0xFF856404),
+                        color: inviteMode
+                            ? const Color(0xFF085041)
+                            : const Color(0xFF856404),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           inviteMode
-                              ? 'سيتم إنشاء رابط دعوة يمكنك إرساله للتابع'
-                              : 'سيتم إضافة التابع مباشرة بدون الحاجة لدعوة',
+                              ? Strings.tr(context, 'will_send_invite')
+                              : Strings.tr(context, 'will_add_directly'),
                           style: TextStyle(
                             fontSize: 12,
-                            color: inviteMode ? const Color(0xFF085041) : const Color(0xFF856404),
+                            color: inviteMode
+                                ? const Color(0xFF085041)
+                                : const Color(0xFF856404),
                           ),
                         ),
                       ),
@@ -163,9 +181,9 @@ class _DependentsScreenState extends State<DependentsScreen> {
                 if (resultMessage == null && !showInviteLink) ...[
                   TextField(
                     controller: nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'الاسم الكامل',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: Strings.tr(context, 'full_name'),
+                      border: const OutlineInputBorder(),
                     ),
                     textAlign: TextAlign.right,
                   ),
@@ -173,21 +191,24 @@ class _DependentsScreenState extends State<DependentsScreen> {
                   TextField(
                     controller: ageController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'العمر (اختياري)',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: Strings.tr(context, 'age_optional'),
+                      border: const OutlineInputBorder(),
                     ),
                     textAlign: TextAlign.right,
                   ),
                   const SizedBox(height: 15),
                   DropdownButtonFormField<String>(
                     initialValue: selectedRelationship,
-                    decoration: const InputDecoration(
-                      labelText: 'صلة القرابة',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: Strings.tr(context, 'relationship_label'),
+                      border: const OutlineInputBorder(),
                     ),
                     items: const [
-                      DropdownMenuItem(value: 'spouse', child: Text('زوج/زوجة')),
+                      DropdownMenuItem(
+                        value: 'spouse',
+                        child: Text('زوج/زوجة'),
+                      ),
                       DropdownMenuItem(value: 'child', child: Text('ابن/ابنة')),
                       DropdownMenuItem(value: 'parent', child: Text('أب/أم')),
                       DropdownMenuItem(value: 'sibling', child: Text('أخ/أخت')),
@@ -210,49 +231,65 @@ class _DependentsScreenState extends State<DependentsScreen> {
                                 final auth = context.read<AuthProvider>();
 
                                 if (auth.accessToken == null) {
-                                  ScaffoldMessenger.of(sheetContext).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Access Token is NULL"),
+                                  ScaffoldMessenger.of(
+                                    sheetContext,
+                                  ).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        Strings.tr(
+                                          context,
+                                          'please_login_first',
+                                        ),
+                                      ),
                                     ),
                                   );
                                   return;
                                 }
 
                                 String? dateOfBirth;
-                                final age = int.tryParse(ageController.text.trim());
+                                final age = int.tryParse(
+                                  ageController.text.trim(),
+                                );
                                 if (age != null && age > 0) {
                                   final now = DateTime.now();
-                                  dateOfBirth = DateTime(now.year - age, now.month, now.day)
-                                      .toIso8601String();
+                                  dateOfBirth = DateTime(
+                                    now.year - age,
+                                    now.month,
+                                    now.day,
+                                  ).toIso8601String();
                                 }
 
                                 setSheetState(() => isProcessing = true);
 
                                 Map<String, dynamic> response;
                                 if (inviteMode) {
-                                  response = await context.read<DependentProvider>().addDependent(
-                                    auth.accessToken!,
-                                    {
-                                      'full_name': nameController.text,
-                                      'relationship': selectedRelationship,
-                                      if (dateOfBirth != null) 'date_of_birth': dateOfBirth,
-                                    },
-                                  );
+                                  response = await context
+                                      .read<DependentProvider>()
+                                      .addDependent(auth.accessToken!, {
+                                        'full_name': nameController.text,
+                                        'relationship': selectedRelationship,
+                                        if (dateOfBirth != null)
+                                          'date_of_birth': dateOfBirth,
+                                      });
                                 } else {
-                                  response = await context.read<DependentProvider>().addDependentDirect(
-                                    auth.accessToken!,
-                                    {
-                                      'full_name': nameController.text,
-                                      'relationship': selectedRelationship,
-                                      if (dateOfBirth != null) 'date_of_birth': dateOfBirth,
-                                    },
-                                  );
+                                  response = await context
+                                      .read<DependentProvider>()
+                                      .addDependentDirect(auth.accessToken!, {
+                                        'full_name': nameController.text,
+                                        'relationship': selectedRelationship,
+                                        if (dateOfBirth != null)
+                                          'date_of_birth': dateOfBirth,
+                                      });
                                 }
 
                                 if (response['success'] == true) {
                                   if (inviteMode) {
-                                    final data = response['data'] as Map<String, dynamic>? ?? {};
-                                    final inviteLink = data['invite_link'] as String? ?? '';
+                                    final data =
+                                        response['data']
+                                            as Map<String, dynamic>? ??
+                                        {};
+                                    final inviteLink =
+                                        data['invite_link'] as String? ?? '';
                                     setSheetState(() {
                                       isProcessing = false;
                                       generatedLink = inviteLink;
@@ -262,19 +299,26 @@ class _DependentsScreenState extends State<DependentsScreen> {
                                   } else {
                                     setSheetState(() {
                                       isProcessing = false;
-                                      resultMessage = 'تم إضافة التابع بنجاح ';
+                                      resultMessage = Strings.tr(
+                                        context,
+                                        'dependent_added_success',
+                                      );
                                     });
                                   }
                                 } else {
                                   setSheetState(() {
                                     isProcessing = false;
-                                    resultMessage = response['error'] ?? 'فشلت العملية';
+                                    resultMessage =
+                                        response['error'] ??
+                                        Strings.tr(context, 'operation_failed');
                                   });
                                 }
                               } else {
                                 ScaffoldMessenger.of(sheetContext).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('الرجاء إدخال الاسم واختيار العلاقة'),
+                                  SnackBar(
+                                    content: Text(
+                                      Strings.tr(context, 'missing_data'),
+                                    ),
                                   ),
                                 );
                               }
@@ -305,12 +349,16 @@ class _DependentsScreenState extends State<DependentsScreen> {
                             ),
                           )
                         : Text(
-                            inviteMode ? 'توليد رابط الدعوة' : 'إضافة التابع',
-                            style: const TextStyle(color: Colors.white, fontSize: 16),
+                            inviteMode
+                                ? Strings.tr(context, 'generate_invite_link')
+                                : Strings.tr(context, 'add_dependent'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                            ),
                           ),
                   ),
                 ] else if (showInviteLink && generatedLink != null) ...[
-                  // Show invite link
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -336,7 +384,9 @@ class _DependentsScreenState extends State<DependentsScreen> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              linkCopied ? 'تم النسخ!' : 'رابط الدعوة',
+                              linkCopied
+                                  ? Strings.tr(context, 'link_copied')
+                                  : Strings.tr(context, 'invite_link_label'),
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: linkCopied
@@ -359,12 +409,16 @@ class _DependentsScreenState extends State<DependentsScreen> {
                           width: double.infinity,
                           child: OutlinedButton.icon(
                             onPressed: () {
-                              Clipboard.setData(ClipboardData(text: generatedLink!));
+                              Clipboard.setData(
+                                ClipboardData(text: generatedLink!),
+                              );
                               setSheetState(() => linkCopied = true);
                               ScaffoldMessenger.of(sheetContext).showSnackBar(
-                                const SnackBar(
-                                  content: Text('تم نسخ الرابط'),
-                                  backgroundColor: Color(0xFF085041),
+                                SnackBar(
+                                  content: Text(
+                                    Strings.tr(context, 'link_copied_message'),
+                                  ),
+                                  backgroundColor: const Color(0xFF085041),
                                 ),
                               );
                             },
@@ -372,7 +426,11 @@ class _DependentsScreenState extends State<DependentsScreen> {
                               linkCopied ? Icons.check : Icons.copy,
                               size: 18,
                             ),
-                            label: Text(linkCopied ? 'تم النسخ' : 'نسخ الرابط'),
+                            label: Text(
+                              linkCopied
+                                  ? Strings.tr(context, 'link_copied')
+                                  : Strings.tr(context, 'copy_link'),
+                            ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF085041),
                               side: const BorderSide(color: Color(0xFF085041)),
@@ -387,7 +445,6 @@ class _DependentsScreenState extends State<DependentsScreen> {
                   ),
                   const SizedBox(height: 16),
                 ] else if (resultMessage != null) ...[
-                  // Success/Error message
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
@@ -425,14 +482,14 @@ class _DependentsScreenState extends State<DependentsScreen> {
                   const SizedBox(height: 16),
                 ],
 
-                // Done button
                 if (resultMessage != null || showInviteLink)
                   ElevatedButton(
                     onPressed: () {
-                      // Refresh dependents list before closing
                       final auth = context.read<AuthProvider>();
                       if (auth.accessToken != null) {
-                        context.read<DependentProvider>().fetchDependents(auth.accessToken!);
+                        context.read<DependentProvider>().fetchDependents(
+                          auth.accessToken!,
+                        );
                       }
                       Navigator.pop(sheetContext, true);
                     },
@@ -443,9 +500,9 @@ class _DependentsScreenState extends State<DependentsScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'تم، العودة للقائمة',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    child: Text(
+                      Strings.tr(context, 'save_and_return'),
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
                     ),
                   ),
                 const SizedBox(height: 20),
@@ -467,7 +524,7 @@ class _DependentsScreenState extends State<DependentsScreen> {
     return name;
   }
 
-String _getSafeRelationship(String? relationship) {
+  String _getSafeRelationship(String? relationship) {
     if (relationship == null || relationship.isEmpty) return 'لا يوجد';
     return relationship;
   }
@@ -481,24 +538,24 @@ String _getSafeRelationship(String? relationship) {
       builder: (dialogContext) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          title: const Text('تعديل بيانات التابع'),
+          title: Text(Strings.tr(context, 'edit_dependent_title')),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameController,
                 textAlign: TextAlign.right,
-                decoration: const InputDecoration(
-                  labelText: 'الاسم الكامل',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: Strings.tr(context, 'full_name'),
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: selectedRelationship,
-                decoration: const InputDecoration(
-                  labelText: 'صلة القرابة',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: Strings.tr(context, 'relationship_label'),
+                  border: const OutlineInputBorder(),
                 ),
                 items: const [
                   DropdownMenuItem(value: 'spouse', child: Text('زوج/زوجة')),
@@ -514,27 +571,36 @@ String _getSafeRelationship(String? relationship) {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('إلغاء'),
+              child: Text(Strings.tr(context, 'cancel')),
             ),
             ElevatedButton(
               onPressed: () async {
                 if (nameController.text.trim().isEmpty) return;
                 final auth = context.read<AuthProvider>();
                 if (auth.accessToken == null) return;
-                final success = await context.read<DependentProvider>().updateDependent(
-                  auth.accessToken!,
-                  dependent.id.toString(),
-                  {
-                    'full_name': nameController.text.trim(),
-                    'relationship': selectedRelationship ?? dependent.relationship,
-                  },
-                );
+                final success = await context
+                    .read<DependentProvider>()
+                    .updateDependent(
+                      auth.accessToken!,
+                      dependent.id.toString(),
+                      {
+                        'full_name': nameController.text.trim(),
+                        'relationship':
+                            selectedRelationship ?? dependent.relationship,
+                      },
+                    );
                 if (dialogContext.mounted) Navigator.pop(dialogContext);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(success ? 'تم التحديث بنجاح ' : 'فشل التحديث'),
-                      backgroundColor: success ? const Color(0xFF1D9E75) : Colors.red,
+                      content: Text(
+                        success
+                            ? Strings.tr(context, 'data_updated_success')
+                            : Strings.tr(context, 'update_failed'),
+                      ),
+                      backgroundColor: success
+                          ? const Color(0xFF1D9E75)
+                          : Colors.red,
                     ),
                   );
                 }
@@ -542,7 +608,10 @@ String _getSafeRelationship(String? relationship) {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF085041),
               ),
-              child: const Text('حفظ', style: TextStyle(color: Colors.white)),
+              child: Text(
+                Strings.tr(context, 'save'),
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -556,17 +625,22 @@ String _getSafeRelationship(String? relationship) {
       builder: (dialogContext) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          title: const Text('حذف التابع'),
-          content: Text('هل أنت متأكد من حذف "${dependent.fullName}"؟ لا يمكن التراجع عن هذا الإجراء.'),
+          title: Text(Strings.tr(context, 'delete_dependent_title')),
+          content: Text(
+            '${Strings.tr(context, 'delete_dependent_confirm')} "${dependent.fullName}"؟ ${Strings.tr(context, 'delete_dependent_cant_undo')}',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('إلغاء'),
+              child: Text(Strings.tr(context, 'cancel')),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(dialogContext, true),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('حذف', style: TextStyle(color: Colors.white)),
+              child: Text(
+                Strings.tr(context, 'delete'),
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -583,7 +657,11 @@ String _getSafeRelationship(String? relationship) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(success ? 'تم حذف التابع بنجاح ' : 'فشل الحذف'),
+            content: Text(
+              success
+                  ? Strings.tr(context, 'dependent_deleted_success')
+                  : Strings.tr(context, 'delete_failed'),
+            ),
             backgroundColor: success ? const Color(0xFF1D9E75) : Colors.red,
           ),
         );
@@ -595,7 +673,7 @@ String _getSafeRelationship(String? relationship) {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('التابعين'),
+        title: Text(Strings.tr(context, 'dependents_list')),
         backgroundColor: const Color(0xFF085041),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -605,17 +683,17 @@ String _getSafeRelationship(String? relationship) {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const AddDependentScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const AddDependentScreen()),
               ).then((_) {
                 final auth = context.read<AuthProvider>();
                 if (auth.accessToken != null) {
-                  context.read<DependentProvider>().fetchDependents(auth.accessToken!);
+                  context.read<DependentProvider>().fetchDependents(
+                    auth.accessToken!,
+                  );
                 }
               });
             },
-            tooltip: 'إرسال دعوة',
+            tooltip: Strings.tr(context, 'send_invite'),
           ),
         ],
       ),
@@ -626,8 +704,8 @@ String _getSafeRelationship(String? relationship) {
           }
 
           if (provider.dependents.isEmpty) {
-            return const Center(
-              child: Text('لم تقم بإضافة أي تابعين بعد'),
+            return Center(
+              child: Text(Strings.tr(context, 'no_dependents_yet')),
             );
           }
 
@@ -639,9 +717,11 @@ String _getSafeRelationship(String? relationship) {
 
               final String displayName = _getSafeName(dependent.fullName);
               final String firstLetter = _getFirstLetter(dependent.fullName);
-              final String displayRelationship = _getSafeRelationship(dependent.relationship);
+              final String displayRelationship = _getSafeRelationship(
+                dependent.relationship,
+              );
 
-return Card(
+              return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
                 child: ListTile(
                   leading: CircleAvatar(
@@ -657,19 +737,31 @@ return Card(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.edit, color: Color(0xFF085041), size: 20),
+                        icon: const Icon(
+                          Icons.edit,
+                          color: Color(0xFF085041),
+                          size: 20,
+                        ),
                         onPressed: () => _showEditDialog(dependent),
-                        tooltip: 'تعديل',
+                        tooltip: Strings.tr(context, 'edit'),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                          size: 20,
+                        ),
                         onPressed: () => _confirmDelete(dependent),
-                        tooltip: 'حذف',
+                        tooltip: Strings.tr(context, 'delete'),
                       ),
                       if (isSelected)
                         const Padding(
                           padding: EdgeInsets.only(left: 4),
-                          child: Icon(Icons.check_circle, color: Color(0xFF1D9E75), size: 20),
+                          child: Icon(
+                            Icons.check_circle,
+                            color: Color(0xFF1D9E75),
+                            size: 20,
+                          ),
                         ),
                     ],
                   ),
@@ -681,9 +773,8 @@ return Card(
                     final changed = await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => DependentDashboardScreen(
-                          dependent: dependent,
-                        ),
+                        builder: (_) =>
+                            DependentDashboardScreen(dependent: dependent),
                       ),
                     );
 

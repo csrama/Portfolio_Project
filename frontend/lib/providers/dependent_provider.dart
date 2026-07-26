@@ -8,7 +8,8 @@ class DependentProvider extends ChangeNotifier {
   Dependent? _selectedDependent;
   bool _isLoading = false;
 
-  DependentProvider({required DependentService dependentService}) : _dependentService = dependentService;
+  DependentProvider({required DependentService dependentService})
+    : _dependentService = dependentService;
 
   List<Dependent> get dependents => _dependents;
   Dependent? get selectedDependent => _selectedDependent;
@@ -32,7 +33,10 @@ class DependentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Map<String, dynamic>> addDependent(String token, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> addDependent(
+    String token,
+    Map<String, dynamic> data,
+  ) async {
     _isLoading = true;
     notifyListeners();
     try {
@@ -47,14 +51,15 @@ class DependentProvider extends ChangeNotifier {
     }
   }
 
-  /// Add a dependent directly without sending an invite
-  Future<Map<String, dynamic>> addDependentDirect(String token, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> addDependentDirect(
+    String token,
+    Map<String, dynamic> data,
+  ) async {
     _isLoading = true;
     notifyListeners();
     try {
       final response = await _dependentService.addDependentDirect(token, data);
       if (response['success'] == true) {
-        // Refresh the dependents list
         await fetchDependents(token);
       }
       return response;
@@ -67,10 +72,17 @@ class DependentProvider extends ChangeNotifier {
     }
   }
 
-  /// Update a dependent's info
-  Future<bool> updateDependent(String token, String dependentId, Map<String, dynamic> data) async {
+  Future<bool> updateDependent(
+    String token,
+    String dependentId,
+    Map<String, dynamic> data,
+  ) async {
     try {
-      final response = await _dependentService.updateDependent(token, dependentId, data);
+      final response = await _dependentService.updateDependent(
+        token,
+        dependentId,
+        data,
+      );
       if (response['success'] == true) {
         await fetchDependents(token);
         return true;
@@ -82,10 +94,12 @@ class DependentProvider extends ChangeNotifier {
     }
   }
 
-  /// Delete a dependent
   Future<bool> deleteDependent(String token, String dependentId) async {
     try {
-      final response = await _dependentService.deleteDependent(token, dependentId);
+      final response = await _dependentService.deleteDependent(
+        token,
+        dependentId,
+      );
       if (response['success'] == true) {
         await fetchDependents(token);
         return true;

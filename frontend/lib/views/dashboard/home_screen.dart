@@ -75,11 +75,22 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+<<<<<<< Updated upstream
   final List<MedicationItem> _medications = [];
   final Set<String> _takenMedications = {};
   final Set<String> _notTakenMedications = {};
   final Map<String, int> _doseRecordIds = {};
   List<DrugInteraction> _interactions = [];
+=======
+  final List<MedicationItem> _medications =
+      []; // unlimited: just a growing list
+  final Set<String> _takenMedications = {}; // medication name + date key
+  final Set<String> _notTakenMedications = {}; // explicit not-taken state
+  final Map<String, int> _doseRecordIds =
+      {}; // نفس المفتاح -> id السجل بالباك إند
+  List<DrugInteraction> _interactions =
+      []; // تداخلات دوائية بين الأدوية الحالية
+>>>>>>> Stashed changes
   final DrugInteractionService _interactionService = DrugInteractionService();
   bool _interactionsBannerExpanded = false;
 
@@ -126,6 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _weekdayNameFromDate(DateTime date) {
     final weekday = date.weekday;
     const names = [
+<<<<<<< Updated upstream
       'الاثنين',
       'الثلاثاء',
       'الأربعاء',
@@ -133,6 +145,15 @@ class _HomeScreenState extends State<HomeScreen> {
       'الجمعة',
       'السبت',
       'الأحد',
+=======
+      'الاثنين', // Monday (1)
+      'الثلاثاء', // Tuesday (2)
+      'الأربعاء', // Wednesday (3)
+      'الخميس', // Thursday (4)
+      'الجمعة', // Friday (5)
+      'السبت', // Saturday (6)
+      'الأحد', // Sunday (7)
+>>>>>>> Stashed changes
     ];
     return names[weekday - 1];
   }
@@ -141,7 +162,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final dayName = _weekdayNameFromDate(date);
     return _medications.where((med) {
       final scheduledEveryDay = med.daysOfWeek.isEmpty;
-      return med.isActive && (scheduledEveryDay || med.daysOfWeek.contains(dayName));
+      return med.isActive &&
+          (scheduledEveryDay || med.daysOfWeek.contains(dayName));
     }).toList();
   }
 
@@ -150,8 +172,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _medicationDoseKey(
-      MedicationItem medication, DateTime date, int doseIndex) {
-    final iso = '${date.year.toString().padLeft(4, '0')}-'
+    MedicationItem medication,
+    DateTime date,
+    int doseIndex,
+  ) {
+    final iso =
+        '${date.year.toString().padLeft(4, '0')}-'
         '${date.month.toString().padLeft(2, '0')}-'
         '${date.day.toString().padLeft(2, '0')}';
     return '${medication.name}_${iso}_$doseIndex';
@@ -169,9 +195,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  DateTime _doseDateTime(MedicationItem medication, DateTime date, int doseIndex) {
-    final intervalHours =
-        medication.dosesPerDay > 1 ? 24 ~/ medication.dosesPerDay : 0;
+  DateTime _doseDateTime(
+    MedicationItem medication,
+    DateTime date,
+    int doseIndex,
+  ) {
+    final intervalHours = medication.dosesPerDay > 1
+        ? 24 ~/ medication.dosesPerDay
+        : 0;
     final baseHour = medication.time.hour;
     final baseMinute = medication.time.minute;
     final doseHour = (baseHour + intervalHours * doseIndex) % 24;
@@ -200,7 +231,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _updateDoseStatus(
-      MedicationItem medication, DateTime date, int doseIndex, bool markTaken) async {
+    MedicationItem medication,
+    DateTime date,
+    int doseIndex,
+    bool markTaken,
+  ) async {
     final key = _medicationDoseKey(medication, date, doseIndex);
     final wasTaken = _takenMedications.contains(key);
     final wasNotTaken = _notTakenMedications.contains(key);
@@ -220,18 +255,18 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
 
-    await Future.wait([
-      _saveTakenMedications(),
-      _saveNotTakenMedications(),
-    ]);
+    await Future.wait([_saveTakenMedications(), _saveNotTakenMedications()]);
 
     final authProvider = context.read<AuthProvider>();
     final token = authProvider.accessToken;
     final medId = int.tryParse(medication.id);
     if (token == null || medId == null) return;
 
-    final scheduledTime =
-        _doseDateTime(medication, date, doseIndex).toIso8601String();
+    final scheduledTime = _doseDateTime(
+      medication,
+      date,
+      doseIndex,
+    ).toIso8601String();
 
     try {
       final existingId = _doseRecordIds[key];
@@ -261,8 +296,9 @@ class _HomeScreenState extends State<HomeScreen> {
           );
           final newId = created['id'];
           if (newId != null) {
-            _doseRecordIds[key] =
-                newId is int ? newId : int.tryParse(newId.toString()) ?? -1;
+            _doseRecordIds[key] = newId is int
+                ? newId
+                : int.tryParse(newId.toString()) ?? -1;
           }
         }
       } else if (willBeNotTaken) {
@@ -285,8 +321,9 @@ class _HomeScreenState extends State<HomeScreen> {
           );
           final newId = created['id'];
           if (newId != null) {
-            _doseRecordIds[key] =
-                newId is int ? newId : int.tryParse(newId.toString()) ?? -1;
+            _doseRecordIds[key] = newId is int
+                ? newId
+                : int.tryParse(newId.toString()) ?? -1;
           }
         }
       } else if (existingId != null) {
@@ -346,8 +383,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
         final recordId = r['id'];
         if (recordId != null) {
-          ids[key] =
-              recordId is int ? recordId : int.tryParse(recordId.toString()) ?? -1;
+          ids[key] = recordId is int
+              ? recordId
+              : int.tryParse(recordId.toString()) ?? -1;
         }
       }
 
@@ -381,7 +419,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 final authProvider = context.read<AuthProvider>();
                 final token = authProvider.accessToken;
                 if (token == null) return null;
-                return ApiService.getJsonDynamic('/adherence/rate', token: token);
+                return ApiService.getJsonDynamic(
+                  '/adherence/rate',
+                  token: token,
+                );
               }(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
@@ -415,7 +456,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     const Text(
                       'متابعة الجرعات',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 20),
                     Text(
@@ -439,20 +483,32 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Column(
                           children: [
-                            Text('$completed',
-                                style: const TextStyle(
-                                    fontSize: 20, fontWeight: FontWeight.bold)),
-                            const Text('جرعات مأخوذة',
-                                style: TextStyle(color: _Colors.textSecondary)),
+                            Text(
+                              '$completed',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Text(
+                              'جرعات مأخوذة',
+                              style: TextStyle(color: _Colors.textSecondary),
+                            ),
                           ],
                         ),
                         Column(
                           children: [
-                            Text('$total',
-                                style: const TextStyle(
-                                    fontSize: 20, fontWeight: FontWeight.bold)),
-                            const Text('إجمالي الجرعات',
-                                style: TextStyle(color: _Colors.textSecondary)),
+                            Text(
+                              '$total',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Text(
+                              'إجمالي الجرعات',
+                              style: TextStyle(color: _Colors.textSecondary),
+                            ),
                           ],
                         ),
                       ],
@@ -478,10 +534,7 @@ class _HomeScreenState extends State<HomeScreen> {
         'type': m.type.index,
         'daysOfWeek': m.daysOfWeek,
         'period': m.period,
-        'time': {
-          'hour': m.time.hour,
-          'minute': m.time.minute,
-        },
+        'time': {'hour': m.time.hour, 'minute': m.time.minute},
         'dosesPerDay': m.dosesPerDay,
         'reminderEnabled': m.reminderEnabled,
         'isActive': m.isActive,
@@ -509,10 +562,7 @@ class _HomeScreenState extends State<HomeScreen> {
           selectedDep.id,
         );
       } else {
-        rawList = await ApiService.getJsonList(
-          '/medications',
-          token: token,
-        );
+        rawList = await ApiService.getJsonList('/medications', token: token);
       }
 
       setState(() {
@@ -537,8 +587,11 @@ class _HomeScreenState extends State<HomeScreen> {
               id: m['id'].toString(),
               name: m['name'] ?? '',
               dosage: m['dosage'] ?? '',
-              type: MedicationType.values[
-                  (m['type'] ?? 0).clamp(0, MedicationType.values.length - 1)],
+              type:
+                  MedicationType.values[(m['type'] ?? 0).clamp(
+                    0,
+                    MedicationType.values.length - 1,
+                  )],
               daysOfWeek: m['days_of_week'] != null
                   ? List<String>.from(m['days_of_week'])
                   : [],
@@ -565,16 +618,23 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
     try {
-      final found = await _interactionService
-          .checkInteractions(_medications.map((m) => m.name).toList());
+      final found = await _interactionService.checkInteractions(
+        _medications.map((m) => m.name).toList(),
+      );
       if (mounted) setState(() => _interactions = found);
     } catch (e) {
       debugPrint('Interaction check failed: $e');
     }
   }
 
+<<<<<<< Updated upstream
   Future<List<DrugInteraction>> _checkInteractionsFor(
       String newMedName) async {
+=======
+  /// يفحص دواء معيّن (بالاسم) مقابل بقية الأدوية الحالية فقط،
+  /// يُستخدم لعرض تحذير فوري بعد إضافة دواء جديد.
+  Future<List<DrugInteraction>> _checkInteractionsFor(String newMedName) async {
+>>>>>>> Stashed changes
     try {
       return await _interactionService.checkNewMedication(
         newMedName,
@@ -616,8 +676,16 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+<<<<<<< Updated upstream
   Widget _buildInteractionDetailTile(DrugInteraction i,
       {bool emphasize = false}) {
+=======
+  /// يبني نص + لون التفاصيل لتداخل واحد بالعربي (يرجع للإنجليزي لو ما لقى ترجمة).
+  Widget _buildInteractionDetailTile(
+    DrugInteraction i, {
+    bool emphasize = false,
+  }) {
+>>>>>>> Stashed changes
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -639,8 +707,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          Text(i.descriptionAr,
-              style: TextStyle(fontSize: emphasize ? 14 : 13)),
+          Text(
+            i.descriptionAr,
+            style: TextStyle(fontSize: emphasize ? 14 : 13),
+          ),
           if (i.recommendationAr.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
@@ -654,7 +724,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _showInteractionDetailsDialog(
-      List<DrugInteraction> found) async {
+    List<DrugInteraction> found,
+  ) async {
     if (found.isEmpty || !mounted) return;
     await showDialog(
       context: context,
@@ -704,7 +775,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     final summaryParts = ['contraindicated', 'major', 'moderate', 'minor']
         .where((s) => counts.containsKey(s))
-        .map((s) => '${_arabicDigits(counts[s].toString())} ${_severityLabelAr(s).replaceFirst('خطر جداً - يمنع الجمع بينهما', 'ممنوع')}')
+        .map(
+          (s) =>
+              '${_arabicDigits(counts[s].toString())} ${_severityLabelAr(s).replaceFirst('خطر جداً - يمنع الجمع بينهما', 'ممنوع')}',
+        )
         .join('، ');
 
     return Container(
@@ -712,7 +786,9 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFFFFF3F0),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _severityColor(highestSeverity).withValues(alpha: 0.35)),
+        border: Border.all(
+          color: _severityColor(highestSeverity).withValues(alpha: 0.35),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -720,13 +796,17 @@ class _HomeScreenState extends State<HomeScreen> {
           InkWell(
             borderRadius: BorderRadius.circular(12),
             onTap: () => setState(
-                () => _interactionsBannerExpanded = !_interactionsBannerExpanded),
+              () => _interactionsBannerExpanded = !_interactionsBannerExpanded,
+            ),
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  Icon(Icons.warning_amber_rounded,
-                      color: _severityColor(highestSeverity), size: 20),
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    color: _severityColor(highestSeverity),
+                    size: 20,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -776,13 +856,17 @@ class _HomeScreenState extends State<HomeScreen> {
                               '${i.ingredientAAr} + ${i.ingredientBAr} — ${_severityLabelAr(i.severity)}',
                               style: TextStyle(
                                 fontSize: isHighest ? 13 : 12,
-                                fontWeight:
-                                    isHighest ? FontWeight.bold : FontWeight.normal,
+                                fontWeight: isHighest
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                             ),
                           ),
-                          const Icon(Icons.chevron_left_rounded,
-                              size: 16, color: Colors.black45),
+                          const Icon(
+                            Icons.chevron_left_rounded,
+                            size: 16,
+                            color: Colors.black45,
+                          ),
                         ],
                       ),
                     ),
@@ -802,7 +886,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _saveNotTakenMedications() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('notTakenMedications', _notTakenMedications.toList());
+    await prefs.setStringList(
+      'notTakenMedications',
+      _notTakenMedications.toList(),
+    );
   }
 
   Future<void> _loadTakenMedications() async {
@@ -883,7 +970,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
                 await _loadMedications();
                 if (med.reminderEnabled) {
-                  final idx = _medications.indexWhere((m) => m.name == med.name && m.time.hour == med.time.hour && m.time.minute == med.time.minute);
+                  final idx = _medications.indexWhere(
+                    (m) =>
+                        m.name == med.name &&
+                        m.time.hour == med.time.hour &&
+                        m.time.minute == med.time.minute,
+                  );
                   if (idx >= 0) {
                     await NotificationService.scheduleMedicineReminder(
                       id: idx,
@@ -917,7 +1009,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
                 await _loadMedications();
                 if (med.reminderEnabled) {
-                  final idx = _medications.indexWhere((m) => m.name == med.name && m.time.hour == med.time.hour && m.time.minute == med.time.minute);
+                  final idx = _medications.indexWhere(
+                    (m) =>
+                        m.name == med.name &&
+                        m.time.hour == med.time.hour &&
+                        m.time.minute == med.time.minute,
+                  );
                   if (idx >= 0) {
                     await NotificationService.scheduleMedicineReminder(
                       id: idx,
@@ -948,7 +1045,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
                 await _loadMedications();
                 if (med.reminderEnabled) {
-                  final idx = _medications.indexWhere((m) => m.name == med.name && m.time.hour == med.time.hour && m.time.minute == med.time.minute);
+                  final idx = _medications.indexWhere(
+                    (m) =>
+                        m.name == med.name &&
+                        m.time.hour == med.time.hour &&
+                        m.time.minute == med.time.minute,
+                  );
                   if (idx >= 0) {
                     await NotificationService.scheduleMedicineReminder(
                       id: idx,
@@ -994,9 +1096,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
+<<<<<<< Updated upstream
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
             ),
+=======
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+>>>>>>> Stashed changes
             child: const Text("حذف"),
           ),
         ],
@@ -1024,8 +1130,21 @@ class _HomeScreenState extends State<HomeScreen> {
       {'method': 'DELETE', 'path': '/medicines/${med.id}'},
       {'method': 'DELETE', 'path': '/medicine/${med.id}'},
       {'method': 'DELETE', 'path': '/api/medications/${med.id}'},
+<<<<<<< Updated upstream
       {'method': 'POST', 'path': '/medications/${med.id}', 'body': '{"_method":"DELETE"}'},
       {'method': 'POST', 'path': '/medication/${med.id}', 'body': '{"_method":"DELETE"}'},
+=======
+      {
+        'method': 'POST',
+        'path': '/medications/${med.id}',
+        'body': '{"_method":"DELETE"}',
+      },
+      {
+        'method': 'POST',
+        'path': '/medication/${med.id}',
+        'body': '{"_method":"DELETE"}',
+      },
+>>>>>>> Stashed changes
       {'method': 'DELETE', 'path': '/medications/delete/${med.id}'},
       {'method': 'DELETE', 'path': '/delete-medication/${med.id}'},
     ];
@@ -1068,7 +1187,11 @@ class _HomeScreenState extends State<HomeScreen> {
           lastStatusCode = response.statusCode;
         }
       } catch (e) {
+<<<<<<< Updated upstream
         debugPrint(' Error with ${test['path']}: $e');
+=======
+        debugPrint('❌ Error with ${test['path']}: $e');
+>>>>>>> Stashed changes
       }
     }
 
@@ -1077,7 +1200,11 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
+<<<<<<< Updated upstream
             content: Text(' تم حذف الدواء بنجاح'),
+=======
+            content: Text('✅ تم حذف الدواء بنجاح'),
+>>>>>>> Stashed changes
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
@@ -1087,7 +1214,11 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+<<<<<<< Updated upstream
             content: Text(' فشل الحذف: الكود $lastStatusCode'),
+=======
+            content: Text('❌ فشل الحذف: الكود $lastStatusCode'),
+>>>>>>> Stashed changes
             backgroundColor: Colors.red,
             duration: Duration(seconds: 3),
           ),
@@ -1156,7 +1287,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               Text('حسابي', style: TextStyle(fontSize: 16)),
                               SizedBox(width: 12),
-                              Icon(Icons.person_outline_rounded, color: _Colors.darkGreen, size: 24),
+                              Icon(
+                                Icons.person_outline_rounded,
+                                color: _Colors.darkGreen,
+                                size: 24,
+                              ),
                             ],
                           ),
                         ),
@@ -1167,7 +1302,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               Text('الإعدادات', style: TextStyle(fontSize: 16)),
                               SizedBox(width: 12),
-                              Icon(Icons.settings_outlined, color: _Colors.darkGreen, size: 24),
+                              Icon(
+                                Icons.settings_outlined,
+                                color: _Colors.darkGreen,
+                                size: 24,
+                              ),
                             ],
                           ),
                         ),
@@ -1178,7 +1317,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               Text('تذكيراتي', style: TextStyle(fontSize: 16)),
                               SizedBox(width: 12),
-                              Icon(Icons.notifications_outlined, color: _Colors.darkGreen, size: 24),
+                              Icon(
+                                Icons.notifications_outlined,
+                                color: _Colors.darkGreen,
+                                size: 24,
+                              ),
                             ],
                           ),
                         ),
@@ -1189,7 +1332,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               Text('أدويتي', style: TextStyle(fontSize: 16)),
                               SizedBox(width: 12),
-                              Icon(Icons.medication_outlined, color: _Colors.darkGreen, size: 24),
+                              Icon(
+                                Icons.medication_outlined,
+                                color: _Colors.darkGreen,
+                                size: 24,
+                              ),
                             ],
                           ),
                         ),
@@ -1198,9 +1345,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Text('متابعة الجرعات', style: TextStyle(fontSize: 16)),
+                              Text(
+                                'متابعة الجرعات',
+                                style: TextStyle(fontSize: 16),
+                              ),
                               SizedBox(width: 12),
-                              Icon(Icons.fact_check_outlined, color: _Colors.darkGreen, size: 24),
+                              Icon(
+                                Icons.fact_check_outlined,
+                                color: _Colors.darkGreen,
+                                size: 24,
+                              ),
                             ],
                           ),
                         ),
@@ -1211,7 +1365,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               Text('التابعون', style: TextStyle(fontSize: 16)),
                               SizedBox(width: 12),
-                              Icon(Icons.people_outline_rounded, color: _Colors.darkGreen, size: 24),
+                              Icon(
+                                Icons.people_outline_rounded,
+                                color: _Colors.darkGreen,
+                                size: 24,
+                              ),
                             ],
                           ),
                         ),
@@ -1221,14 +1379,20 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Text('تسجيل الخروج',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: Colors.redAccent,
-                                  )),
+                              Text(
+                                'تسجيل الخروج',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.redAccent,
+                                ),
+                              ),
                               SizedBox(width: 12),
-                              Icon(Icons.logout_rounded, color: Colors.redAccent, size: 24),
+                              Icon(
+                                Icons.logout_rounded,
+                                color: Colors.redAccent,
+                                size: 24,
+                              ),
                             ],
                           ),
                         ),
@@ -1258,10 +1422,22 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                       child: CircleAvatar(
                         radius: 26,
-                        backgroundColor: selectedDep != null ? const Color(0xFFC9932E) : _Colors.darkGreen,
+                        backgroundColor: selectedDep != null
+                            ? const Color(0xFFC9932E)
+                            : _Colors.darkGreen,
                         child: selectedDep != null
-                            ? Text(selectedDep.fullName[0], style: const TextStyle(color: Colors.white, fontSize: 24))
-                            : const Icon(Icons.person, color: Colors.white, size: 38),
+                            ? Text(
+                                selectedDep.fullName[0],
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 38,
+                              ),
                       ),
                     );
                   },
@@ -1278,11 +1454,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(
                             selectedDep != null
                                 ? 'ملف: ${selectedDep.fullName}'
-                                : (hasName ? '${_getGreeting()}،' : _getGreeting()),
+                                : (hasName
+                                      ? '${_getGreeting()}،'
+                                      : _getGreeting()),
                             textAlign: TextAlign.right,
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: selectedDep != null ? FontWeight.bold : FontWeight.normal,
+                              fontWeight: selectedDep != null
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                               color: selectedDep != null
                                   ? const Color.fromARGB(255, 8, 78, 3)
                                   : _Colors.textSecondary,
@@ -1353,17 +1533,23 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         children: List.generate(_dateStrip.length, (index) {
           final date = _dateStrip[index];
-          final selected = date.year == _selectedDate.year &&
+          final selected =
+              date.year == _selectedDate.year &&
               date.month == _selectedDate.month &&
               date.day == _selectedDate.day;
           final hasMed = _hasAnyMedicationOnDate(date);
           return Expanded(
             child: Padding(
-              padding: EdgeInsets.only(left: index == _dateStrip.length - 1 ? 0 : 6),
+              padding: EdgeInsets.only(
+                left: index == _dateStrip.length - 1 ? 0 : 6,
+              ),
               child: GestureDetector(
                 onTap: () => setState(() => _selectedDate = date),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: selected ? _Colors.darkGreen : Colors.white,
                     borderRadius: BorderRadius.circular(18),
@@ -1389,7 +1575,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 12,
-                          color: selected ? Colors.white : _Colors.textSecondary,
+                          color: selected
+                              ? Colors.white
+                              : _Colors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -1481,21 +1669,31 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.check_circle_outline, color: Color(0xFF1D9E75), size: 20),
+                      Icon(
+                        Icons.check_circle_outline,
+                        color: Color(0xFF1D9E75),
+                        size: 20,
+                      ),
                       SizedBox(width: 8),
                       Text(
                         'لا توجد أدوية مجدولة لهذا اليوم',
-                        style: TextStyle(color: Color(0xFF085041), fontSize: 14),
+                        style: TextStyle(
+                          color: Color(0xFF085041),
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
                 )
               else
-                ...todaysMeds.map((med) => _MedicationCard(
-                      medication: med,
-                      onEdit: () => _openAddMedicationSheet(existingMedication: med),
-                      onDelete: () => _deleteMedication(med),
-                    )),
+                ...todaysMeds.map(
+                  (med) => _MedicationCard(
+                    medication: med,
+                    onEdit: () =>
+                        _openAddMedicationSheet(existingMedication: med),
+                    onDelete: () => _deleteMedication(med),
+                  ),
+                ),
               const SizedBox(height: 16),
               GestureDetector(
                 onTap: () => _openAddMedicationSheet(),
@@ -1522,7 +1720,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () async {
                       final changed = await Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const DependentsScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const DependentsScreen(),
+                        ),
                       );
                       if (changed == true) _loadMedications();
                     },
@@ -1539,7 +1739,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () async {
                       final changed = await Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const DependentsScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const DependentsScreen(),
+                        ),
                       );
                       if (changed == true) _loadMedications();
                     },
@@ -1577,11 +1779,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.people_outline, color: _Colors.textSecondary, size: 20),
+                      Icon(
+                        Icons.people_outline,
+                        color: _Colors.textSecondary,
+                        size: 20,
+                      ),
                       SizedBox(width: 8),
                       Text(
                         'لا يوجد تابعين مضافين بعد',
-                        style: TextStyle(color: _Colors.textSecondary, fontSize: 14),
+                        style: TextStyle(
+                          color: _Colors.textSecondary,
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
@@ -1603,7 +1812,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFF085041), width: 1.5),
+                    border: Border.all(
+                      color: const Color(0xFF085041),
+                      width: 1.5,
+                    ),
                   ),
                   child: const Text(
                     '+ إضافة تابع',
@@ -1636,7 +1848,9 @@ class _HomeScreenState extends State<HomeScreen> {
         if (changed == true && mounted) {
           final auth = context.read<AuthProvider>();
           if (auth.accessToken != null) {
-            context.read<DependentProvider>().fetchDependents(auth.accessToken!);
+            context.read<DependentProvider>().fetchDependents(
+              auth.accessToken!,
+            );
           }
         }
       },
@@ -1655,7 +1869,11 @@ class _HomeScreenState extends State<HomeScreen> {
               backgroundColor: const Color(0xFFC9932E),
               child: Text(
                 dependent.fullName.isNotEmpty ? dependent.fullName[0] : '?',
-                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -1674,7 +1892,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 4),
                   Text(
                     dependent.relationship,
-                    style: const TextStyle(color: _Colors.textSecondary, fontSize: 13),
+                    style: const TextStyle(
+                      color: _Colors.textSecondary,
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
@@ -1767,20 +1988,32 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (nameController.text.trim().isEmpty) return;
                 final auth = context.read<AuthProvider>();
                 if (auth.accessToken == null) return;
-                final success = await context.read<DependentProvider>().updateDependent(
-                  auth.accessToken!,
-                  dependent.id.toString(),
-                  {
-                    'full_name': nameController.text.trim(),
-                    'relationship': selectedRelationship ?? dependent.relationship,
-                  },
-                );
+                final success = await context
+                    .read<DependentProvider>()
+                    .updateDependent(
+                      auth.accessToken!,
+                      dependent.id.toString(),
+                      {
+                        'full_name': nameController.text.trim(),
+                        'relationship':
+                            selectedRelationship ?? dependent.relationship,
+                      },
+                    );
                 if (dialogContext.mounted) Navigator.pop(dialogContext);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
+<<<<<<< Updated upstream
                       content: Text(success ? 'تم التحديث بنجاح ' : 'فشل التحديث'),
                       backgroundColor: success ? const Color(0xFF1D9E75) : Colors.red,
+=======
+                      content: Text(
+                        success ? 'تم التحديث بنجاح ✅' : 'فشل التحديث',
+                      ),
+                      backgroundColor: success
+                          ? const Color(0xFF1D9E75)
+                          : Colors.red,
+>>>>>>> Stashed changes
                     ),
                   );
                 }
@@ -1803,7 +2036,9 @@ class _HomeScreenState extends State<HomeScreen> {
         textDirection: TextDirection.rtl,
         child: AlertDialog(
           title: const Text('حذف التابع'),
-          content: Text('هل أنت متأكد من حذف "${dependent.fullName}"؟ لا يمكن التراجع عن هذا الإجراء.'),
+          content: Text(
+            'هل أنت متأكد من حذف "${dependent.fullName}"؟ لا يمكن التراجع عن هذا الإجراء.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
@@ -1878,14 +2113,13 @@ class _HomeScreenState extends State<HomeScreen> {
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: active.length,
-                  itemBuilder: (context, index) =>
-                      _MedicationCard(
-                        medication: active[index],
-                        onEdit: () => _openAddMedicationSheet(
-                          existingMedication: active[index],
-                        ),
-                        onDelete: () => _deleteMedication(active[index]),
-                      ),
+                  itemBuilder: (context, index) => _MedicationCard(
+                    medication: active[index],
+                    onEdit: () => _openAddMedicationSheet(
+                      existingMedication: active[index],
+                    ),
+                    onDelete: () => _deleteMedication(active[index]),
+                  ),
                 ),
         ),
       ],
@@ -1909,10 +2143,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-              ),
+              style: const TextStyle(color: Colors.white, fontSize: 14),
             ),
           ),
           Expanded(
@@ -1920,12 +2151,7 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsetsDirectional.only(end: 4),
               child: ElevatedButton(
                 onPressed: enabled
-                    ? () => _updateDoseStatus(
-                          medication,
-                          date,
-                          doseIndex,
-                          true,
-                        )
+                    ? () => _updateDoseStatus(medication, date, doseIndex, true)
                     : null,
                 style: ButtonStyle(
                   backgroundColor: WidgetStateProperty.resolveWith((states) {
@@ -1953,12 +2179,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 1.5,
                     );
                   }),
-                  minimumSize: WidgetStateProperty.all(const Size.fromHeight(30)),
+                  minimumSize: WidgetStateProperty.all(
+                    const Size.fromHeight(30),
+                  ),
                   padding: WidgetStateProperty.all(
-                    const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 6,
-                    ),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   ),
                   shape: WidgetStateProperty.all(
                     RoundedRectangleBorder(
@@ -1968,10 +2193,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: const Text(
                   'مأخوذة',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -1981,12 +2203,8 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsetsDirectional.only(start: 4),
               child: ElevatedButton(
                 onPressed: enabled
-                    ? () => _updateDoseStatus(
-                          medication,
-                          date,
-                          doseIndex,
-                          false,
-                        )
+                    ? () =>
+                          _updateDoseStatus(medication, date, doseIndex, false)
                     : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: notTaken
@@ -2016,7 +2234,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildRemindersTab() {
     final selectedMeds = _medicationsForDate(_selectedDate);
-    final isToday = _selectedDate.year == DateTime.now().year &&
+    final isToday =
+        _selectedDate.year == DateTime.now().year &&
         _selectedDate.month == DateTime.now().month &&
         _selectedDate.day == DateTime.now().day;
 
@@ -2040,7 +2259,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   itemCount: selectedMeds.length,
                   itemBuilder: (context, index) {
                     final medication = selectedMeds[index];
@@ -2078,7 +2300,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 12),
           ...List.generate(medication.dosesPerDay, (doseIndex) {
-            return _buildDoseActionRow(medication, _selectedDate, doseIndex, isToday);
+            return _buildDoseActionRow(
+              medication,
+              _selectedDate,
+              doseIndex,
+              isToday,
+            );
           }),
         ],
       ),
@@ -2147,10 +2374,19 @@ class _MedicationCard extends StatelessWidget {
   final bool showDoseActions;
   final DateTime? selectedDate;
   final bool isToday;
-  final bool Function(MedicationItem medication, DateTime date, int doseIndex)? isTaken;
-  final bool Function(MedicationItem medication, DateTime date, int doseIndex)? isNotTaken;
-  final void Function(MedicationItem medication, DateTime date, int doseIndex, bool markTaken)? onUpdateDoseStatus;
-  final String Function(MedicationItem medication, int doseIndex)? doseTimeLabel;
+  final bool Function(MedicationItem medication, DateTime date, int doseIndex)?
+  isTaken;
+  final bool Function(MedicationItem medication, DateTime date, int doseIndex)?
+  isNotTaken;
+  final void Function(
+    MedicationItem medication,
+    DateTime date,
+    int doseIndex,
+    bool markTaken,
+  )?
+  onUpdateDoseStatus;
+  final String Function(MedicationItem medication, int doseIndex)?
+  doseTimeLabel;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
@@ -2181,10 +2417,7 @@ class _MedicationCard extends StatelessWidget {
         children: [
           PopupMenuButton<String>(
             color: Colors.white,
-            icon: const Icon(
-              Icons.more_vert,
-              color: Colors.white,
-            ),
+            icon: const Icon(Icons.more_vert, color: Colors.white),
             onSelected: (value) {
               if (value == "edit") {
                 onEdit?.call();
@@ -2243,11 +2476,23 @@ class _MedicationCard extends StatelessWidget {
                   '${medication.timeLabel}. x${medication.dosesPerDay}/اليوم',
                   style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
-                if (showDoseActions && selectedDate != null && isTaken != null && isNotTaken != null && onUpdateDoseStatus != null) ...[
+                if (showDoseActions &&
+                    selectedDate != null &&
+                    isTaken != null &&
+                    isNotTaken != null &&
+                    onUpdateDoseStatus != null) ...[
                   const SizedBox(height: 12),
                   ...List.generate(medication.dosesPerDay, (doseIndex) {
-                    final taken = isTaken!(medication, selectedDate!, doseIndex);
-                    final notTaken = isNotTaken!(medication, selectedDate!, doseIndex);
+                    final taken = isTaken!(
+                      medication,
+                      selectedDate!,
+                      doseIndex,
+                    );
+                    final notTaken = isNotTaken!(
+                      medication,
+                      selectedDate!,
+                      doseIndex,
+                    );
                     final doseTime = doseTimeLabel!(medication, doseIndex);
 
                     return Padding(
@@ -2269,45 +2514,60 @@ class _MedicationCard extends StatelessWidget {
                               child: ElevatedButton(
                                 onPressed: isToday
                                     ? () => onUpdateDoseStatus!(
-                                          medication,
-                                          selectedDate!,
-                                          doseIndex,
-                                          true,
-                                        )
+                                        medication,
+                                        selectedDate!,
+                                        doseIndex,
+                                        true,
+                                      )
                                     : null,
                                 style: ButtonStyle(
-                                  backgroundColor: WidgetStateProperty.resolveWith(
-                                      (states) {
-                                    if (taken) {
-                                      return const Color(0xFF1D9E75);
-                                    }
-                                    return const Color(0xFFE1F5EE).withValues(
-                                      alpha: states.contains(WidgetState.disabled)
-                                          ? 0.4
-                                          : 1.0,
-                                    );
-                                  }),
-                                  foregroundColor: WidgetStateProperty.resolveWith(
-                                      (states) {
-                                    if (taken) {
-                                      return Colors.white;
-                                    }
-                                    return const Color(0xFF1D9E75).withValues(
-                                      alpha: states.contains(WidgetState.disabled)
-                                          ? 0.4
-                                          : 1.0,
-                                    );
-                                  }),
-                                  side: WidgetStateProperty.resolveWith((states) {
+                                  backgroundColor:
+                                      WidgetStateProperty.resolveWith((states) {
+                                        if (taken) {
+                                          return const Color(0xFF1D9E75);
+                                        }
+                                        return const Color(
+                                          0xFFE1F5EE,
+                                        ).withValues(
+                                          alpha:
+                                              states.contains(
+                                                WidgetState.disabled,
+                                              )
+                                              ? 0.4
+                                              : 1.0,
+                                        );
+                                      }),
+                                  foregroundColor:
+                                      WidgetStateProperty.resolveWith((states) {
+                                        if (taken) {
+                                          return Colors.white;
+                                        }
+                                        return const Color(
+                                          0xFF1D9E75,
+                                        ).withValues(
+                                          alpha:
+                                              states.contains(
+                                                WidgetState.disabled,
+                                              )
+                                              ? 0.4
+                                              : 1.0,
+                                        );
+                                      }),
+                                  side: WidgetStateProperty.resolveWith((
+                                    states,
+                                  ) {
                                     final color = const Color(0xFF1D9E75);
                                     return BorderSide(
-                                      color: states.contains(WidgetState.disabled)
+                                      color:
+                                          states.contains(WidgetState.disabled)
                                           ? color.withValues(alpha: 0.4)
                                           : color,
                                       width: 1.5,
                                     );
                                   }),
-                                  minimumSize: WidgetStateProperty.all(const Size.fromHeight(30)),
+                                  minimumSize: WidgetStateProperty.all(
+                                    const Size.fromHeight(30),
+                                  ),
                                   padding: WidgetStateProperty.all(
                                     const EdgeInsets.symmetric(
                                       horizontal: 16,
@@ -2332,48 +2592,62 @@ class _MedicationCard extends StatelessWidget {
                           ),
                           Expanded(
                             child: Padding(
-                              padding: const EdgeInsetsDirectional.only(start: 4),
+                              padding: const EdgeInsetsDirectional.only(
+                                start: 4,
+                              ),
                               child: ElevatedButton(
                                 onPressed: isToday
                                     ? () => onUpdateDoseStatus!(
-                                          medication,
-                                          selectedDate!,
-                                          doseIndex,
-                                          false,
-                                        )
+                                        medication,
+                                        selectedDate!,
+                                        doseIndex,
+                                        false,
+                                      )
                                     : null,
                                 style: ButtonStyle(
-                                  backgroundColor: WidgetStateProperty.resolveWith(
-                                      (states) {
-                                    if (notTaken) {
-                                      return const Color(0xFFB85C5C);
-                                    }
-                                    return Colors.white.withValues(
-                                        alpha: states.contains(WidgetState.disabled)
-                                            ? 0.4
-                                            : 1.0);
-                                  }),
-                                  foregroundColor: WidgetStateProperty.resolveWith(
-                                      (states) {
-                                    if (notTaken) {
-                                      return Colors.white;
-                                    }
-                                    return _Colors.darkGreen.withValues(
-                                        alpha: states.contains(WidgetState.disabled)
-                                            ? 0.4
-                                            : 1.0);
-                                  }),
-                                  side: WidgetStateProperty.resolveWith((states) {
+                                  backgroundColor:
+                                      WidgetStateProperty.resolveWith((states) {
+                                        if (notTaken) {
+                                          return const Color(0xFFB85C5C);
+                                        }
+                                        return Colors.white.withValues(
+                                          alpha:
+                                              states.contains(
+                                                WidgetState.disabled,
+                                              )
+                                              ? 0.4
+                                              : 1.0,
+                                        );
+                                      }),
+                                  foregroundColor:
+                                      WidgetStateProperty.resolveWith((states) {
+                                        if (notTaken) {
+                                          return Colors.white;
+                                        }
+                                        return _Colors.darkGreen.withValues(
+                                          alpha:
+                                              states.contains(
+                                                WidgetState.disabled,
+                                              )
+                                              ? 0.4
+                                              : 1.0,
+                                        );
+                                      }),
+                                  side: WidgetStateProperty.resolveWith((
+                                    states,
+                                  ) {
                                     final color = _Colors.darkGreen;
                                     return BorderSide(
-                                      color: states.contains(WidgetState.disabled)
+                                      color:
+                                          states.contains(WidgetState.disabled)
                                           ? color.withValues(alpha: 0.4)
                                           : color,
                                       width: 1.5,
                                     );
                                   }),
-                                  minimumSize:
-                                      WidgetStateProperty.all(const Size.fromHeight(30)),
+                                  minimumSize: WidgetStateProperty.all(
+                                    const Size.fromHeight(30),
+                                  ),
                                   padding: WidgetStateProperty.all(
                                     const EdgeInsets.symmetric(
                                       horizontal: 16,
@@ -2414,10 +2688,7 @@ class _AddMedicationSheet extends StatefulWidget {
   final MedicationItem? existingMedication;
   final void Function(MedicationItem medication) onSave;
 
-  const _AddMedicationSheet({
-    this.existingMedication,
-    required this.onSave,
-  });
+  const _AddMedicationSheet({this.existingMedication, required this.onSave});
 
   @override
   State<_AddMedicationSheet> createState() => _AddMedicationSheetState();
@@ -2505,8 +2776,18 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   void _selectSuggestion(Map<String, dynamic> suggestion) {
     final langCode = context.read<AppSettingsProvider>().languageCode;
     setState(() {
+<<<<<<< Updated upstream
       _nameController.text = _medicineDisplayName(suggestion, langCode);
       _dosageController.text = suggestion['dosage'] ?? '';
+=======
+      final nameEn = (suggestion['name_en'] ?? '').toString();
+      final nameAr = (suggestion['name_ar'] ?? '').toString();
+
+      _nameController.text = nameAr.isNotEmpty ? '$nameEn — $nameAr' : nameEn;
+
+      _dosageController.text = suggestion['dosage'] ?? '';
+
+>>>>>>> Stashed changes
       _searchController.clear();
       _pharmacySuggestions.clear();
     });
@@ -2532,7 +2813,9 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
 
     widget.onSave(
       MedicationItem(
-        id: widget.existingMedication?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        id:
+            widget.existingMedication?.id ??
+            DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text.trim(),
         dosage: _dosageController.text.trim(),
         type: _selectedType,
@@ -3058,7 +3341,10 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   child: OutlinedButton(
                     onPressed: () => _save(withReminder: false),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: _Colors.darkGreen, width: 1.5),
+                      side: const BorderSide(
+                        color: _Colors.darkGreen,
+                        width: 1.5,
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),

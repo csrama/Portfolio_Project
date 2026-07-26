@@ -7,7 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/app_settings_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/dependent_service.dart';
-import '../../services/notification_service.dart';
+import '../../i18n/strings.dart';
 
 String _medicineDisplayName(Map<String, dynamic> medicine, String langCode) {
   final nameEn = (medicine['name_en'] ?? '').toString();
@@ -19,10 +19,7 @@ String _medicineDisplayName(Map<String, dynamic> medicine, String langCode) {
 }
 
 class _Colors {
-  static const Color primaryGreen = Color(0xFF1D9E75);
   static const Color darkGreen = Color(0xFF085041);
-  static const Color lightGreenBg = Color(0xFFD9F2E7);
-  static const Color mutedGreen = Color(0xFF7FBF9E);
   static const Color textPrimary = Colors.black;
   static const Color textSecondary = Colors.black54;
   static const Color borderGrey = Color(0xFFE0E0E0);
@@ -30,11 +27,10 @@ class _Colors {
 
 class DependentDashboardScreen extends StatefulWidget {
   final Dependent dependent;
-
   const DependentDashboardScreen({super.key, required this.dependent});
-
   @override
-  State<DependentDashboardScreen> createState() => _DependentDashboardScreenState();
+  State<DependentDashboardScreen> createState() =>
+      _DependentDashboardScreenState();
 }
 
 class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
@@ -62,7 +58,6 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
       _isLoading = true;
       _errorMessage = null;
     });
-
     try {
       final auth = context.read<AuthProvider>();
       final depService = context.read<DependentService>();
@@ -70,7 +65,7 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
         auth.accessToken!,
         widget.dependent.id,
       );
-
+      if (!mounted) return;
       setState(() {
         _medications = rawList.map((m) {
           TimeOfDay time;
@@ -83,13 +78,15 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
           } else {
             time = const TimeOfDay(hour: 8, minute: 0);
           }
-
           return MedicationItem(
             id: m['id'].toString(),
             name: m['name'] ?? '',
             dosage: m['dosage'] ?? '',
-            type: MedicationType.values[
-                (m['type'] ?? 0).clamp(0, MedicationType.values.length - 1)],
+            type:
+                MedicationType.values[(m['type'] ?? 0).clamp(
+                  0,
+                  MedicationType.values.length - 1,
+                )],
             daysOfWeek: m['days_of_week'] != null
                 ? List<String>.from(m['days_of_week'])
                 : [],
@@ -103,10 +100,10 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('LOAD DEP MEDICATIONS ERROR = $e');
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = 'فشل في تحميل الأدوية';
+        _errorMessage = Strings.tr(context, 'failed_load_medications');
       });
     }
   }
@@ -115,27 +112,24 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("حذف الدواء"),
-        content: Text("هل تريد حذف ${med.name} ؟"),
+        title: const Text('حذف الدواء'),
+        content: Text('هل تريد حذف ${med.name} ؟'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("إلغاء"),
+            child: const Text('إلغاء'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("حذف"),
+            child: const Text('حذف'),
           ),
         ],
       ),
     );
-
     if (ok != true) return;
-
     final auth = context.read<AuthProvider>();
     if (auth.accessToken == null) return;
-
     try {
       await http.delete(
         Uri.parse(ApiService.buildUrl('/medications/${med.id}')),
@@ -145,24 +139,21 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
         },
       );
       await _loadMedications();
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(' تم حذف الدواء بنجاح'),
             backgroundColor: Colors.green,
           ),
         );
-      }
     } catch (e) {
-      debugPrint('Delete error: $e');
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(' فشل الحذف'),
             backgroundColor: Colors.red,
           ),
         );
-      }
     }
   }
 
@@ -174,9 +165,7 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
       builder: (_) => _AddDependentMedicationSheet(
         existingMedication: existingMedication,
         dependentId: widget.dependent.id,
-        onSave: () async {
-          await _loadMedications();
-        },
+        onSave: () async => await _loadMedications(),
       ),
     );
   }
@@ -189,18 +178,14 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
       });
       return;
     }
-
     setState(() => _isSearching = true);
-
     final auth = context.read<AuthProvider>();
     try {
       final result = await ApiService.getJsonList(
         '/medicines/search?q=$query',
         token: auth.accessToken!,
       );
-      setState(() {
-        _searchResults = List<Map<String, dynamic>>.from(result);
-      });
+      setState(() => _searchResults = List<Map<String, dynamic>>.from(result));
     } catch (e) {
       debugPrint('Search error: $e');
     } finally {
@@ -211,15 +196,26 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
   void _addFoundMedicineFromSearch(Map<String, dynamic> med) async {
     final auth = context.read<AuthProvider>();
     if (auth.accessToken == null) return;
+<<<<<<< Updated upstream
 
     final langCode = context.read<AppSettingsProvider>().languageCode;
 
+=======
+>>>>>>> Stashed changes
     try {
       await ApiService.postJson(
         '/medications',
         body: {
           'dependent_id': int.parse(widget.dependent.id.toString()),
+<<<<<<< Updated upstream
           'name': _medicineDisplayName(med, langCode),
+=======
+          'name':
+              (med['name_ar']?.toString().isNotEmpty == true
+                      ? '${med['name_en']} - ${med['name_ar']}'
+                      : med['name_en'] ?? '')
+                  .toString(),
+>>>>>>> Stashed changes
           'dosage': med['dosage'] ?? '',
           'type': 0,
           'days_of_week': [],
@@ -230,34 +226,30 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
         token: auth.accessToken!,
       );
       _searchController.clear();
-      setState(() {
-        _searchResults.clear();
-      });
+      setState(() => _searchResults.clear());
       await _loadMedications();
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(' تم إضافة الدواء بنجاح'),
             backgroundColor: _Colors.darkGreen,
           ),
         );
-      }
       FocusScope.of(context).unfocus();
     } catch (e) {
-      debugPrint('Add from search error: $e');
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(' فشل الإضافة: $e'),
             backgroundColor: Colors.red,
           ),
         );
-      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+<<<<<<< Updated upstream
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -287,18 +279,54 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: Colors.white,
+=======
+    final isRtl = context.watch<AppSettingsProvider>().languageCode == 'ar';
+    return Directionality(
+      textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          title: Text('ملف: ${widget.dependent.fullName}'),
+          backgroundColor: _Colors.darkGreen,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        body: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              color: _Colors.darkGreen,
+              child: TextField(
+                controller: _searchController,
+                onChanged: _searchMedications,
+                textAlign: TextAlign.right,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'ابحث عن دواء لإضافته للتابع...',
+                  hintStyle: const TextStyle(color: Colors.white60),
+                  prefixIcon: _isSearching
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+>>>>>>> Stashed changes
                           ),
-                        ),
-                      )
-                    : const Icon(Icons.search, color: Colors.white60),
-                filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.15),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+                        )
+                      : const Icon(Icons.search, color: Colors.white60),
+                  filled: true,
+                  fillColor: Colors.white.withValues(alpha: 0.15),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
             ),
+<<<<<<< Updated upstream
           ),
           if (_searchResults.isNotEmpty)
             Container(
@@ -324,16 +352,47 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                     title: Text(
                       _medicineDisplayName(item, langCode),
                       textAlign: TextAlign.right,
+=======
+            if (_searchResults.isNotEmpty)
+              Container(
+                constraints: const BoxConstraints(maxHeight: 200),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+>>>>>>> Stashed changes
                     ),
-                    subtitle: Text(
-                      item['dosage'] ?? '',
-                      textAlign: TextAlign.right,
-                    ),
-                    trailing: const Icon(Icons.add_circle_outline, color: _Colors.darkGreen),
-                    onTap: () => _addFoundMedicineFromSearch(item),
-                  );
-                },
+                  ],
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _searchResults.length,
+                  itemBuilder: (context, index) {
+                    final item = _searchResults[index];
+                    final nameEn = (item['name_en'] ?? '').toString();
+                    final nameAr = (item['name_ar'] ?? '').toString();
+                    return ListTile(
+                      title: Text(
+                        nameAr.isNotEmpty ? '$nameEn - $nameAr' : nameEn,
+                        textAlign: TextAlign.right,
+                      ),
+                      subtitle: Text(
+                        item['dosage'] ?? '',
+                        textAlign: TextAlign.right,
+                      ),
+                      trailing: const Icon(
+                        Icons.add_circle_outline,
+                        color: Color(0xFF1D9E75),
+                      ),
+                      onTap: () => _addFoundMedicineFromSearch(item),
+                    );
+                  },
+                ),
               ),
+<<<<<<< Updated upstream
             ),
 
           Expanded(
@@ -426,27 +485,100 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
 
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+=======
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _errorMessage != null
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(_errorMessage!),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _loadMedications,
+                            child: const Text('إعادة المحاولة'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _loadMedications,
+                      child: ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF6F6F6),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: _Colors.borderGrey),
+                            ),
+                            child: Row(
+>>>>>>> Stashed changes
                               children: [
-                                GestureDetector(
-                                  onTap: () => _openAddMedicationSheet(),
-                                  child: const Text(
-                                    'إضافة دواء',
-                                    style: TextStyle(
-                                      color: _Colors.darkGreen,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
+                                CircleAvatar(
+                                  radius: 30,
+                                  backgroundColor: const Color(0xFFC9932E),
+                                  child: Text(
+                                    widget.dependent.fullName.isNotEmpty
+                                        ? widget.dependent.fullName[0]
+                                        : '?',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ),
-                                const Text(
-                                  'عرض المزيد',
-                                  style: TextStyle(
-                                    color: Colors.transparent,
-                                    fontSize: 13,
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.dependent.fullName,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: _Colors.textPrimary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'صلة القرابة: ${widget.dependent.relationship}',
+                                        style: const TextStyle(
+                                          color: _Colors.textSecondary,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      if (widget.dependent.dateOfBirth != null)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 2,
+                                          ),
+                                          child: Text(
+                                            'تاريخ الميلاد: ${widget.dependent.dateOfBirth!.toString().split(' ')[0]}',
+                                            style: const TextStyle(
+                                              color: _Colors.textSecondary,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
+<<<<<<< Updated upstream
                             const SizedBox(height: 8),
                             const Align(
                               alignment: Alignment.centerRight,
@@ -497,19 +629,103 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                                   color: _Colors.darkGreen,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
+=======
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              GestureDetector(
+                                onTap: () => _openAddMedicationSheet(),
+>>>>>>> Stashed changes
                                 child: const Text(
-                                  '+ إضافة دواء',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.white, fontSize: 15),
+                                  'إضافة دواء',
+                                  style: TextStyle(
+                                    color: _Colors.darkGreen,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              const Text(
+                                '',
+                                style: TextStyle(
+                                  color: Colors.transparent,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          const Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              'الأدوية',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: _Colors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          if (_medications.isEmpty)
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE1F5EE),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.check_circle_outline,
+                                    color: Color(0xFF1D9E75),
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'لم يتم إضافة أي أدوية لهذا التابع بعد',
+                                    style: TextStyle(
+                                      color: Color(0xFF085041),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            ..._medications.map(
+                              (med) => _buildMedicationCard(med),
+                            ),
+                          const SizedBox(height: 16),
+                          GestureDetector(
+                            onTap: () => _openAddMedicationSheet(),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: _Colors.darkGreen,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Text(
+                                '+ إضافة دواء',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 24),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
                       ),
-          ),
-        ],
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -529,12 +745,9 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
             color: Colors.white,
             icon: const Icon(Icons.more_vert, color: Colors.white),
             onSelected: (value) {
-              if (value == "edit") {
+              if (value == "edit")
                 _openAddMedicationSheet(existingMedication: medication);
-              }
-              if (value == "delete") {
-                _deleteMedication(medication);
-              }
+              if (value == "delete") _deleteMedication(medication);
             },
             itemBuilder: (_) => const [
               PopupMenuItem(
@@ -595,7 +808,6 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
   }
 }
 
-
 class _AddDependentMedicationSheet extends StatefulWidget {
   final MedicationItem? existingMedication;
   final String dependentId;
@@ -608,10 +820,12 @@ class _AddDependentMedicationSheet extends StatefulWidget {
   });
 
   @override
-  State<_AddDependentMedicationSheet> createState() => _AddDependentMedicationSheetState();
+  State<_AddDependentMedicationSheet> createState() =>
+      _AddDependentMedicationSheetState();
 }
 
-class _AddDependentMedicationSheetState extends State<_AddDependentMedicationSheet> {
+class _AddDependentMedicationSheetState
+    extends State<_AddDependentMedicationSheet> {
   MedicationType _selectedType = MedicationType.tablets;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _dosageController = TextEditingController();
@@ -631,6 +845,7 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
   String _period = 'صباحا';
   TimeOfDay _time = const TimeOfDay(hour: 6, minute: 0);
   int _dosesPerDay = 1;
+  bool _isSaving = false;
 
   List<Map<String, dynamic>> _pharmacySuggestions = [];
 
@@ -639,16 +854,15 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
       setState(() => _pharmacySuggestions.clear());
       return;
     }
-
     final auth = context.read<AuthProvider>();
     try {
       final result = await ApiService.getJsonList(
         '/medicines/search?q=$query',
         token: auth.accessToken!,
       );
-      setState(() {
-        _pharmacySuggestions = List<Map<String, dynamic>>.from(result);
-      });
+      setState(
+        () => _pharmacySuggestions = List<Map<String, dynamic>>.from(result),
+      );
     } catch (e) {
       debugPrint(e.toString());
     }
@@ -680,7 +894,13 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
   void _selectSuggestion(Map<String, dynamic> suggestion) {
     final langCode = context.read<AppSettingsProvider>().languageCode;
     setState(() {
+<<<<<<< Updated upstream
       _nameController.text = _medicineDisplayName(suggestion, langCode);
+=======
+      final nameEn = (suggestion['name_en'] ?? '').toString();
+      final nameAr = (suggestion['name_ar'] ?? '').toString();
+      _nameController.text = nameAr.isNotEmpty ? '$nameEn - $nameAr' : nameEn;
+>>>>>>> Stashed changes
       _dosageController.text = suggestion['dosage'] ?? '';
       _searchController.clear();
       _pharmacySuggestions.clear();
@@ -696,81 +916,64 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
   bool get _isValid =>
       _nameController.text.trim().isNotEmpty && _selectedDays.isNotEmpty;
 
-  void _save({required bool withReminder}) async {
+  Future<void> _save({required bool withReminder}) async {
     if (!_isValid) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('الرجاء إدخال اسم الدواء واختيار الأيام')),
+        SnackBar(content: Text(Strings.tr(context, 'enter_name_and_days'))),
       );
       return;
     }
 
+    setState(() => _isSaving = true);
+
     final auth = context.read<AuthProvider>();
-    if (auth.accessToken == null) return;
+    if (auth.accessToken == null) {
+      setState(() => _isSaving = false);
+      return;
+    }
 
     try {
+      final depId = int.tryParse(widget.dependentId) ?? 0;
+      final body = {
+        'dependent_id': depId,
+        'name': _nameController.text.trim(),
+        'dosage': _dosageController.text.trim(),
+        'type': _selectedType.index,
+        'days_of_week': _selectedDays.toList(),
+        'period': _period,
+        'time': '${_time.hour}:${_time.minute}',
+        'doses_per_day': _dosesPerDay,
+      };
+
       if (widget.existingMedication != null) {
         await ApiService.putJson(
           '/medications/${widget.existingMedication!.id}',
-          body: {
-            'name': _nameController.text.trim(),
-            'dosage': _dosageController.text.trim(),
-            'type': _selectedType.index,
-            'days_of_week': _selectedDays.toList(),
-            'period': _period,
-            'time': '${_time.hour}:${_time.minute}',
-            'doses_per_day': _dosesPerDay,
-          },
+          body: body,
           token: auth.accessToken!,
         );
       } else {
         await ApiService.postJson(
           '/medications',
-          body: {
-            'dependent_id': int.parse(widget.dependentId.toString()),
-            'name': _nameController.text.trim(),
-            'dosage': _dosageController.text.trim(),
-            'type': _selectedType.index,
-            'days_of_week': _selectedDays.toList(),
-            'period': _period,
-            'time': '${_time.hour}:${_time.minute}',
-            'doses_per_day': _dosesPerDay,
-          },
+          body: body,
           token: auth.accessToken!,
         );
       }
 
-      if (withReminder) {
-        await NotificationService.scheduleMedicineReminder(
-          id: DateTime.now().millisecondsSinceEpoch,
-          medicineName: _nameController.text.trim(),
-          hour: _time.hour,
-          minute: _time.minute,
-        );
-      }
-
       widget.onSave();
-      Navigator.of(context).pop();
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(widget.existingMedication != null
-                ? ' تم تعديل الدواء بنجاح'
-                : ' تم إضافة الدواء بنجاح'),
-            backgroundColor: _Colors.darkGreen,
-          ),
-        );
-      }
+      if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      debugPrint('Save medication error: $e');
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(' فشل الحفظ: $e'),
+            content: Text(
+              '${Strings.tr(context, 'medication_save_failed')} $e',
+            ),
             backgroundColor: Colors.red,
           ),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -816,10 +1019,13 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'حدد نوع الدواء:',
+                Text(
+                  Strings.tr(context, 'select_medication_type'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: _Colors.textSecondary),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: _Colors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
@@ -840,7 +1046,9 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
                           decoration: BoxDecoration(
                             color: selected ? _Colors.darkGreen : Colors.white,
                             border: Border.all(
-                              color: selected ? _Colors.darkGreen : _Colors.borderGrey,
+                              color: selected
+                                  ? _Colors.darkGreen
+                                  : _Colors.borderGrey,
                               width: selected ? 2 : 1,
                             ),
                             borderRadius: BorderRadius.circular(16),
@@ -855,9 +1063,12 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Align(
+                Align(
                   alignment: Alignment.centerRight,
-                  child: Text('اسم الدواء', style: TextStyle(color: _Colors.textSecondary)),
+                  child: Text(
+                    Strings.tr(context, 'medication_name'),
+                    style: const TextStyle(color: _Colors.textSecondary),
+                  ),
                 ),
                 const SizedBox(height: 6),
                 TextField(
@@ -865,7 +1076,7 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
                   onChanged: _searchMedicines,
                   textAlign: TextAlign.right,
                   decoration: InputDecoration(
-                    hintText: 'ابحث عن الدواء من نفس الصيدلية',
+                    hintText: Strings.tr(context, 'search_pharmacy_hint'),
                     filled: true,
                     fillColor: const Color(0xFFF6F6F6),
                     border: OutlineInputBorder(
@@ -892,15 +1103,21 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
                             context.watch<AppSettingsProvider>().languageCode;
                         return ListTile(
                           title: Text(
+<<<<<<< Updated upstream
                             _medicineDisplayName(item, langCode),
+=======
+                            nameAr.isNotEmpty ? '$nameEn - $nameAr' : nameEn,
+>>>>>>> Stashed changes
                             textAlign: TextAlign.right,
                           ),
                           subtitle: Text(
                             item['dosage'] ?? '',
                             textAlign: TextAlign.right,
                           ),
-                          trailing: const Icon(Icons.medical_services_outlined,
-                              color: _Colors.primaryGreen),
+                          trailing: const Icon(
+                            Icons.medical_services_outlined,
+                            color: Color(0xFF1D9E75),
+                          ),
                           onTap: () => _selectSuggestion(item),
                         );
                       },
@@ -956,7 +1173,9 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
                       final selected = _selectedDays.contains(day);
                       return GestureDetector(
                         onTap: () => setState(() {
-                          selected ? _selectedDays.remove(day) : _selectedDays.add(day);
+                          selected
+                              ? _selectedDays.remove(day)
+                              : _selectedDays.add(day);
                         }),
                         child: Container(
                           width: 64,
@@ -964,7 +1183,9 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
                           decoration: BoxDecoration(
                             color: selected ? _Colors.darkGreen : Colors.white,
                             border: Border.all(
-                              color: selected ? _Colors.darkGreen : _Colors.borderGrey,
+                              color: selected
+                                  ? _Colors.darkGreen
+                                  : _Colors.borderGrey,
                             ),
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -975,14 +1196,20 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
                                 day,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: selected ? Colors.white : _Colors.textPrimary,
+                                  color: selected
+                                      ? Colors.white
+                                      : _Colors.textPrimary,
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Icon(
-                                selected ? Icons.check_circle : Icons.circle_outlined,
+                                selected
+                                    ? Icons.check_circle
+                                    : Icons.circle_outlined,
                                 size: 14,
-                                color: selected ? Colors.white : _Colors.borderGrey,
+                                color: selected
+                                    ? Colors.white
+                                    : _Colors.borderGrey,
                               ),
                             ],
                           ),
@@ -998,7 +1225,12 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text('الفترة', style: TextStyle(color: _Colors.textSecondary)),
+                          Text(
+                            Strings.tr(context, 'period_label'),
+                            style: const TextStyle(
+                              color: _Colors.textSecondary,
+                            ),
+                          ),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
                             initialValue: _period,
@@ -1011,11 +1243,18 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
                                 borderSide: BorderSide.none,
                               ),
                             ),
-                            items: const [
-                              DropdownMenuItem(value: 'صباحا', child: Text('صباحا')),
-                              DropdownMenuItem(value: 'مساء', child: Text('مساء')),
+                            items: [
+                              DropdownMenuItem(
+                                value: 'صباحا',
+                                child: Text(Strings.tr(context, 'morning')),
+                              ),
+                              DropdownMenuItem(
+                                value: 'مساء',
+                                child: Text(Strings.tr(context, 'evening')),
+                              ),
                             ],
-                            onChanged: (value) => setState(() => _period = value!),
+                            onChanged: (value) =>
+                                setState(() => _period = value!),
                           ),
                         ],
                       ),
@@ -1025,17 +1264,28 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text('الوقت', style: TextStyle(color: _Colors.textSecondary)),
+                          Text(
+                            Strings.tr(context, 'time_label'),
+                            style: const TextStyle(
+                              color: _Colors.textSecondary,
+                            ),
+                          ),
                           const SizedBox(height: 6),
                           GestureDetector(
                             onTap: _pickTime,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 14,
+                                horizontal: 12,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF6F6F6),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Text(_time.format(context), textAlign: TextAlign.center),
+                              child: Text(
+                                _time.format(context),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
                         ],
@@ -1044,11 +1294,11 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
                   ],
                 ),
                 const SizedBox(height: 20),
-                const Align(
+                Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    'عدد الجرعات في اليوم',
-                    style: TextStyle(color: _Colors.textSecondary),
+                    Strings.tr(context, 'doses_per_day'),
+                    style: const TextStyle(color: _Colors.textSecondary),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -1064,7 +1314,9 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
-                              color: selected ? _Colors.mutedGreen : _Colors.darkGreen,
+                              color: selected
+                                  ? Color(0xFF7FBF9E)
+                                  : _Colors.darkGreen,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -1082,42 +1334,51 @@ class _AddDependentMedicationSheetState extends State<_AddDependentMedicationShe
                   }),
                 ),
                 const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => _save(withReminder: true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _Colors.darkGreen,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                if (_isSaving)
+                  const Center(child: CircularProgressIndicator())
+                else
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => _save(withReminder: true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _Colors.darkGreen,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
-                    ),
-                    child: const Text(
-                      'حفظ',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                      child: const Text(
+                        'حفظ',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
-                ),
                 const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: () => _save(withReminder: false),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: _Colors.darkGreen, width: 1.5),
+                      side: const BorderSide(
+                        color: _Colors.darkGreen,
+                        width: 1.5,
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text(
-                      'حفظ الدواء بدون التنبيه',
-                      style: TextStyle(color: _Colors.darkGreen, fontSize: 15),
+                    child: Text(
+                      Strings.tr(context, 'save_without_reminder'),
+                      style: const TextStyle(
+                        color: _Colors.darkGreen,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
                 ),

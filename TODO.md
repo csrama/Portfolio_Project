@@ -1,28 +1,16 @@
-# Fix Profile Screen Issues
+# TODO: Dark Mode Text Color Fix for Settings Screen
 
-<<<<<<< HEAD
+## Goal
+Replace hardcoded `Colors.black38` and `Colors.black54` with theme-aware colors so text appears white/light in dark mode.
+
 ## Steps
-- [x] Step 1: Analyze issues - Identified broken widget structure, missing `_changeAvatar` method, camera button to remove
-- [x] Step 2: Fix avatar section - Removed `Positioned` camera button, extra `)`, restructured `CircleAvatar` properly
-- [x] Step 3: Fix adherence sheet - Display actual `rate`, `completed`, `total` values using string interpolation
-- [x] Step 4: Build verification - Flutter analyze reports **0 errors**, only 3 unused variable warnings (false positives from string interpolation)
-=======
-## ✅ Bugs Fixed
+- [x] Step 1: Read relevant files (settings_screen.dart, main.dart, app_settings_provider.dart)
+- [x] Step 2: Create plan and get user approval
+- [x] Step 3: Edit `_userInfoCard` - replace `Colors.black38` and `Colors.black54` with theme colors
+- [x] Step 4: Edit `_languageRow` - replace `Colors.black54` with theme color
+- [x] Step 5: Edit `_notificationRow` - replace `Colors.black54` with theme color
+- [x] Step 6: Edit `_darkModeRow` - replace `Colors.black54` with theme color
+- [x] Step 7: Edit `_privacySection` - replace `Colors.black54` with theme color
+- [x] Step 8: Edit `_aboutSection` - replace `Colors.black54` with theme color
+- [x] Step 9: Verify changes -  All done, no remaining hardcoded black colors
 
-1. ✅ **`_MedicationCard` constructor malformed** - Fixed the invalid initializer list (`: showDoseActions = false : selectedDate : ...`) to proper parameter defaults with commas
-2. ✅ **Missing dependencies in pubspec.yaml** - Added `http`, `shared_preferences`, `provider`, `app_links`, `awesome_notifications`
-3. ✅ **Duplicate `assets:` key in pubspec.yaml** - Fixed YAML structure
-4. ✅ **Empty `adherence_service.dart`** - Implemented with `getAdherenceRate()` and `getDoseLogs()` methods
-5. ✅ **Wrong import path in `main.dart`** - Changed `package:frontend/services/notification_service.dart` to relative import
-
-## Progress
-- [x] 1. Fix `_MedicationCard` constructor in home_screen.dart
-- [x] 2. Fix pubspec.yaml (dependencies + assets)
-- [x] 3. Implement adherence_service.dart
-- [ ] 4. Run flutter pub get
-- [ ] 5. Run flutter analyze to verify
-- [ ] 6. Launch the app
->>>>>>> ccd75fe31e7615ea0fc678375100d2242a4a6cca
-
-## Summary
-Profile screen now compiles successfully with no syntax errors.

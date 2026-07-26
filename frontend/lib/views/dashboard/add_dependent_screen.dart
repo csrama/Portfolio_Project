@@ -1,9 +1,9 @@
-// lib/views/dashboard/add_dependent_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import '../../i18n/strings.dart';
 
 class AddDependentScreen extends StatefulWidget {
   const AddDependentScreen({super.key});
@@ -20,7 +20,6 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
   String? _generatedLink;
   bool _linkCopied = false;
   final bool _inviteMode = true;
-  String? _successMessage;
 
   final List<Map<String, String>> _relationships = [
     {'value': 'spouse', 'label': 'زوج/زوجة'},
@@ -49,7 +48,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
       final token = authProvider.accessToken;
 
       if (token == null) {
-        _showSnackBar('الرجاء تسجيل الدخول أولاً', Colors.red);
+        _showSnackBar(Strings.tr(context, 'please_login_first'), Colors.red);
         return;
       }
 
@@ -82,20 +81,27 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
             _generatedLink = inviteLink;
             _linkCopied = false;
           });
-          _showSnackBar('تم إنشاء رابط الدعوة بنجاح', const Color(0xFF085041));
+          _showSnackBar(
+            Strings.tr(context, 'invite_link_created'),
+            const Color(0xFF085041),
+          );
         } else {
-          setState(() {
-            _successMessage = 'تم إضافة التابع بنجاح ';
-          });
+          _showSnackBar(
+            Strings.tr(context, 'dependent_added_success'),
+            const Color(0xFF085041),
+          );
         }
       } else {
         _showSnackBar(
-          response['error'] ?? 'فشلت العملية',
+          response['error'] ?? Strings.tr(context, 'operation_failed'),
           Colors.red,
         );
       }
     } catch (e) {
-      _showSnackBar('حدث خطأ: ${e.toString()}', Colors.red);
+      _showSnackBar(
+        '${Strings.tr(context, 'operation_failed')}: ${e.toString()}',
+        Colors.red,
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -105,7 +111,10 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
     if (_generatedLink != null && _generatedLink!.isNotEmpty) {
       Clipboard.setData(ClipboardData(text: _generatedLink!));
       setState(() => _linkCopied = true);
-      _showSnackBar('تم نسخ الرابط', const Color(0xFF085041));
+      _showSnackBar(
+        Strings.tr(context, 'link_copied_message'),
+        const Color(0xFF085041),
+      );
     }
   }
 
@@ -123,221 +132,214 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إضافة تابع'),
+        title: Text(Strings.tr(context, 'add_dependent_title')),
         backgroundColor: const Color(0xFF085041),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Directionality(
-        textDirection: TextDirection.rtl,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD9F2E7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: Color(0xFF085041)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        Strings.tr(context, 'invite_info'),
+                        style: const TextStyle(color: Color(0xFF085041)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              TextFormField(
+                controller: _nameController,
+                textAlign: TextAlign.left,
+                decoration: InputDecoration(
+                  labelText: Strings.tr(context, 'name_hint'),
+                  hintText: Strings.tr(context, 'name_hint'),
+                  border: const OutlineInputBorder(),
+                  filled: true,
+                  fillColor: const Color(0xFFF6F6F6),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return Strings.tr(context, 'missing_data');
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              DropdownButtonFormField<String>(
+                decoration: InputDecoration(
+                  labelText: Strings.tr(context, 'relationship_label'),
+                  border: const OutlineInputBorder(),
+                  filled: true,
+                  fillColor: const Color(0xFFF6F6F6),
+                ),
+                initialValue: _selectedRelationship,
+                items: _relationships.map((item) {
+                  return DropdownMenuItem<String>(
+                    value: item['value'],
+                    child: Text(item['label']!),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() => _selectedRelationship = value);
+                },
+                validator: (value) {
+                  if (value == null) {
+                    return Strings.tr(context, 'missing_data');
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+
+              if (_generatedLink != null) ...[
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD9F2E7),
+                    color: const Color(0xFFF0FFF4),
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _linkCopied
+                          ? const Color(0xFF1D9E75)
+                          : const Color(0xFF085041),
+                    ),
                   ),
-                  child: const Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.info_outline, color: Color(0xFF085041)),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'سيتم إنشاء رابط دعوة يمكنك نسخه وإرساله للتابع',
-                          style: TextStyle(color: Color(0xFF085041)),
+                      Row(
+                        children: [
+                          Icon(
+                            _linkCopied ? Icons.check_circle : Icons.link,
+                            color: _linkCopied
+                                ? const Color(0xFF1D9E75)
+                                : const Color(0xFF085041),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _linkCopied
+                                ? Strings.tr(context, 'link_copied')
+                                : Strings.tr(context, 'invite_link_label'),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: _linkCopied
+                                  ? const Color(0xFF1D9E75)
+                                  : const Color(0xFF085041),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SelectableText(
+                        _generatedLink!,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF085041),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _copyToClipboard,
+                          icon: Icon(
+                            _linkCopied ? Icons.check : Icons.copy,
+                            size: 18,
+                          ),
+                          label: Text(
+                            _linkCopied
+                                ? Strings.tr(context, 'link_copied')
+                                : Strings.tr(context, 'copy_link'),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF085041),
+                            side: const BorderSide(color: Color(0xFF085041)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
-
-                TextFormField(
-                  controller: _nameController,
-                  textAlign: TextAlign.right,
-                  decoration: const InputDecoration(
-                    labelText: 'الاسم الكامل للتابع',
-                    hintText: 'أدخل اسم التابع',
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: Color(0xFFF6F6F6),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'الاسم الكامل مطلوب';
-                    }
-                    return null;
-                  },
-                ),
                 const SizedBox(height: 16),
+              ],
 
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: 'صلة القرابة',
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: Color(0xFFF6F6F6),
-                  ),
-                  initialValue: _selectedRelationship,
-                  items: _relationships.map((item) {
-                    return DropdownMenuItem<String>(
-                      value: item['value'],
-                      child: Text(item['label']!),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() => _selectedRelationship = value);
-                  },
-                  validator: (value) {
-                    if (value == null) {
-                      return 'الرجاء اختيار العلاقة';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-
-                if (_generatedLink != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FFF4),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _linkCopied
-                            ? const Color(0xFF1D9E75)
-                            : const Color(0xFF085041),
-                      ),
+              SizedBox(
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _addDependent,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF085041),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              _linkCopied
-                                  ? Icons.check_circle
-                                  : Icons.link,
-                              color: _linkCopied
-                                  ? const Color(0xFF1D9E75)
-                                  : const Color(0xFF085041),
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _linkCopied
-                                  ? 'تم النسخ!'
-                                  : 'رابط الدعوة',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: _linkCopied
-                                    ? const Color(0xFF1D9E75)
-                                    : const Color(0xFF085041),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        SelectableText(
-                          _generatedLink!,
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          Strings.tr(context, 'generate_invite_link'),
                           style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF085041),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: _copyToClipboard,
-                            icon: Icon(
-                              _linkCopied ? Icons.check : Icons.copy,
-                              size: 18,
-                            ),
-                            label: Text(
-                              _linkCopied ? 'تم النسخ' : 'نسخ الرابط',
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF085041),
-                              side: const BorderSide(
-                                color: Color(0xFF085041),
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
+                ),
+              ),
+              if (_generatedLink != null) ...[
+                const SizedBox(height: 12),
                 SizedBox(
                   height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _addDependent,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF085041),
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context, true);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF085041),
+                      side: const BorderSide(color: Color(0xFF085041)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            _inviteMode ? 'توليد رابط الدعوة' : 'إضافة التابع',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                  ),
-                ),
-                if (_generatedLink != null) ...[
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 56,
-                    child: OutlinedButton(
-                      onPressed: () {
-                        Navigator.pop(context, true);
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF085041),
-                        side: const BorderSide(
-                          color: Color(0xFF085041),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: const Text(
-                        'تم، العودة للقائمة',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    child: Text(
+                      Strings.tr(context, 'back_to_list'),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                ],
+                ),
               ],
-            ),
+            ],
           ),
         ),
       ),

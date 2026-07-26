@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../models/medication_item.dart';
+import '../../i18n/strings.dart';
 
 class _Colors {
   static const Color primaryGreen = Color(0xFF1D9E75);
@@ -44,18 +45,20 @@ class _AdherenceScreenState extends State<AdherenceScreen> {
     }
 
     try {
-      final rateData =
-          await ApiService.getJsonDynamic('/adherence/rate', token: token);
+      final rateData = await ApiService.getJsonDynamic(
+        '/adherence/rate',
+        token: token,
+      );
       final records = await ApiService.getJsonList('/dose-logs', token: token);
 
       records.sort((a, b) {
         final aTime =
             DateTime.tryParse((a['scheduled_time'] ?? '').toString()) ??
-                DateTime(0);
+            DateTime(0);
         final bTime =
             DateTime.tryParse((b['scheduled_time'] ?? '').toString()) ??
-                DateTime(0);
-        return bTime.compareTo(aTime); // الأحدث أول
+            DateTime(0);
+        return bTime.compareTo(aTime);
       });
 
       if (!mounted) return;
@@ -77,7 +80,7 @@ class _AdherenceScreenState extends State<AdherenceScreen> {
     for (final m in widget.medications) {
       if (m.id == medicationId.toString()) return m.name;
     }
-    return 'دواء';
+    return '';
   }
 
   String _formatDateTime(DateTime dt) {
@@ -85,56 +88,60 @@ class _AdherenceScreenState extends State<AdherenceScreen> {
     final month = dt.month.toString().padLeft(2, '0');
     final hour = dt.hour.toString().padLeft(2, '0');
     final minute = dt.minute.toString().padLeft(2, '0');
-    return '$day/$month/${dt.year} — $hour:$minute';
+    return '$day/$month/${dt.year} - $hour:$minute';
   }
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: _Colors.darkGreen,
-          foregroundColor: Colors.white,
-          centerTitle: true,
-          title: const Text('متابعة الجرعات'),
-        ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
-                onRefresh: _loadData,
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    _buildRateCard(),
-                    const SizedBox(height: 24),
-                    const Align(
-                      alignment: Alignment.centerRight,
-                      child: Text(
-                        'سجل الجرعات',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (_records.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 60),
-                        child: Center(
-                          child: Text(
-                            'ما فيه سجلات جرعات لسا',
-                            style: TextStyle(color: _Colors.textSecondary),
-                          ),
-                        ),
-                      )
-                    else
-                      ..._records.map(_buildRecordTile),
-                  ],
+    final theme = Theme.of(context);
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: _Colors.darkGreen,
+        foregroundColor: Colors.white,
+        centerTitle: true,
+        title: Text(Strings.tr(context, 'adherence_tracking')),
+      ),
+      body: _buildBody(theme),
+    );
+  }
+
+  Widget _buildBody(ThemeData theme) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildRateCard(),
+          const SizedBox(height: 24),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              Strings.tr(context, 'adherence_rate'),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: theme.textTheme.bodyLarge?.color,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (_records.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 60),
+              child: Center(
+                child: Text(
+                  'لا توجد سجلات',
+                  style: TextStyle(color: _Colors.textSecondary),
                 ),
               ),
+            )
+          else
+            ..._records.map((r) => _buildRecordTile(r, theme)),
+        ],
       ),
     );
   }
@@ -158,17 +165,20 @@ class _AdherenceScreenState extends State<AdherenceScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'نسبة الالتزام بالجرعات',
-            style: TextStyle(color: _Colors.textSecondary),
+          Text(
+            Strings.tr(context, 'adherence_rate_percent'),
+            style: const TextStyle(color: _Colors.textSecondary),
           ),
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildStatColumn('$_completed', 'جرعات مأخوذة'),
+              _buildStatColumn(
+                '$_completed',
+                Strings.tr(context, 'doses_taken'),
+              ),
               Container(width: 1, height: 32, color: _Colors.borderGrey),
-              _buildStatColumn('$_total', 'إجمالي الجرعات'),
+              _buildStatColumn('$_total', Strings.tr(context, 'total_doses')),
             ],
           ),
         ],
@@ -188,19 +198,23 @@ class _AdherenceScreenState extends State<AdherenceScreen> {
           ),
         ),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: _Colors.textSecondary, fontSize: 12)),
+        Text(
+          label,
+          style: const TextStyle(color: _Colors.textSecondary, fontSize: 12),
+        ),
       ],
     );
   }
 
-  Widget _buildRecordTile(Map<String, dynamic> record) {
+  Widget _buildRecordTile(Map<String, dynamic> record, ThemeData theme) {
     final status = (record['status'] ?? '').toString();
     final doseTaken = record['dose_taken'] == true;
     final taken = status == 'TAKEN' || doseTaken;
 
     final scheduledRaw = record['scheduled_time'];
-    final scheduled =
-        scheduledRaw != null ? DateTime.tryParse(scheduledRaw.toString()) : null;
+    final scheduled = scheduledRaw != null
+        ? DateTime.tryParse(scheduledRaw.toString())
+        : null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -223,21 +237,29 @@ class _AdherenceScreenState extends State<AdherenceScreen> {
                 Text(
                   _medicationName(record['medication_id']),
                   textAlign: TextAlign.right,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: theme.textTheme.bodyLarge?.color,
+                  ),
                 ),
                 if (scheduled != null) ...[
                   const SizedBox(height: 2),
                   Text(
                     _formatDateTime(scheduled),
                     textAlign: TextAlign.right,
-                    style: const TextStyle(fontSize: 12, color: _Colors.textSecondary),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: _Colors.textSecondary,
+                    ),
                   ),
                 ],
               ],
             ),
           ),
           Text(
-            taken ? 'تم أخذها' : 'لم تؤخذ',
+            taken
+                ? Strings.tr(context, 'medication_taken')
+                : Strings.tr(context, 'medication_not_taken'),
             style: TextStyle(
               color: taken ? _Colors.darkGreen : Colors.redAccent,
               fontWeight: FontWeight.bold,
