@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import '../../repositories/auth_repository.dart';
 import '../../services/google_auth_service.dart';
 import 'package:http/http.dart' as http;
@@ -75,13 +75,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-<<<<<<< Updated upstream
-  final List<MedicationItem> _medications = [];
-  final Set<String> _takenMedications = {};
-  final Set<String> _notTakenMedications = {};
-  final Map<String, int> _doseRecordIds = {};
-  List<DrugInteraction> _interactions = [];
-=======
   final List<MedicationItem> _medications =
       []; // unlimited: just a growing list
   final Set<String> _takenMedications = {}; // medication name + date key
@@ -90,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
       {}; // نفس المفتاح -> id السجل بالباك إند
   List<DrugInteraction> _interactions =
       []; // تداخلات دوائية بين الأدوية الحالية
->>>>>>> Stashed changes
+
   final DrugInteractionService _interactionService = DrugInteractionService();
   bool _interactionsBannerExpanded = false;
 
@@ -137,7 +130,6 @@ class _HomeScreenState extends State<HomeScreen> {
   String _weekdayNameFromDate(DateTime date) {
     final weekday = date.weekday;
     const names = [
-<<<<<<< Updated upstream
       'الاثنين',
       'الثلاثاء',
       'الأربعاء',
@@ -145,15 +137,6 @@ class _HomeScreenState extends State<HomeScreen> {
       'الجمعة',
       'السبت',
       'الأحد',
-=======
-      'الاثنين', // Monday (1)
-      'الثلاثاء', // Tuesday (2)
-      'الأربعاء', // Wednesday (3)
-      'الخميس', // Thursday (4)
-      'الجمعة', // Friday (5)
-      'السبت', // Saturday (6)
-      'الأحد', // Sunday (7)
->>>>>>> Stashed changes
     ];
     return names[weekday - 1];
   }
@@ -627,14 +610,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-<<<<<<< Updated upstream
-  Future<List<DrugInteraction>> _checkInteractionsFor(
-      String newMedName) async {
-=======
   /// يفحص دواء معيّن (بالاسم) مقابل بقية الأدوية الحالية فقط،
   /// يُستخدم لعرض تحذير فوري بعد إضافة دواء جديد.
   Future<List<DrugInteraction>> _checkInteractionsFor(String newMedName) async {
->>>>>>> Stashed changes
+
     try {
       return await _interactionService.checkNewMedication(
         newMedName,
@@ -676,16 +655,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-<<<<<<< Updated upstream
-  Widget _buildInteractionDetailTile(DrugInteraction i,
-      {bool emphasize = false}) {
-=======
   /// يبني نص + لون التفاصيل لتداخل واحد بالعربي (يرجع للإنجليزي لو ما لقى ترجمة).
   Widget _buildInteractionDetailTile(
     DrugInteraction i, {
     bool emphasize = false,
   }) {
->>>>>>> Stashed changes
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -1096,13 +1071,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-<<<<<<< Updated upstream
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-=======
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
->>>>>>> Stashed changes
+
             child: const Text("حذف"),
           ),
         ],
@@ -1130,10 +1100,6 @@ class _HomeScreenState extends State<HomeScreen> {
       {'method': 'DELETE', 'path': '/medicines/${med.id}'},
       {'method': 'DELETE', 'path': '/medicine/${med.id}'},
       {'method': 'DELETE', 'path': '/api/medications/${med.id}'},
-<<<<<<< Updated upstream
-      {'method': 'POST', 'path': '/medications/${med.id}', 'body': '{"_method":"DELETE"}'},
-      {'method': 'POST', 'path': '/medication/${med.id}', 'body': '{"_method":"DELETE"}'},
-=======
       {
         'method': 'POST',
         'path': '/medications/${med.id}',
@@ -1144,7 +1110,7 @@ class _HomeScreenState extends State<HomeScreen> {
         'path': '/medication/${med.id}',
         'body': '{"_method":"DELETE"}',
       },
->>>>>>> Stashed changes
+
       {'method': 'DELETE', 'path': '/medications/delete/${med.id}'},
       {'method': 'DELETE', 'path': '/delete-medication/${med.id}'},
     ];
@@ -1187,11 +1153,8 @@ class _HomeScreenState extends State<HomeScreen> {
           lastStatusCode = response.statusCode;
         }
       } catch (e) {
-<<<<<<< Updated upstream
-        debugPrint(' Error with ${test['path']}: $e');
-=======
         debugPrint('❌ Error with ${test['path']}: $e');
->>>>>>> Stashed changes
+
       }
     }
 
@@ -1200,11 +1163,8 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-<<<<<<< Updated upstream
-            content: Text(' تم حذف الدواء بنجاح'),
-=======
             content: Text('✅ تم حذف الدواء بنجاح'),
->>>>>>> Stashed changes
+
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
@@ -1214,11 +1174,8 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-<<<<<<< Updated upstream
-            content: Text(' فشل الحذف: الكود $lastStatusCode'),
-=======
             content: Text('❌ فشل الحذف: الكود $lastStatusCode'),
->>>>>>> Stashed changes
+
             backgroundColor: Colors.red,
             duration: Duration(seconds: 3),
           ),
@@ -2003,17 +1960,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-<<<<<<< Updated upstream
-                      content: Text(success ? 'تم التحديث بنجاح ' : 'فشل التحديث'),
-                      backgroundColor: success ? const Color(0xFF1D9E75) : Colors.red,
-=======
                       content: Text(
                         success ? 'تم التحديث بنجاح ✅' : 'فشل التحديث',
                       ),
                       backgroundColor: success
                           ? const Color(0xFF1D9E75)
                           : Colors.red,
->>>>>>> Stashed changes
+
                     ),
                   );
                 }
@@ -2776,10 +2729,6 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   void _selectSuggestion(Map<String, dynamic> suggestion) {
     final langCode = context.read<AppSettingsProvider>().languageCode;
     setState(() {
-<<<<<<< Updated upstream
-      _nameController.text = _medicineDisplayName(suggestion, langCode);
-      _dosageController.text = suggestion['dosage'] ?? '';
-=======
       final nameEn = (suggestion['name_en'] ?? '').toString();
       final nameAr = (suggestion['name_ar'] ?? '').toString();
 
@@ -2787,7 +2736,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
 
       _dosageController.text = suggestion['dosage'] ?? '';
 
->>>>>>> Stashed changes
+
       _searchController.clear();
       _pharmacySuggestions.clear();
     });
@@ -3368,3 +3317,4 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
     );
   }
 }
+

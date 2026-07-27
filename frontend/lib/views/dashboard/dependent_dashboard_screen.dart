@@ -196,26 +196,16 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
   void _addFoundMedicineFromSearch(Map<String, dynamic> med) async {
     final auth = context.read<AuthProvider>();
     if (auth.accessToken == null) return;
-<<<<<<< Updated upstream
-
-    final langCode = context.read<AppSettingsProvider>().languageCode;
-
-=======
->>>>>>> Stashed changes
     try {
       await ApiService.postJson(
         '/medications',
         body: {
           'dependent_id': int.parse(widget.dependent.id.toString()),
-<<<<<<< Updated upstream
-          'name': _medicineDisplayName(med, langCode),
-=======
           'name':
               (med['name_ar']?.toString().isNotEmpty == true
                       ? '${med['name_en']} - ${med['name_ar']}'
                       : med['name_en'] ?? '')
                   .toString(),
->>>>>>> Stashed changes
           'dosage': med['dosage'] ?? '',
           'type': 0,
           'days_of_week': [],
@@ -249,37 +239,6 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< Updated upstream
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text('ملف: ${widget.dependent.fullName}'),
-        backgroundColor: _Colors.darkGreen,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            color: _Colors.darkGreen,
-            child: TextField(
-              controller: _searchController,
-              onChanged: _searchMedications,
-              textAlign: TextAlign.right,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'ابحث عن دواء لإضافته للتابع...',
-                hintStyle: const TextStyle(color: Colors.white60),
-                prefixIcon: _isSearching
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-=======
     final isRtl = context.watch<AppSettingsProvider>().languageCode == 'ar';
     return Directionality(
       textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
@@ -313,7 +272,6 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                               strokeWidth: 2,
                               color: Colors.white,
                             ),
->>>>>>> Stashed changes
                           ),
                         )
                       : const Icon(Icons.search, color: Colors.white60),
@@ -326,33 +284,6 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                 ),
               ),
             ),
-<<<<<<< Updated upstream
-          ),
-          if (_searchResults.isNotEmpty)
-            Container(
-              constraints: const BoxConstraints(maxHeight: 200),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _searchResults.length,
-                itemBuilder: (context, index) {
-                  final item = _searchResults[index];
-                  final langCode =
-                      context.watch<AppSettingsProvider>().languageCode;
-                  return ListTile(
-                    title: Text(
-                      _medicineDisplayName(item, langCode),
-                      textAlign: TextAlign.right,
-=======
             if (_searchResults.isNotEmpty)
               Container(
                 constraints: const BoxConstraints(maxHeight: 200),
@@ -363,7 +294,6 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                       color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
->>>>>>> Stashed changes
                     ),
                   ],
                 ),
@@ -392,100 +322,6 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                   },
                 ),
               ),
-<<<<<<< Updated upstream
-            ),
-
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _errorMessage != null
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                            const SizedBox(height: 16),
-                            Text(_errorMessage!),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _loadMedications,
-                              child: const Text('إعادة المحاولة'),
-                            ),
-                          ],
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _loadMedications,
-                        child: ListView(
-                          padding: const EdgeInsets.all(16),
-                          children: [
-                            // --- Dependent Info Card ---
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF6F6F6),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: _Colors.borderGrey),
-                              ),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 30,
-                                    backgroundColor: const Color(0xFFC9932E),
-                                    child: Text(
-                                      widget.dependent.fullName.isNotEmpty
-                                          ? widget.dependent.fullName[0]
-                                          : '?',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          widget.dependent.fullName,
-                                          style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: _Colors.textPrimary,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'صلة القرابة: ${widget.dependent.relationship}',
-                                          style: const TextStyle(
-                                            color: _Colors.textSecondary,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                        if (widget.dependent.dateOfBirth != null)
-                                          Padding(
-                                            padding: const EdgeInsets.only(top: 2),
-                                            child: Text(
-                                              'تاريخ الميلاد: ${widget.dependent.dateOfBirth!.toString().split(' ')[0]}',
-                                              style: const TextStyle(
-                                                color: _Colors.textSecondary,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-=======
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -522,7 +358,6 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                               border: Border.all(color: _Colors.borderGrey),
                             ),
                             child: Row(
->>>>>>> Stashed changes
                               children: [
                                 CircleAvatar(
                                   radius: 30,
@@ -578,58 +413,6 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                                 ),
                               ],
                             ),
-<<<<<<< Updated upstream
-                            const SizedBox(height: 8),
-                            const Align(
-                              alignment: Alignment.centerRight,
-                              child: Text(
-                                'الأدوية',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: _Colors.textPrimary,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-
-                            if (_medications.isEmpty)
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE1F5EE),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.check_circle_outline,
-                                        color: Color(0xFF1D9E75), size: 20),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'لم يتم إضافة أي أدوية لهذا التابع بعد',
-                                      style: TextStyle(
-                                        color: Color(0xFF085041),
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            else
-                              ..._medications.map((med) => _buildMedicationCard(med)),
-                            const SizedBox(height: 16),
-
-                            GestureDetector(
-                              onTap: () => _openAddMedicationSheet(),
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                decoration: BoxDecoration(
-                                  color: _Colors.darkGreen,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-=======
                           ),
                           const SizedBox(height: 24),
                           Row(
@@ -637,7 +420,6 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                             children: [
                               GestureDetector(
                                 onTap: () => _openAddMedicationSheet(),
->>>>>>> Stashed changes
                                 child: const Text(
                                   'إضافة دواء',
                                   style: TextStyle(
@@ -894,13 +676,9 @@ class _AddDependentMedicationSheetState
   void _selectSuggestion(Map<String, dynamic> suggestion) {
     final langCode = context.read<AppSettingsProvider>().languageCode;
     setState(() {
-<<<<<<< Updated upstream
-      _nameController.text = _medicineDisplayName(suggestion, langCode);
-=======
       final nameEn = (suggestion['name_en'] ?? '').toString();
       final nameAr = (suggestion['name_ar'] ?? '').toString();
       _nameController.text = nameAr.isNotEmpty ? '$nameEn - $nameAr' : nameEn;
->>>>>>> Stashed changes
       _dosageController.text = suggestion['dosage'] ?? '';
       _searchController.clear();
       _pharmacySuggestions.clear();
@@ -1099,15 +877,14 @@ class _AddDependentMedicationSheetState
                       itemCount: _pharmacySuggestions.length,
                       itemBuilder: (context, index) {
                         final item = _pharmacySuggestions[index];
-                        final langCode =
-                            context.watch<AppSettingsProvider>().languageCode;
+                        final langCode = context
+                            .watch<AppSettingsProvider>()
+                            .languageCode;
+                        final nameEn = (item['name_en'] ?? '').toString();
+                        final nameAr = (item['name_ar'] ?? '').toString();
                         return ListTile(
                           title: Text(
-<<<<<<< Updated upstream
-                            _medicineDisplayName(item, langCode),
-=======
                             nameAr.isNotEmpty ? '$nameEn - $nameAr' : nameEn,
->>>>>>> Stashed changes
                             textAlign: TextAlign.right,
                           ),
                           subtitle: Text(
