@@ -176,11 +176,11 @@ Manual QA review should be requested once the checklist below is verified end-to
 
 Links to be completed by the team before submission:
 
-●      Sprint Reviews: \[Insert link — e.g., recorded demo or meeting notes\]
+●      Sprint Reviews: \[https://github.com/janabakri/Portfolio_Project/milestones]
 
 ●      Retrospectives: \[Insert link — e.g., Trello/Notion board\]
 
-●      Sprint Planning: \[Insert link — e.g., Trello board with Sprint 1 / Sprint 2 columns\]
+●      Sprint Planning: \[https://github.com/janabakri/Portfolio_Project/milestones]
 
 ●      Source repository: \[https://github.com/janabakri/Portfolio\_Project\]
 
