@@ -178,7 +178,7 @@ Links to be completed by the team before submission:
 
 ●      Sprint Reviews: \[https://github.com/janabakri/Portfolio_Project/milestones]
 
-●      Retrospectives: \[Insert link — e.g., Trello/Notion board\]
+●      Retrospectives: \[https://github.com/janabakri/Portfolio_Project/issues]
 
 ●      Sprint Planning: \[https://github.com/janabakri/Portfolio_Project/milestones]
 
