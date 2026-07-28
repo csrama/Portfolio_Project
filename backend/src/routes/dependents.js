@@ -7,7 +7,6 @@ const crypto = require('crypto');
 
 const router = new Hono();
 
-// Public endpoint - must be before auth middleware
 router.get('/invite/:token', async (c) => {
   try {
     const token = c.req.param('token');
@@ -102,7 +101,6 @@ router.post('/', caregiverCheck, async (c) => {
       return c.json({ error: 'العلاقة مطلوبة' }, 400);
     }
 
-    // Create a placeholder user for the dependent
     const placeholderEmail = `dep_${Date.now()}_${Math.random().toString(36).substring(2, 8)}@direct.local`;
     const temporaryPassword = crypto.randomBytes(8).toString('hex');
     const passwordHash = await bcrypt.hash(temporaryPassword, 10);
@@ -123,7 +121,6 @@ router.post('/', caregiverCheck, async (c) => {
     let invitationToken = null;
 
     if (sendInvite) {
-      // Generate invite token
       invitationToken = crypto.randomBytes(32).toString('hex');
 
       dependent = await pool.createDependent({
@@ -136,11 +133,9 @@ router.post('/', caregiverCheck, async (c) => {
         invitation_token: invitationToken
       });
 
-      // Build the invite link
       const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
       inviteLink = `${baseUrl}/invite?token=${invitationToken}`;
     } else {
-      // Add dependent directly - no invite needed
       dependent = await pool.createDependentDirect({
         caregiver_user_id: user.id,
         dependent_user_id: newDependentUser.id,
@@ -241,7 +236,6 @@ router.delete('/:id', caregiverCheck, async (c) => {
   }
 });
 
-// Accept/claim an invite - links the logged-in user's account to this dependent
 router.post('/invite/:token/accept', async (c) => {
   try {
     const token = c.req.param('token');
@@ -267,7 +261,6 @@ router.post('/invite/:token/accept', async (c) => {
       return c.json({ error: 'انتهت صلاحية الدعوة' }, 410);
     }
 
-    // Claim the invite - link this user to the dependent record
     const claimed = await pool.claimDependentInvite(token, user.id);
     if (!claimed) {
       return c.json({ error: 'فشل قبول الدعوة' }, 500);
@@ -297,11 +290,19 @@ router.get('/:id/medications', async (c) => {
       return c.json({ error: 'التابع غير موجود' }, 404);
     }
 
-    const medications = await pool.listMedications(dependent.dependent_user_id);
+    const result = await pool.query(
+      `
+      SELECT *
+      FROM medications
+      WHERE dependent_id = $1
+      ORDER BY created_at DESC
+      `,
+      [dependentId]
+    );
 
     return c.json({
       success: true,
-      data: medications || []
+      data: result.rows || []
     });
   } catch (error) {
     console.error('Error fetching dependent medications:', error);
