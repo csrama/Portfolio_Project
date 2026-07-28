@@ -645,6 +645,18 @@ class _AddDependentMedicationSheetState
   int _dosesPerDay = 1;
   bool _isSaving = false;
 
+  static const List<String> _dosageAmounts = [
+    '5',
+    '10',
+    '25',
+    '50',
+    '100',
+    '250',
+    '500',
+    '1000',
+  ];
+  String? _selectedDosageAmount;
+
   List<Map<String, dynamic>> _pharmacySuggestions = [];
 
   final Map<MedicationType, String> _typeLabels = {
@@ -686,7 +698,7 @@ class _AddDependentMedicationSheetState
     final existing = widget.existingMedication;
     if (existing != null) {
       _nameController.text = existing.name;
-      _dosageController.text = existing.dosage;
+      _applyDosageString(existing.dosage);
       _selectedType = existing.type;
       _selectedDays.addAll(existing.daysOfWeek);
       _period = existing.period;
@@ -703,6 +715,18 @@ class _AddDependentMedicationSheetState
     super.dispose();
   }
 
+  void _applyDosageString(String dosageStr) {
+    final s = dosageStr.trim();
+    final match = RegExp(r'^(\d+)\s*(.*)$').firstMatch(s);
+    if (match != null && _dosageAmounts.contains(match.group(1))) {
+      _selectedDosageAmount = match.group(1);
+      _dosageController.text = match.group(2) ?? '';
+    } else {
+      _selectedDosageAmount = null;
+      _dosageController.text = s;
+    }
+  }
+
   void _selectSuggestion(Map<String, dynamic> suggestion) {
     final langCode = context.read<AppSettingsProvider>().languageCode;
     setState(() {
@@ -711,7 +735,7 @@ class _AddDependentMedicationSheetState
 
       _nameController.text = nameAr.isNotEmpty ? '$nameEn — $nameAr' : nameEn;
 
-      _dosageController.text = suggestion['dosage'] ?? '';
+      _applyDosageString((suggestion['dosage'] ?? '').toString());
 
       _searchController.clear();
       _pharmacySuggestions.clear();
@@ -749,7 +773,7 @@ class _AddDependentMedicationSheetState
       final body = {
         'dependent_id': depId,
         'name': _nameController.text.trim(),
-        'dosage': _dosageController.text.trim(),
+        'dosage': '${_selectedDosageAmount ?? ''}${_dosageController.text.trim()}',
         'type': _selectedType.index,
         'days_of_week': _selectedDays.toList(),
         'period': _period,
@@ -1079,11 +1103,47 @@ class _AddDependentMedicationSheetState
                     ),
                     const SizedBox(width: 8),
                     Expanded(
+                      child: Container(
+                        height: 56,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF6F6F6),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedDosageAmount,
+                            isExpanded: true,
+                            alignment: AlignmentDirectional.centerEnd,
+                            dropdownColor: Colors.white,
+                            hint: Text(
+                              'الجرعة',
+                              textAlign: TextAlign.right,
+                              style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                            ),
+                            style: const TextStyle(color: Colors.black87, fontSize: 14),
+                            icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                            items: _dosageAmounts
+                                .map(
+                                  (d) => DropdownMenuItem(
+                                    value: d,
+                                    child: Text(d, textAlign: TextAlign.right),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) =>
+                                setState(() => _selectedDosageAmount = value),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
                       child: TextField(
                         controller: _dosageController,
                         textAlign: TextAlign.right,
                         decoration: InputDecoration(
-                          hintText: '100mcg',
+                          hintText: 'mcg',
                           hintStyle: TextStyle(color: Colors.grey[400]),
                           filled: true,
                           fillColor: const Color(0xFFF6F6F6),
