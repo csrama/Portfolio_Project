@@ -524,9 +524,17 @@ class _DependentsScreenState extends State<DependentsScreen> {
     return name;
   }
 
+  static const Map<String, String> _relationshipLabels = {
+    'spouse': 'زوج/زوجة',
+    'child': 'ابن/ابنة',
+    'parent': 'أب/أم',
+    'sibling': 'أخ/أخت',
+    'other': 'أخرى',
+  };
+
   String _getSafeRelationship(String? relationship) {
     if (relationship == null || relationship.isEmpty) return 'لا يوجد';
-    return relationship;
+    return _relationshipLabels[relationship] ?? relationship;
   }
 
   void _showEditDialog(Dependent dependent) {
