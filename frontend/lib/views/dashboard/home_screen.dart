@@ -83,7 +83,6 @@ class _HomeScreenState extends State<HomeScreen> {
       {}; 
   List<DrugInteraction> _interactions =
       []; 
-
   final DrugInteractionService _interactionService = DrugInteractionService();
   bool _interactionsBannerExpanded = false;
 
@@ -1118,7 +1117,7 @@ class _HomeScreenState extends State<HomeScreen> {
     for (final test in tests) {
       try {
         final url = ApiService.buildUrl(test['path']!);
-        debugPrint('Trying: ${test['method']} $url');
+        debugPrint(' Trying: ${test['method']} $url');
 
         http.Response response;
 
@@ -1141,7 +1140,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        debugPrint('Status: ${response.statusCode} for ${test['path']}');
+        debugPrint(' Status: ${response.statusCode} for ${test['path']}');
 
         if (response.statusCode >= 200 && response.statusCode < 300) {
           workingPath = test['path'];
@@ -1150,7 +1149,7 @@ class _HomeScreenState extends State<HomeScreen> {
           lastStatusCode = response.statusCode;
         }
       } catch (e) {
-        debugPrint('Error with ${test['path']}: $e');
+        debugPrint('❌ Error with ${test['path']}: $e');
 
       }
     }
@@ -1160,7 +1159,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('تم حذف الدواء بنجاح'),
+            content: Text(' تم حذف الدواء بنجاح'),
 
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
@@ -1171,7 +1170,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('فشل الحذف: الكود $lastStatusCode'),
+            content: Text(' فشل الحذف: الكود $lastStatusCode'),
 
             backgroundColor: Colors.red,
             duration: Duration(seconds: 3),
@@ -2143,7 +2142,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: const Text(
                   'مأخوذة',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -2665,6 +2664,18 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   TimeOfDay _time = const TimeOfDay(hour: 6, minute: 0);
   int _dosesPerDay = 1;
 
+  static const List<String> _dosageAmounts = [
+    '5',
+    '10',
+    '25',
+    '50',
+    '100',
+    '250',
+    '500',
+    '1000',
+  ];
+  String? _selectedDosageAmount;
+
   List<Map<String, dynamic>> _pharmacySuggestions = [];
 
   final Map<MedicationType, String> _typeLabels = {
@@ -2706,7 +2717,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
     final existing = widget.existingMedication;
     if (existing != null) {
       _nameController.text = existing.name;
-      _dosageController.text = existing.dosage;
+      _applyDosageString(existing.dosage);
       _selectedType = existing.type;
       _selectedDays.addAll(existing.daysOfWeek);
       _period = existing.period;
@@ -2723,6 +2734,18 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
     super.dispose();
   }
 
+  void _applyDosageString(String dosageStr) {
+    final s = dosageStr.trim();
+    final match = RegExp(r'^(\d+)\s*(.*)$').firstMatch(s);
+    if (match != null && _dosageAmounts.contains(match.group(1))) {
+      _selectedDosageAmount = match.group(1);
+      _dosageController.text = match.group(2) ?? '';
+    } else {
+      _selectedDosageAmount = null;
+      _dosageController.text = s;
+    }
+  }
+
   void _selectSuggestion(Map<String, dynamic> suggestion) {
     final langCode = context.read<AppSettingsProvider>().languageCode;
     setState(() {
@@ -2731,7 +2754,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
 
       _nameController.text = nameAr.isNotEmpty ? '$nameEn — $nameAr' : nameEn;
 
-      _dosageController.text = suggestion['dosage'] ?? '';
+      _applyDosageString((suggestion['dosage'] ?? '').toString());
 
 
       _searchController.clear();
@@ -2763,7 +2786,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
             widget.existingMedication?.id ??
             DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text.trim(),
-        dosage: _dosageController.text.trim(),
+        dosage: '${_selectedDosageAmount ?? ''}${_dosageController.text.trim()}',
         type: _selectedType,
         daysOfWeek: _selectedDays.toList(),
         period: _period,
@@ -3063,11 +3086,47 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
+                      child: Container(
+                        height: 56,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF6F6F6),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedDosageAmount,
+                            isExpanded: true,
+                            alignment: AlignmentDirectional.centerEnd,
+                            dropdownColor: Colors.white,
+                            hint: Text(
+                              'الجرعة',
+                              textAlign: TextAlign.right,
+                              style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                            ),
+                            style: const TextStyle(color: Colors.black87, fontSize: 14),
+                            icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                            items: _dosageAmounts
+                                .map(
+                                  (d) => DropdownMenuItem(
+                                    value: d,
+                                    child: Text(d, textAlign: TextAlign.right),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) =>
+                                setState(() => _selectedDosageAmount = value),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
                       child: TextField(
                         controller: _dosageController,
                         textAlign: TextAlign.right,
                         decoration: InputDecoration(
-                          hintText: '100mcg',
+                          hintText: 'mcg',
                           hintStyle: TextStyle(color: Colors.grey[400]),
                           filled: true,
                           fillColor: const Color(0xFFF6F6F6),
