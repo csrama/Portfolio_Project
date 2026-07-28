@@ -9,6 +9,19 @@ import '../../services/api_service.dart';
 import '../../services/dependent_service.dart';
 import '../../i18n/strings.dart';
 
+const Map<String, String> _relationshipLabels = {
+  'spouse': 'زوج/زوجة',
+  'child': 'ابن/ابنة',
+  'parent': 'أب/أم',
+  'sibling': 'أخ/أخت',
+  'other': 'أخرى',
+};
+
+String _relationshipDisplay(String? relationship) {
+  if (relationship == null || relationship.isEmpty) return 'لا يوجد';
+  return _relationshipLabels[relationship] ?? relationship;
+}
+
 String _medicineDisplayName(Map<String, dynamic> medicine, String langCode) {
   final nameEn = (medicine['name_en'] ?? '').toString();
   final nameAr = (medicine['name_ar'] ?? '').toString();
@@ -389,7 +402,7 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        'صلة القرابة: ${widget.dependent.relationship}',
+                                        'صلة القرابة: ${_relationshipDisplay(widget.dependent.relationship)}',
                                         style: const TextStyle(
                                           color: _Colors.textSecondary,
                                           fontSize: 13,
