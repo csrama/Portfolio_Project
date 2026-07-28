@@ -376,7 +376,7 @@ const db = {
     let params;
 
     if (dependentId) {
-      queryText = `SELECT * FROM medications WHERE user_id = $1 OR dependent_id = $1 ORDER BY created_at DESC`;
+      queryText = `SELECT * FROM medications WHERE dependent_id = $1 ORDER BY created_at DESC`;
       params = [dependentId];
     } else {
       queryText = `SELECT * FROM medications WHERE user_id = $1 AND (dependent_id IS NULL) ORDER BY created_at DESC`;
