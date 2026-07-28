@@ -76,13 +76,13 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final List<MedicationItem> _medications =
-      []; // unlimited: just a growing list
-  final Set<String> _takenMedications = {}; // medication name + date key
-  final Set<String> _notTakenMedications = {}; // explicit not-taken state
+      []; 
+  final Set<String> _takenMedications = {}; 
+  final Set<String> _notTakenMedications = {}; 
   final Map<String, int> _doseRecordIds =
-      {}; // نفس المفتاح -> id السجل بالباك إند
+      {}; 
   List<DrugInteraction> _interactions =
-      []; // تداخلات دوائية بين الأدوية الحالية
+      []; 
 
   final DrugInteractionService _interactionService = DrugInteractionService();
   bool _interactionsBannerExpanded = false;
@@ -610,8 +610,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// يفحص دواء معيّن (بالاسم) مقابل بقية الأدوية الحالية فقط،
-  /// يُستخدم لعرض تحذير فوري بعد إضافة دواء جديد.
   Future<List<DrugInteraction>> _checkInteractionsFor(String newMedName) async {
 
     try {
@@ -655,7 +653,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// يبني نص + لون التفاصيل لتداخل واحد بالعربي (يرجع للإنجليزي لو ما لقى ترجمة).
   Widget _buildInteractionDetailTile(
     DrugInteraction i, {
     bool emphasize = false,
@@ -1121,7 +1118,7 @@ class _HomeScreenState extends State<HomeScreen> {
     for (final test in tests) {
       try {
         final url = ApiService.buildUrl(test['path']!);
-        debugPrint('🔍 Trying: ${test['method']} $url');
+        debugPrint('Trying: ${test['method']} $url');
 
         http.Response response;
 
@@ -1144,7 +1141,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        debugPrint('🔍 Status: ${response.statusCode} for ${test['path']}');
+        debugPrint('Status: ${response.statusCode} for ${test['path']}');
 
         if (response.statusCode >= 200 && response.statusCode < 300) {
           workingPath = test['path'];
@@ -1153,7 +1150,7 @@ class _HomeScreenState extends State<HomeScreen> {
           lastStatusCode = response.statusCode;
         }
       } catch (e) {
-        debugPrint('❌ Error with ${test['path']}: $e');
+        debugPrint('Error with ${test['path']}: $e');
 
       }
     }
@@ -1163,7 +1160,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ تم حذف الدواء بنجاح'),
+            content: Text('تم حذف الدواء بنجاح'),
 
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
@@ -1174,7 +1171,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ فشل الحذف: الكود $lastStatusCode'),
+            content: Text('فشل الحذف: الكود $lastStatusCode'),
 
             backgroundColor: Colors.red,
             duration: Duration(seconds: 3),
@@ -1848,7 +1845,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    dependent.relationship,
+                    _relationshipDisplay(dependent.relationship),
                     style: const TextStyle(
                       color: _Colors.textSecondary,
                       fontSize: 13,
@@ -1961,7 +1958,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        success ? 'تم التحديث بنجاح ✅' : 'فشل التحديث',
+                        success ? 'تم التحديث بنجاح ' : 'فشل التحديث',
                       ),
                       backgroundColor: success
                           ? const Color(0xFF1D9E75)
@@ -2146,7 +2143,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: const Text(
                   'مأخوذة',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -3317,4 +3314,3 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
     );
   }
 }
-
