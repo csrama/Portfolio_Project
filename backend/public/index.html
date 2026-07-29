@@ -1,0 +1,2184 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>دوائي — نظام إدارة الأدوية</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <style>
+        /* ============================================================
+               دوائي - هاتف تفاعلي مع شاشات من التطبيق
+               ============================================================ */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0D5C3A;
+            --primary-dark: #085041;
+            --primary-light: #D9F2E7;
+            --secondary: #C4902B;
+            --secondary-light: #F5EDDD;
+            --bg: #F8F6F2;
+            --card: #FFFFFF;
+            --text: #1A2E24;
+            --text-light: #4A6658;
+            --text-muted: #8A9F93;
+            --border: #E6E0D6;
+            --shadow: 0 4px 20px rgba(13, 92, 58, 0.06);
+            --shadow-hover: 0 8px 30px rgba(13, 92, 58, 0.12);
+            --radius: 12px;
+            --radius-lg: 20px;
+            --transition: 0.3s ease;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1140px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ============================================================
+               أزرار
+               ============================================================ */
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--primary);
+            color: #fff;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 15px;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(13, 92, 58, 0.25);
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: transparent;
+            color: var(--text);
+            padding: 14px 30px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 15px;
+            border: 1.5px solid var(--border);
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        /* ============================================================
+               هيدر
+               ============================================================ */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(248, 246, 242, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .navbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            font-weight: 900;
+            font-size: 22px;
+            color: var(--primary-dark);
+        }
+
+        .logo-icon {
+            width: 38px;
+            height: 38px;
+            background: var(--primary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 17px;
+            color: #fff;
+            font-weight: 900;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .nav-links a {
+            color: var(--text-light);
+            text-decoration: none;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            right: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary);
+            transition: var(--transition);
+        }
+
+        .nav-links a:hover {
+            color: var(--text);
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-cta {
+            background: var(--primary);
+            color: #fff;
+            padding: 8px 22px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+
+        .nav-cta:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            padding: 8px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            width: 42px;
+            height: 42px;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .hamburger span {
+            display: block;
+            width: 18px;
+            height: 2px;
+            background: var(--text);
+            border-radius: 2px;
+            transition: var(--transition);
+        }
+
+        .hamburger.active span:nth-child(1) {
+            transform: translateY(6px) rotate(45deg);
+        }
+        .hamburger.active span:nth-child(2) {
+            opacity: 0;
+        }
+        .hamburger.active span:nth-child(3) {
+            transform: translateY(-6px) rotate(-45deg);
+        }
+
+        .mobile-menu {
+            display: none;
+            flex-direction: column;
+            gap: 2px;
+            padding: 16px 0 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .mobile-menu.open {
+            display: flex;
+        }
+
+        .mobile-menu a {
+            padding: 12px 0;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-light);
+            text-decoration: none;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .mobile-menu a:last-child {
+            border-bottom: none;
+        }
+
+        /* ============================================================
+               هيرو
+               ============================================================ */
+        .hero {
+            padding: 80px 0 60px;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            right: -5%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(13, 92, 58, 0.04) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 5px 14px 5px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .hero-badge .dot {
+            width: 6px;
+            height: 6px;
+            background: var(--primary);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.8); }
+        }
+
+        .hero h1 {
+            font-size: clamp(34px, 4.5vw, 50px);
+            font-weight: 900;
+            line-height: 1.2;
+            color: var(--text);
+        }
+
+        .hero h1 .highlight {
+            color: var(--primary);
+            position: relative;
+        }
+
+        .hero h1 .highlight::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            right: 0;
+            width: 100%;
+            height: 5px;
+            background: var(--secondary-light);
+            border-radius: 3px;
+            z-index: -1;
+        }
+
+        .hero p {
+            font-size: 17px;
+            color: var(--text-light);
+            max-width: 460px;
+            margin: 16px 0 30px;
+            line-height: 1.8;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 40px;
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 40px;
+            padding-top: 30px;
+            border-top: 1px solid var(--border);
+        }
+
+        .hero-stats .stat h3 {
+            font-size: 26px;
+            font-weight: 900;
+            color: var(--primary);
+        }
+
+        .hero-stats .stat span {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        /* ============================================================
+               هاتف تفاعلي - مقاسات مضبوطة
+               ============================================================ */
+        .phone-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .phone-wrapper {
+            position: relative;
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+        }
+
+        .phone-wrapper:hover {
+            transform: translateY(-6px) scale(1.01);
+        }
+
+        .phone {
+            width: 320px;
+            height: 640px;
+            background: #1a1a2e;
+            border-radius: 34px;
+            padding: 10px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+            position: relative;
+        }
+
+        .phone::after {
+            content: '';
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+        }
+
+        .phone::before {
+            content: '';
+            position: absolute;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            z-index: 5;
+        }
+
+        .phone-screen {
+            width: 100%;
+            height: 100%;
+            background: #F8F6F2;
+            border-radius: 24px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ===== الشاشات ===== */
+        .app-screen {
+            width: 100%;
+            height: 100%;
+            padding: 10px 12px;
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            overflow-y: auto;
+            animation: fadeIn 0.4s ease;
+            flex: 1;
+        }
+
+        .app-screen.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .app-screen::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        .app-screen::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .app-screen::-webkit-scrollbar-thumb {
+            background: #E6E0D6;
+            border-radius: 4px;
+        }
+
+        /* شريط الحالة */
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            font-weight: 700;
+            color: #8A9F93;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #E6E0D6;
+            flex-shrink: 0;
+        }
+
+        /* ===== شاشة 1: تسجيل الدخول ===== */
+        .login-title {
+            font-size: 20px;
+            font-weight: 900;
+            color: #085041;
+            text-align: center;
+            margin: 6px 0 2px;
+        }
+
+        .login-sub {
+            text-align: center;
+            color: #4A6658;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        .login-input {
+            background: #FFFFFF;
+            border: 1px solid #E6E0D6;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 12px;
+            color: #1A2E24;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .login-input::placeholder {
+            color: #8A9F93;
+        }
+
+        .login-input:focus {
+            outline: none;
+            border-color: #0D5C3A;
+        }
+
+        .login-btn {
+            background: #085041;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 11px;
+            font-family: 'Tajawal', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 4px;
+        }
+
+        .login-btn:hover {
+            background: #0D5C3A;
+        }
+
+        .login-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 8px 0;
+        }
+
+        .login-divider::before,
+        .login-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #E6E0D6;
+        }
+
+        .login-divider span {
+            color: #8A9F93;
+            font-size: 11px;
+        }
+
+        .social-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #FFFFFF;
+            border: 1px solid #E6E0D6;
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'Tajawal', sans-serif;
+            font-weight: 700;
+            font-size: 12px;
+            color: #1A2E24;
+            width: 100%;
+            cursor: pointer;
+            margin-bottom: 6px;
+        }
+
+        .social-btn:hover {
+            background: #F8F6F2;
+        }
+
+        .login-footer {
+            text-align: center;
+            font-size: 10px;
+            color: #8A9F93;
+            margin-top: 4px;
+        }
+
+        .login-footer a {
+            color: #085041;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .guest-btn {
+            background: transparent;
+            border: none;
+            color: #085041;
+            font-family: 'Tajawal', sans-serif;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            text-align: center;
+            width: 100%;
+            padding: 8px;
+            margin-top: 2px;
+        }
+
+        /* ===== شاشة 2: الرئيسية ===== */
+        .greeting {
+            font-size: 16px;
+            font-weight: 800;
+            color: #1A2E24;
+        }
+
+        .greeting span {
+            color: #085041;
+        }
+
+        .interaction-banner {
+            background: #FDF3F0;
+            border: 1px solid #F5DCD4;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 11px;
+            color: #B84A3A;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .interaction-banner i {
+            font-size: 12px;
+        }
+
+        .date-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 3px;
+            margin: 4px 0;
+        }
+
+        .date-item {
+            flex: 1;
+            text-align: center;
+            padding: 4px 2px;
+            border-radius: 6px;
+            font-size: 10px;
+            background: #FFFFFF;
+            border: 1px solid #E6E0D6;
+        }
+
+        .date-item .day-num {
+            font-weight: 900;
+            font-size: 12px;
+        }
+
+        .date-item .day-name {
+            font-size: 8px;
+            color: #8A9F93;
+        }
+
+        .date-item.active {
+            background: #085041;
+            color: #fff;
+            border-color: #085041;
+        }
+
+        .date-item.active .day-name {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .section-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: 700;
+            color: #085041;
+            margin: 4px 0 2px;
+        }
+
+        .section-label span:last-child {
+            font-weight: 500;
+            color: #4A6658;
+        }
+
+        .med-card {
+            background: #085041;
+            border-radius: 10px;
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .med-card .info {
+            flex: 1;
+        }
+
+        .med-card .name {
+            color: #fff;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .med-card .details {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 9px;
+        }
+
+        .med-card .dose-info {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 10px;
+            font-weight: 700;
+            text-align: left;
+        }
+
+        .med-card .pill-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 900;
+            font-size: 11px;
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+
+        /* ===== شاشة 3: إضافة دواء ===== */
+        .add-title {
+            font-size: 17px;
+            font-weight: 900;
+            color: #085041;
+            text-align: right;
+            margin: 2px 0;
+        }
+
+        .add-sub {
+            color: #4A6658;
+            font-size: 11px;
+            margin-bottom: 6px;
+        }
+
+        .type-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .type-item {
+            background: #FFFFFF;
+            border: 1px solid #E6E0D6;
+            border-radius: 6px;
+            padding: 6px 4px;
+            text-align: center;
+            font-size: 9px;
+            font-weight: 700;
+            color: #4A6658;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .type-item:hover {
+            border-color: #085041;
+        }
+
+        .type-item.active {
+            background: #085041;
+            color: #fff;
+            border-color: #085041;
+        }
+
+        .type-item i {
+            display: block;
+            font-size: 16px;
+            margin-bottom: 2px;
+        }
+
+        .add-input {
+            background: #FFFFFF;
+            border: 1px solid #E6E0D6;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 12px;
+            color: #1A2E24;
+            width: 100%;
+            margin-bottom: 6px;
+        }
+
+        .add-input::placeholder {
+            color: #8A9F93;
+        }
+
+        .add-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .add-row .add-input {
+            flex: 1;
+        }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 3px;
+            margin: 2px 0 6px;
+        }
+
+        .day-chip {
+            background: #FFFFFF;
+            border: 1px solid #E6E0D6;
+            border-radius: 4px;
+            padding: 4px 2px;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 600;
+            color: #4A6658;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .day-chip:hover {
+            border-color: #085041;
+        }
+
+        .day-chip.active {
+            background: #085041;
+            color: #fff;
+            border-color: #085041;
+        }
+
+        .all-days-btn {
+            background: #D9F2E7;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 10px;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            color: #085041;
+            cursor: pointer;
+            margin-top: 2px;
+        }
+
+        /* ===== شاشة 4: التذكيرات ===== */
+        .reminder-card {
+            background: #085041;
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 6px;
+        }
+
+        .reminder-card .name {
+            color: #fff;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .reminder-card .details {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 10px;
+        }
+
+        .reminder-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .reminder-actions button {
+            flex: 1;
+            padding: 5px;
+            border-radius: 6px;
+            font-family: 'Tajawal', sans-serif;
+            font-weight: 700;
+            font-size: 10px;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .reminder-actions .taken {
+            background: #1D9E75;
+            color: #fff;
+        }
+
+        .reminder-actions .taken:hover {
+            background: #167a5a;
+        }
+
+        .reminder-actions .not-taken {
+            background: #FFFFFF;
+            color: #085041;
+            border: 1px solid #085041;
+        }
+
+        .reminder-actions .not-taken:hover {
+            background: #D9F2E7;
+        }
+
+        /* ===== شاشة 5: الملف الشخصي ===== */
+        .profile-header {
+            text-align: center;
+            padding: 4px 0;
+        }
+
+        .profile-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: #085041;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 4px;
+            font-size: 22px;
+            font-weight: 900;
+            color: #fff;
+        }
+
+        .profile-name {
+            font-size: 16px;
+            font-weight: 900;
+            color: #1A2E24;
+        }
+
+        .profile-email {
+            font-size: 11px;
+            color: #8A9F93;
+        }
+
+        .profile-menu {
+            margin-top: 8px;
+        }
+
+        .profile-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: #FFFFFF;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .profile-item:hover {
+            background: #F8F6F2;
+        }
+
+        .profile-item i {
+            width: 18px;
+            color: #085041;
+            font-size: 14px;
+        }
+
+        .profile-item span {
+            flex: 1;
+            font-weight: 600;
+            font-size: 12px;
+            color: #1A2E24;
+        }
+
+        .profile-item .arrow {
+            color: #8A9F93;
+            font-size: 10px;
+        }
+
+        /* ===== أزرار التنقل ===== */
+        .app-nav {
+            display: flex;
+            gap: 2px;
+            justify-content: center;
+            padding: 4px 0 2px;
+            border-top: 1px solid #E6E0D6;
+            flex-shrink: 0;
+            background: #FFFFFF;
+            border-radius: 0 0 24px 24px;
+        }
+
+        .app-nav button {
+            padding: 4px 6px;
+            border-radius: 4px;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 8px;
+            font-weight: 700;
+            border: none;
+            background: transparent;
+            color: #4A6658;
+            cursor: pointer;
+            transition: var(--transition);
+            flex: 1;
+        }
+
+        .app-nav button i {
+            display: block;
+            font-size: 13px;
+            margin-bottom: 1px;
+        }
+
+        .app-nav button:hover {
+            background: #D9F2E7;
+        }
+
+        .app-nav button.active-tab {
+            color: #085041;
+        }
+
+        .app-nav button.active-tab i {
+            color: #085041;
+        }
+
+        .phone-controls {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .phone-controls button {
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            border: 1.5px solid #E6E0D6;
+            background: #FFFFFF;
+            color: #1A2E24;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .phone-controls button:hover {
+            border-color: #085041;
+            background: #D9F2E7;
+        }
+
+        .phone-controls button.active-btn {
+            background: #085041;
+            color: #fff;
+            border-color: #085041;
+        }
+
+        /* ============================================================
+               باقي الأقسام
+               ============================================================ */
+        .stats-bar {
+            background: var(--primary-dark);
+            padding: 30px 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            text-align: center;
+        }
+
+        .stats-grid .stat h3 {
+            font-size: 28px;
+            font-weight: 900;
+            color: var(--secondary);
+        }
+
+        .stats-grid .stat span {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .section {
+            padding: 70px 0;
+        }
+
+        .section-header {
+            max-width: 600px;
+            margin-bottom: 44px;
+        }
+
+        .section-header .tag {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            color: var(--secondary);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .section-header h2 {
+            font-size: clamp(28px, 3vw, 36px);
+            font-weight: 900;
+            line-height: 1.3;
+        }
+
+        .section-header p {
+            color: var(--text-light);
+            font-size: 15px;
+            margin-top: 8px;
+            line-height: 1.8;
+        }
+
+        .section-header.center {
+            text-align: center;
+            margin-inline: auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .feature-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 26px 24px;
+            transition: var(--transition);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-hover);
+            border-color: var(--primary);
+        }
+
+        .feature-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--primary);
+            margin-bottom: 14px;
+        }
+
+        .feature-card h3 {
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .feature-card p {
+            font-size: 13px;
+            color: var(--text-light);
+            line-height: 1.7;
+        }
+
+        .how-section {
+            background: var(--primary-dark);
+            border-radius: var(--radius-lg);
+            padding: 50px 0;
+        }
+
+        .how-section .section-header h2 {
+            color: #fff;
+        }
+
+        .how-section .section-header p {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .how-section .section-header .tag {
+            color: var(--secondary);
+        }
+
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .step-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: var(--radius);
+            padding: 24px 20px;
+            text-align: center;
+        }
+
+        .step-number {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--secondary);
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 17px;
+            margin: 0 auto 14px;
+        }
+
+        .step-card h4 {
+            font-size: 16px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .step-card p {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.7;
+        }
+
+        .interaction-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            align-items: center;
+        }
+
+        .interaction-box {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .interaction-pills {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .pill-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .pill-tag .color {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .pill-tag .color.amber {
+            background: var(--secondary);
+        }
+        .pill-tag .color.green {
+            background: var(--primary);
+        }
+
+        .interaction-warning {
+            background: #FDF3F0;
+            border: 1px solid #F5DCD4;
+            border-radius: 8px;
+            padding: 14px 16px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .interaction-warning .icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: #B84A3A;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 900;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .interaction-warning h5 {
+            color: #7D2A20;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .interaction-warning p {
+            font-size: 12px;
+            color: #8A4A40;
+            line-height: 1.7;
+        }
+
+        .severity {
+            display: inline-block;
+            margin-top: 4px;
+            font-size: 10px;
+            font-weight: 800;
+            background: #B84A3A;
+            color: #fff;
+            padding: 2px 10px;
+            border-radius: 4px;
+        }
+
+        .family-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            align-items: center;
+        }
+
+        .family-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .family-item {
+            display: flex;
+            gap: 14px;
+        }
+
+        .family-item .num {
+            font-weight: 900;
+            font-size: 17px;
+            color: var(--secondary);
+            flex-shrink: 0;
+            width: 28px;
+        }
+
+        .family-item h4 {
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        .family-item p {
+            font-size: 13px;
+            color: var(--text-light);
+            line-height: 1.7;
+        }
+
+        .family-cards {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .family-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .family-row:last-child {
+            border-bottom: none;
+        }
+
+        .family-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 15px;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .family-row .info b {
+            display: block;
+            font-size: 13px;
+        }
+
+        .family-row .info span {
+            font-size: 11px;
+            color: var(--text-light);
+        }
+
+        .family-status {
+            margin-right: auto;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 4px;
+        }
+
+        .family-status.linked {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .family-status.pending {
+            background: var(--secondary-light);
+            color: #8A6A1C;
+        }
+
+        .quote-block {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .quote-block blockquote {
+            font-size: clamp(20px, 2.2vw, 26px);
+            font-weight: 400;
+            line-height: 1.8;
+            color: var(--text);
+        }
+
+        .quote-block blockquote::before {
+            content: '"';
+            color: var(--secondary);
+            font-size: 1.6em;
+        }
+
+        .quote-block blockquote::after {
+            content: '"';
+            color: var(--secondary);
+            font-size: 1.6em;
+        }
+
+        .quote-block cite {
+            display: block;
+            margin-top: 12px;
+            font-style: normal;
+            font-weight: 700;
+            color: var(--text-light);
+            font-size: 13px;
+        }
+
+        .cta-section {
+            background: var(--primary);
+            border-radius: var(--radius-lg);
+            padding: 60px 36px;
+            text-align: center;
+            color: #fff;
+        }
+
+        .cta-section h2 {
+            font-size: clamp(28px, 3.2vw, 38px);
+            font-weight: 900;
+        }
+
+        .cta-section p {
+            color: rgba(255, 255, 255, 0.85);
+            margin-top: 12px;
+            font-size: 15px;
+            max-width: 480px;
+            margin-inline: auto;
+            line-height: 1.8;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+            margin-top: 28px;
+            flex-wrap: wrap;
+        }
+
+        .btn-white {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #fff;
+            color: var(--primary-dark);
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+
+        .btn-white:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .btn-outline-white {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: transparent;
+            color: #fff;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            border: 1.5px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+
+        .btn-outline-white:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        footer {
+            padding: 50px 0 28px;
+            background: var(--card);
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 1.6fr 1fr 1fr 1fr;
+            gap: 36px;
+            padding-bottom: 28px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .footer-brand p {
+            font-size: 13px;
+            color: var(--text-light);
+            max-width: 300px;
+            margin-top: 8px;
+            line-height: 1.7;
+        }
+
+        .footer-col h5 {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-light);
+            margin-bottom: 12px;
+        }
+
+        .footer-col a {
+            display: block;
+            font-size: 13px;
+            color: var(--text-light);
+            margin-bottom: 8px;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .footer-col a:hover {
+            color: var(--primary);
+        }
+
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 20px;
+            font-size: 12px;
+            color: var(--text-light);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (max-width: 1024px) {
+            .features-grid { grid-template-columns: repeat(2, 1fr); }
+            .footer-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        @media (max-width: 820px) {
+            .hero-grid {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .hero p {
+                max-width: 100%;
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            .hero-actions { justify-content: center; }
+            .hero-stats { justify-content: center; flex-wrap: wrap; gap: 20px; }
+
+            .phone { width: 280px; height: 560px; }
+
+            .interaction-grid { grid-template-columns: 1fr; }
+            .family-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .steps-grid { grid-template-columns: 1fr; }
+
+            .nav-links { display: none; }
+            .hamburger { display: flex; }
+            .nav-cta { display: none; }
+        }
+
+        @media (max-width: 640px) {
+            .hero { padding: 40px 0 32px; }
+            .hero h1 { font-size: 28px; }
+
+            .phone { width: 260px; height: 520px; }
+
+            .features-grid { grid-template-columns: 1fr; }
+            .footer-grid { grid-template-columns: 1fr; }
+            .cta-section { padding: 36px 20px; }
+
+            .stats-grid .stat h3 { font-size: 22px; }
+            .hero-stats .stat h3 { font-size: 22px; }
+
+            .phone-controls button { font-size: 9px; padding: 4px 8px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============================================================
+    الهيدر
+    ============================================================ -->
+    <header>
+        <div class="container">
+            <nav class="navbar">
+                <a href="#" class="logo">
+                    <span class="logo-icon">د</span>
+                    دوائي
+                </a>
+
+                <div class="nav-links">
+                    <a href="#features">المميزات</a>
+                    <a href="#how">كيف يعمل</a>
+                    <a href="#interactions">التفاعلات</a>
+                    <a href="#family">العائلة</a>
+                </div>
+
+                <a href="#cta" class="nav-cta">جرب الآن</a>
+
+                <button class="hamburger" id="hamburgerBtn" aria-label="فتح القائمة">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </nav>
+
+            <div class="mobile-menu" id="mobileMenu">
+                <a href="#features">المميزات</a>
+                <a href="#how">كيف يعمل</a>
+                <a href="#interactions">التفاعلات</a>
+                <a href="#family">العائلة</a>
+                <a href="#cta">جرب الآن</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- ============================================================
+    الهيرو
+    ============================================================ -->
+    <section class="hero">
+        <div class="container hero-grid">
+            <div>
+                <div class="hero-badge">
+                    <span class="dot"></span>
+                    تطبيق إدارة الأدوية
+                </div>
+                <h1>
+                    جرعتك في وقتها،
+                    <br />
+                    <span class="highlight">دائماً</span>
+                </h1>
+                <p>
+                    نظام متكامل لإدارة الأدوية يوفّر تذكيرات دقيقة، فحصاً للتفاعلات الدوائية،
+                    وإمكانية متابعة أدوية أفراد العائلة من خلال منصة واحدة.
+                </p>
+                <div class="hero-actions">
+                    <a href="#cta" class="btn-primary">
+                        ابدأ الآن
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h13M13 6l6 6-6 6" /></svg>
+                    </a>
+                    <a href="#how" class="btn-secondary">كيف يعمل</a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <h3>٣٧٠٠+</h3>
+                        <span>دواء في القاعدة</span>
+                    </div>
+                    <div class="stat">
+                        <h3>٩٢%</h3>
+                        <span>التزام بالجرعات</span>
+                    </div>
+                    <div class="stat">
+                        <h3>عربي</h3>
+                        <span>بالكامل</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== هاتف تفاعلي مع شاشات التطبيق ===== -->
+            <div class="phone-container">
+                <div class="phone-wrapper">
+                    <div class="phone">
+                        <div class="phone-screen" id="phoneScreen">
+
+                            <!-- ===== شاشة 1: تسجيل الدخول ===== -->
+                            <div class="app-screen active" id="screenLogin">
+                                <div class="status-bar">
+                                    <span><i class="fa-solid fa-wifi"></i> <i class="fa-solid fa-battery-three-quarters"></i></span>
+                                    <span>١٠:٣٠</span>
+                                </div>
+
+                                <div class="login-title">تسجيل الدخول</div>
+                                <div class="login-sub">سجل دخولك لمتابعة أدويتك</div>
+
+                                <input class="login-input" type="email" placeholder="البريد الإلكتروني" />
+                                <input class="login-input" type="password" placeholder="كلمة المرور" />
+
+                                <button class="login-btn">تسجيل الدخول</button>
+
+                                <div style="text-align:center;font-size:12px;color:#4A6658;margin:6px 0;">
+                                    ليس لديك حساب؟ <a href="#" style="color:#085041;font-weight:700;">إنشاء حساب جديد</a>
+                                </div>
+
+                                <div class="login-divider">
+                                    <span>أو</span>
+                                </div>
+
+                                <button class="social-btn">
+                                    <i class="fa-brands fa-google" style="color:#0e0200;"></i>
+                                    التسجيل عبر Google
+                                </button>
+
+                                <button class="social-btn">
+                                    <i class="fa-brands fa-apple" style="color:#1A1A1A;"></i>
+                                    التسجيل عبر Apple
+                                </button>
+
+                                <div class="login-footer">
+                                    بالمتابعة، أنت توافق على <a href="#">الشروط والأحكام</a>
+                                </div>
+
+                                <button class="guest-btn">الاستمرار كضيف</button>
+                            </div>
+
+                            <!-- ===== شاشة 2: الرئيسية ===== -->
+                            <div class="app-screen" id="screenHome">
+                                <div class="status-bar">
+                                    <span><i class="fa-solid fa-wifi"></i> <i class="fa-solid fa-battery-three-quarters"></i></span>
+                                    <span>١٠:٣٠</span>
+                                </div>
+
+                                <div class="greeting">مساء الخير، <span>rama</span></div>
+
+                                <div class="interaction-banner">
+                                    <i class="fa-solid fa-triangle-exclamation"></i>
+                                    تداخلات دوائية (٤) – ٢ خطورة عالية، ٢ خطورة متوسطة
+                                </div>
+
+                                <div class="date-row">
+                                    <div class="date-item"><div class="day-num">١</div><div class="day-name">السبت</div></div>
+                                    <div class="date-item"><div class="day-num">٣١</div><div class="day-name">الجمعة</div></div>
+                                    <div class="date-item active"><div class="day-num">٣٠</div><div class="day-name">الخميس</div></div>
+                                    <div class="date-item"><div class="day-num">٢٩</div><div class="day-name">الأربعاء</div></div>
+                                    <div class="date-item"><div class="day-num">٢٨</div><div class="day-name">الثلاثاء</div></div>
+                                    <div class="date-item"><div class="day-num">٢٧</div><div class="day-name">الاثنين</div></div>
+                                    <div class="date-item"><div class="day-num">٢٦</div><div class="day-name">الأحد</div></div>
+                                </div>
+
+                                <div class="section-label">
+                                    <span>الأدوية المضافه</span>
+                                    <span>عرض المزيد</span>
+                                </div>
+
+                                <div class="med-card">
+                                    <div class="pill-icon">ب</div>
+                                    <div class="info">
+                                        <div class="name">PANADOL 500</div>
+                                        <div class="details">قرص 500 MG · ١:٠٠ مساءً · ١/١ اليوم</div>
+                                    </div>
+                                    <div class="dose-info">MG 500</div>
+                                </div>
+
+                                <div class="med-card">
+                                    <div class="pill-icon">ا</div>
+                                    <div class="info">
+                                        <div class="name">IBUPROFEN</div>
+                                        <div class="details">١٠٠ مجم/٥ مل معلق فموي · ٦:٠٠ صباحاً · ١/١ اليوم</div>
+                                    </div>
+                                    <div class="dose-info">100MG</div>
+                                </div>
+
+                                <div class="med-card">
+                                    <div class="pill-icon">ف</div>
+                                    <div class="info">
+                                        <div class="name">FORRETIC 500</div>
+                                        <div class="details">قرص 500 MG · ٦:٠٠ صباحاً · ١/١ اليوم</div>
+                                    </div>
+                                    <div class="dose-info">MG 500</div>
+                                </div>
+                            </div>
+
+                            <!-- ===== شاشة 3: إضافة دواء ===== -->
+                            <div class="app-screen" id="screenAdd">
+                                <div class="status-bar">
+                                    <span><i class="fa-solid fa-wifi"></i> <i class="fa-solid fa-battery-three-quarters"></i></span>
+                                    <span>١٠:٣٠</span>
+                                </div>
+
+                                <div class="add-title">جدول دوائك</div>
+                                <div class="add-sub">حدد نوع الدواء:</div>
+
+                                <div class="type-grid">
+                                    <div class="type-item"><i class="fa-solid fa-capsules"></i>كبسولات</div>
+                                    <div class="type-item"><i class="fa-solid fa-eye-dropper"></i>قطرات</div>
+                                    <div class="type-item"><i class="fa-solid fa-flask"></i>كريم</div>
+                                    <div class="type-item"><i class="fa-solid fa-syringe"></i>حقن</div>
+                                    <div class="type-item"><i class="fa-solid fa-flask"></i>شراب</div>
+                                    <div class="type-item active"><i class="fa-solid fa-tablets"></i>أقراص</div>
+                                </div>
+
+                                <input class="add-input" type="text" placeholder="اسم الدواء" />
+                                <input class="add-input" type="text" placeholder="ابحث عن الدواء من نفس الصيدلية" />
+
+                                <div class="add-row">
+                                    <input class="add-input" type="text" placeholder="mcg" style="flex:0.4;" />
+                                    <input class="add-input" type="text" placeholder="الجرعة" style="flex:0.4;" />
+                                    <input class="add-input" type="text" placeholder="Eltroxin" style="flex:1;" />
+                                </div>
+
+                                <div style="font-size:11px;font-weight:700;color:#4A6658;margin:2px 0;">أيام الأسبوع</div>
+
+                                <div class="days-grid">
+                                    <div class="day-chip active">الاثنين</div>
+                                    <div class="day-chip active">الثلاثاء</div>
+                                    <div class="day-chip active">الأربعاء</div>
+                                    <div class="day-chip active">الخميس</div>
+                                    <div class="day-chip active">الأحد</div>
+                                    <div class="day-chip">السبت</div>
+                                    <div class="day-chip">الجمعة</div>
+                                    <div class="day-chip" style="background:#D9F2E7;font-weight:700;">كل أيام الأسبوع</div>
+                                </div>
+                            </div>
+
+                            <!-- ===== شاشة 4: التذكيرات ===== -->
+                            <div class="app-screen" id="screenReminders">
+                                <div class="status-bar">
+                                    <span><i class="fa-solid fa-wifi"></i> <i class="fa-solid fa-battery-three-quarters"></i></span>
+                                    <span>١٠:٣٠</span>
+                                </div>
+
+                                <div class="greeting" style="font-size:15px;">مساء الخير، <span>rama</span></div>
+
+                                <div class="date-row" style="margin:2px 0;">
+                                    <div class="date-item"><div class="day-num">١</div><div class="day-name">السبت</div><i class="fa-regular fa-circle" style="font-size:5px;color:#8A9F93;display:block;"></i></div>
+                                    <div class="date-item"><div class="day-num">٣١</div><div class="day-name">الجمعة</div><i class="fa-regular fa-circle" style="font-size:5px;color:#8A9F93;display:block;"></i></div>
+                                    <div class="date-item active"><div class="day-num">٣٠</div><div class="day-name">الخميس</div><i class="fa-regular fa-circle" style="font-size:5px;color:#fff;display:block;"></i></div>
+                                    <div class="date-item"><div class="day-num">٢٩</div><div class="day-name">الأربعاء</div><i class="fa-regular fa-circle" style="font-size:5px;color:#8A9F93;display:block;"></i></div>
+                                    <div class="date-item"><div class="day-num">٢٨</div><div class="day-name">الثلاثاء</div><i class="fa-regular fa-circle" style="font-size:5px;color:#8A9F93;display:block;"></i></div>
+                                    <div class="date-item"><div class="day-num">٢٧</div><div class="day-name">الاثنين</div><i class="fa-regular fa-circle" style="font-size:5px;color:#8A9F93;display:block;"></i></div>
+                                    <div class="date-item"><div class="day-num">٢٦</div><div class="day-name">الأحد</div><i class="fa-regular fa-circle" style="font-size:5px;color:#8A9F93;display:block;"></i></div>
+                                </div>
+
+                                <div class="reminder-card">
+                                    <div class="name">PANADOL 500 MG</div>
+                                    <div class="details">قرص 500 MG · ١:٠٠ مساءً</div>
+                                    <div class="reminder-actions">
+                                        <button class="not-taken">لم تُؤخذ</button>
+                                        <button class="taken">مأخوذة</button>
+                                    </div>
+                                </div>
+
+                                <div class="reminder-card">
+                                    <div class="name">IBUPROFEN 100MG</div>
+                                    <div class="details">معلق فموي ١٢٠ مل · ٦:٠٠ صباحاً</div>
+                                    <div class="reminder-actions">
+                                        <button class="not-taken">لم تُؤخذ</button>
+                                        <button class="taken">مأخوذة</button>
+                                    </div>
+                                </div>
+
+                                <div class="reminder-card">
+                                    <div class="name">FORRETIC 500 MG</div>
+                                    <div class="details">قرص 500 MG · ٦:٠٠ صباحاً</div>
+                                    <div class="reminder-actions">
+                                        <button class="not-taken">لم تُؤخذ</button>
+                                        <button class="taken">مأخوذة</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ===== شاشة 5: الملف الشخصي ===== -->
+                            <div class="app-screen" id="screenProfile">
+                                <div class="status-bar">
+                                    <span><i class="fa-solid fa-wifi"></i> <i class="fa-solid fa-battery-three-quarters"></i></span>
+                                    <span>١٠:٣٠</span>
+                                </div>
+
+                                <div class="profile-header">
+                                    <div class="profile-avatar">ر</div>
+                                    <div class="profile-name">rama</div>
+                                    <div class="profile-email">ramadafer1@gmail.com</div>
+                                </div>
+
+                                <div style="background:#FFFFFF;border-radius:8px;padding:8px 12px;margin:2px 0;">
+                                    <div style="font-size:11px;color:#8A9F93;">الاسم الكامل</div>
+                                    <div style="font-weight:700;font-size:14px;color:#1A2E24;">rama</div>
+                                </div>
+
+                                <div class="profile-menu">
+                                    <div class="profile-item">
+                                        <i class="fa-solid fa-pills"></i>
+                                        <span>أدويتي</span>
+                                        <span class="arrow"><i class="fa-solid fa-chevron-left"></i></span>
+                                    </div>
+                                    <div class="profile-item">
+                                        <i class="fa-regular fa-bell"></i>
+                                        <span>تذكيراتي</span>
+                                        <span class="arrow"><i class="fa-solid fa-chevron-left"></i></span>
+                                    </div>
+                                    <div class="profile-item">
+                                        <i class="fa-solid fa-chart-line"></i>
+                                        <span>متابعة الجرعات</span>
+                                        <span class="arrow"><i class="fa-solid fa-chevron-left"></i></span>
+                                    </div>
+                                    <div class="profile-item">
+                                        <i class="fa-solid fa-users"></i>
+                                        <span>إدارة التابعين</span>
+                                        <span class="arrow"><i class="fa-solid fa-chevron-left"></i></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ===== أزرار التنقل ===== -->
+                            <div class="app-nav">
+                                <button class="active-tab" data-screen="screenLogin"><i class="fa-solid fa-right-to-bracket"></i>دخول</button>
+                                <button data-screen="screenHome"><i class="fa-solid fa-house"></i>اليوم</button>
+                                <button data-screen="screenAdd"><i class="fa-solid fa-plus"></i>إضافة</button>
+                                <button data-screen="screenReminders"><i class="fa-regular fa-bell"></i>تذكيرات</button>
+                                <button data-screen="screenProfile"><i class="fa-regular fa-user"></i>حسابي</button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="phone-controls">
+                    <button class="active-btn" data-screen="screenLogin"><i class="fa-solid fa-right-to-bracket"></i> دخول</button>
+                    <button data-screen="screenHome"><i class="fa-solid fa-house"></i> الرئيسية</button>
+                    <button data-screen="screenAdd"><i class="fa-solid fa-plus"></i> إضافة</button>
+                    <button data-screen="screenReminders"><i class="fa-regular fa-bell"></i> تذكيرات</button>
+                    <button data-screen="screenProfile"><i class="fa-regular fa-user"></i> حسابي</button>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ============================================================
+    باقي الأقسام
+    ============================================================ -->
+    <div class="stats-bar">
+        <div class="container stats-grid">
+            <div class="stat reveal"><h3>٣٧٥٨+</h3><span>دواء في قاعدة البيانات</span></div>
+            <div class="stat reveal"><h3>٤١</h3><span>تفاعل دوائي موثق</span></div>
+            <div class="stat reveal"><h3>٤</h3><span>مستويات خطورة</span></div>
+            <div class="stat reveal"><h3>١٠٠%</h3><span>واجهة عربية</span></div>
+        </div>
+    </div>
+
+    <section class="section" id="features">
+        <div class="container">
+            <div class="section-header center reveal">
+                <span class="tag">المميزات</span>
+                <h2>كل ما تحتاجه لإدارة أدويتك</h2>
+                <p>نظام متكامل يوفر التذكيرات الدقيقة، فحص التفاعلات، ومتابعة العائلة في منصة واحدة.</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card reveal"><div class="feature-icon"><i class="fa-solid fa-bell"></i></div><h3>التذكيرات الذكية</h3><p>إنشاء تذكيرات دقيقة لمواعيد الجرعات مع إمكانية تأجيلها أو تسجيل تناول الدواء.</p></div>
+                <div class="feature-card reveal"><div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div><h3>فحص التفاعلات الدوائية</h3><p>التحقق من وجود تعارضات بين الأدوية وإظهار مستوى الخطورة قبل الاستخدام.</p></div>
+                <div class="feature-card reveal"><div class="feature-icon"><i class="fa-solid fa-capsules"></i></div><h3>إدارة الأدوية</h3><p>إضافة الأدوية وتنظيم الجرعات والأوقات بطريقة بسيطة وسريعة.</p></div>
+                <div class="feature-card reveal"><div class="feature-icon"><i class="fa-solid fa-chart-line"></i></div><h3>تقارير الالتزام</h3><p>متابعة نسبة الالتزام بالجرعات من خلال تقارير وإحصائيات واضحة.</p></div>
+                <div class="feature-card reveal"><div class="feature-icon"><i class="fa-solid fa-users"></i></div><h3>إدارة أفراد العائلة</h3><p>متابعة أدوية أفراد العائلة من حساب واحد مع صلاحيات مناسبة لكل مستخدم.</p></div>
+                <div class="feature-card reveal"><div class="feature-icon"><i class="fa-solid fa-language"></i></div><h3>واجهة عربية</h3><p>تجربة استخدام مصممة بالكامل باللغة العربية مع واجهة سهلة وواضحة.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="how">
+        <div class="container how-section">
+            <div class="section-header center reveal">
+                <span class="tag">كيف يعمل</span>
+                <h2>ثلاث خطوات بسيطة</h2>
+                <p>من إضافة الأدوية إلى متابعة الالتزام بكل سهولة.</p>
+            </div>
+            <div class="steps-grid">
+                <div class="step-card reveal"><div class="step-number">١</div><h4>إضافة الأدوية</h4><p>البحث عن الدواء في قاعدة البيانات أو إضافته يدوياً مع تحديد الجرعة والموعد.</p></div>
+                <div class="step-card reveal"><div class="step-number">٢</div><h4>استلام التذكير</h4><p>وصول الإشعار في الوقت المحدد مع إمكانية تسجيل أخذ الجرعة أو تأجيلها.</p></div>
+                <div class="step-card reveal"><div class="step-number">٣</div><h4>متابعة التقدم</h4><p>عرض سجل الالتزام اليومي ونسب الأداء مع إمكانية مشاركته مع مقدم الرعاية.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="interactions">
+        <div class="container interaction-grid">
+            <div class="reveal">
+                <span class="tag" style="display:inline-block;font-size:10px;font-weight:800;letter-spacing:1.5px;color:var(--secondary);text-transform:uppercase;margin-bottom:6px;">الأمان الدوائي</span>
+                <h2 style="font-size:clamp(26px,3vw,34px);font-weight:900;line-height:1.3;">فحص التفاعلات قبل حدوثها</h2>
+                <p style="color:var(--text-light);font-size:15px;margin-top:8px;line-height:1.8;">يقارن النظام المواد الفعالة للأدوية المضافة للكشف عن أي تعارض محتمل، مع تصنيف واضح لمستوى الخطورة وتوصيات مناسبة باللغة العربية.</p>
+            </div>
+            <div class="reveal">
+                <div class="interaction-box">
+                    <div class="interaction-pills">
+                        <span class="pill-tag"><span class="color amber"></span>وارفارين</span>
+                        <span style="color:var(--text-light);font-weight:700;">+</span>
+                        <span class="pill-tag"><span class="color green"></span>إيبوبروفين</span>
+                    </div>
+                    <div class="interaction-warning">
+                        <div class="icon">!</div>
+                        <div>
+                            <h5>تعارض دوائي محتمل</h5>
+                            <p>قد يؤدي الجمع بين وارفارين وإيبوبروفين إلى زيادة خطر النزيف. يُنصح باستشارة الطبيب قبل الاستخدام المتزامن.</p>
+                            <span class="severity">خطورة عالية</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="family">
+        <div class="container family-grid">
+            <div class="reveal">
+                <span class="tag" style="display:inline-block;font-size:10px;font-weight:800;letter-spacing:1.5px;color:var(--secondary);text-transform:uppercase;margin-bottom:6px;">مقدمو الرعاية</span>
+                <h2 style="font-size:clamp(26px,3vw,34px);font-weight:900;line-height:1.3;">إدارة أدوية العائلة بكفاءة</h2>
+                <div class="family-list">
+                    <div class="family-item"><span class="num">١</span><div><h4>إضافة تابع</h4><p>تسجيل أفراد العائلة كمتتبعين مع تحديد صلة القرابة لكل فرد.</p></div></div>
+                    <div class="family-item"><span class="num">٢</span><div><h4>دعوة آمنة</h4><p>إرسال رابط دعوة للتابع لربط حسابه مع تحديد صلاحيات الوصول.</p></div></div>
+                    <div class="family-item"><span class="num">٣</span><div><h4>متابعة شاملة</h4><p>عرض جداول الأدوية ونسب الالتزام لجميع أفراد العائلة من منصة واحدة.</p></div></div>
+                </div>
+            </div>
+            <div class="reveal">
+                <div class="family-cards">
+                    <div class="family-row"><div class="family-avatar">س</div><div class="info"><b>سعاد — الوالدة</b><span>٣ أدوية · التزام ٩٢%</span></div><span class="family-status linked"><i class="fa-solid fa-check"></i> مرتبط</span></div>
+                    <div class="family-row"><div class="family-avatar" style="background:var(--secondary-light);color:#8A6A1C;">ع</div><div class="info"><b>عبدالله — الوالد</b><span>دعوة أُرسلت منذ يومين</span></div><span class="family-status pending"><i class="fa-regular fa-clock"></i> قيد الانتظار</span></div>
+                    <div class="family-row"><div class="family-avatar">ج</div><div class="info"><b>جدتي</b><span>٥ أدوية · التزام ٧٨%</span></div><span class="family-status linked"><i class="fa-solid fa-check"></i> مرتبط</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="quote-block reveal">
+                <blockquote>بدأ مشروع دوائي من فكرة بسيطة: لأن نسيان جرعة واحدة أو الجمع بين دوائين غير متوافقين قد يؤثر على صحة الإنسان. صممنا دوائي ليساعد المستخدم على تنظيم أدويته، تذكيره بمواعيدها، والتنبيه إلى التفاعلات الدوائية، لتصبح إدارة العلاج أكثر سهولة وأمانًا.</blockquote>
+                <cite> مطورين دوائي</cite>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="cta">
+        <div class="container">
+            <div class="cta-section reveal">
+                <h2>ابدأ الآن في تنظيم أدويتك</h2>
+                <p>منصة مجانية بالكامل، تدعم اللغة العربية، وتعمل مع أول دواء تضيفه.</p>
+                <div class="cta-buttons">
+                    <a href="#" class="btn-white"><i class="fa-solid fa-play"></i> مشاهدة المشروع</a>
+                    <a href="#features" class="btn-outline-white"><i class="fa-solid fa-list"></i> استعراض المميزات</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="#" class="logo" style="font-size:20px;"><span class="logo-icon">د</span> دوائي</a>
+                    <p>نظام إدارة الأدوية وتذكيرات الجرعات المصمم خصيصاً للعائلات العربية ومقدمي الرعاية.</p>
+                </div>
+                <div class="footer-col"><h5>المنتج</h5><a href="#features">المميزات</a><a href="#how">كيف يعمل</a><a href="#interactions">الأمان الدوائي</a></div>
+                <div class="footer-col"><h5>العائلة</h5><a href="#family">مقدمو الرعاية</a><a href="#cta">تحميل التطبيق</a></div>
+                <div class="footer-col"><h5>عن دوائي</h5><a href="#">سياسة الخصوصية</a></div>
+            </div>
+            <div class="footer-bottom">
+                <span><i class="fa-regular fa-copyright"></i> جميع الحقوق محفوظة © ٢٠٢٦ دوائي</span>
+                <span><i class="fa-regular fa-graduation-cap"></i> مشروع طلاب هيلبرتون</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ============================================================
+    جافا سكريبت
+    ============================================================ -->
+    <script>
+        const screens = {
+            login: document.getElementById('screenLogin'),
+            home: document.getElementById('screenHome'),
+            add: document.getElementById('screenAdd'),
+            reminders: document.getElementById('screenReminders'),
+            profile: document.getElementById('screenProfile')
+        };
+
+        const navButtons = document.querySelectorAll('.app-nav button');
+        const controlButtons = document.querySelectorAll('.phone-controls button');
+
+        function switchScreen(screenId) {
+            Object.values(screens).forEach(s => s.classList.remove('active'));
+
+            const target = document.getElementById(screenId);
+            if (target) target.classList.add('active');
+
+            navButtons.forEach(btn => {
+                btn.classList.toggle('active-tab', btn.dataset.screen === screenId);
+            });
+
+            controlButtons.forEach(btn => {
+                btn.classList.toggle('active-btn', btn.dataset.screen === screenId);
+            });
+        }
+
+        navButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                switchScreen(btn.dataset.screen);
+            });
+        });
+
+        controlButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                switchScreen(btn.dataset.screen);
+            });
+        });
+
+        const hamburger = document.getElementById('hamburgerBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+
+        hamburger.addEventListener('click', () => {
+            const isOpen = mobileMenu.classList.toggle('open');
+            hamburger.classList.toggle('active', isOpen);
+        });
+
+        mobileMenu.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.remove('open');
+                hamburger.classList.remove('active');
+            });
+        });
+
+        const revealElements = document.querySelectorAll('.reveal');
+
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    revealObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15 });
+
+        revealElements.forEach(el => revealObserver.observe(el));
+
+        document.querySelectorAll('.nav-links a, .mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.remove('open');
+                hamburger.classList.remove('active');
+            });
+        });
+    </script>
+
+</body>
+</html>

@@ -3,6 +3,8 @@ console.log("JWT_SECRET =", process.env.JWT_SECRET);
 const { Hono } = require('hono');
 const { cors } = require('hono/cors');
 const { serve } = require('@hono/node-server');
+const fs = require('fs');
+const path = require('path');
 const authRoutes = require('./routes/auth');
 const medicationRoutes = require('./routes/medications');
 const scheduleRoutes = require('./routes/schedules');
@@ -21,6 +23,52 @@ const app = new Hono();
 const PORT = Number(process.env.PORT || (require.main === module ? 3000 : 0));
 
 app.use('*', cors());
+
+// ============================================================
+// صفحة الهبوط (Landing Page)
+// ============================================================
+app.get('/', async (c) => {
+  try {
+    const html = fs.readFileSync(
+      path.resolve(__dirname, '../public/index.html'),
+      'utf-8'
+    );
+    return c.html(html);
+  } catch (e) {
+    console.error('Landing page error:', e.message);
+    return c.text('صفحة الهبوط غير متوفرة', 404);
+  }
+});
+
+// ملفات CSS
+app.get('/style.css', async (c) => {
+  try {
+    const css = fs.readFileSync(
+      path.resolve(__dirname, '../public/style.css'),
+      'utf-8'
+    );
+    return c.body(css, 200, {
+      'Content-Type': 'text/css; charset=utf-8',
+    });
+  } catch (e) {
+    return c.text('CSS not found', 404);
+  }
+});
+
+// ملفات JavaScript
+app.get('/script.js', async (c) => {
+  try {
+    const js = fs.readFileSync(
+      path.resolve(__dirname, '../public/script.js'),
+      'utf-8'
+    );
+    return c.body(js, 200, {
+      'Content-Type': 'application/javascript; charset=utf-8',
+    });
+  } catch (e) {
+    return c.text('JS not found', 404);
+  }
+});
 
 // Serve the invite HTML page at /invite
 app.get('/invite', async (c) => {
