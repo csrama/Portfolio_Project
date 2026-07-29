@@ -21,6 +21,7 @@ import '../onboarding/onboarding_screen.dart';
 import '../profile/profile_screen.dart';
 import 'dependents_screen.dart';
 import 'dependent_dashboard_screen.dart';
+import 'link_requests_screen.dart';
 
 const Map<String, String> _relationshipLabels = {
   'spouse': 'زوج/زوجة',
@@ -1149,7 +1150,7 @@ class _HomeScreenState extends State<HomeScreen> {
           lastStatusCode = response.statusCode;
         }
       } catch (e) {
-        debugPrint('❌ Error with ${test['path']}: $e');
+        debugPrint(' Error with ${test['path']}: $e');
 
       }
     }
@@ -1326,6 +1327,21 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
+                        const PopupMenuItem<String>(
+                          value: 'link_requests',
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text('طلبات الربط', style: TextStyle(fontSize: 16)),
+                              SizedBox(width: 12),
+                              Icon(
+                                Icons.link,
+                                color: _Colors.darkGreen,
+                                size: 24,
+                              ),
+                            ],
+                          ),
+                        ),
                         const PopupMenuDivider(height: 8),
                         const PopupMenuItem<String>(
                           value: 'logout',
@@ -1369,6 +1385,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           if (changed == true) {
                             _loadMedications();
                           }
+                        } else if (value == 'link_requests') {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LinkRequestsScreen(),
+                            ),
+                          );
                         } else if (value == 'logout') {
                           await _signOut(context);
                         }
