@@ -1,4 +1,3 @@
-// backend/src/db/pool.js - الملف كاملاً مع الإضافات الجديدة
 require('dotenv').config();
 const { Pool } = require('pg');
 
