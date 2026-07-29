@@ -24,21 +24,24 @@ const PORT = Number(process.env.PORT || (require.main === module ? 3000 : 0));
 
 app.use('*', cors());
 
-// ============================================================
-// صفحة الهبوط (Landing Page)
-// ============================================================
-app.get('/', async (c) => {
+
+//(Landing Page)
+
+app.get('/', (c) => {
   try {
-    const html = fs.readFileSync(
-      path.resolve(__dirname, '../public/index.html'),
-      'utf-8'
+    const html = readFileSync(
+      resolve(__dirname, '../public/index.html'),
+      'utf8'
     );
+
     return c.html(html);
   } catch (e) {
-    console.error('Landing page error:', e.message);
-    return c.text('صفحة الهبوط غير متوفرة', 404);
+    console.error(e);
+    return c.text('Landing page not found', 404);
   }
-});
+}
+);
+
 
 // ملفات CSS
 app.get('/style.css', async (c) => {
