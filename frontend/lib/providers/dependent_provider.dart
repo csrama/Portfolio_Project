@@ -1,36 +1,29 @@
-// frontend/lib/providers/dependent_provider.dart - الملف كاملاً مع الإضافات الجديدة
 import 'package:flutter/material.dart';
 import '../models/dependent.dart';
 import '../services/dependent_service.dart';
-import '../services/api_service.dart';
 
 class DependentProvider extends ChangeNotifier {
   final DependentService _dependentService;
-  
   List<Dependent> _dependents = [];
   List<dynamic> _incomingRequests = [];
   Dependent? _selectedDependent;
   bool _isLoading = false;
-  String? _error;
 
   DependentProvider({required DependentService dependentService})
-      : _dependentService = dependentService;
+    : _dependentService = dependentService;
 
   List<Dependent> get dependents => _dependents;
   List<dynamic> get incomingRequests => _incomingRequests;
   Dependent? get selectedDependent => _selectedDependent;
   bool get isLoading => _isLoading;
-  String? get error => _error;
 
   Future<void> fetchDependents(String token) async {
     _isLoading = true;
-    _error = null;
     notifyListeners();
-
     try {
       _dependents = await _dependentService.getDependents(token);
     } catch (e) {
-      _error = e.toString();
+      debugPrint('Error fetching dependents: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -50,13 +43,73 @@ class DependentProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final response = await _dependentService.addDependent(token, data);
+      return response;
+    } catch (e) {
+      debugPrint('Error adding dependent: $e');
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<Map<String, dynamic>> addDependentDirect(
+    String token,
+    Map<String, dynamic> data,
+  ) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _dependentService.addDependentDirect(token, data);
       if (response['success'] == true) {
         await fetchDependents(token);
       }
       return response;
+    } catch (e) {
+      debugPrint('Error adding dependent directly: $e');
+      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<bool> updateDependent(
+    String token,
+    String dependentId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final response = await _dependentService.updateDependent(
+        token,
+        dependentId,
+        data,
+      );
+      if (response['success'] == true) {
+        await fetchDependents(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error updating dependent: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteDependent(String token, String dependentId) async {
+    try {
+      final response = await _dependentService.deleteDependent(
+        token,
+        dependentId,
+      );
+      if (response['success'] == true) {
+        await fetchDependents(token);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error deleting dependent: $e');
+      return false;
     }
   }
 
@@ -92,11 +145,7 @@ class DependentProvider extends ChangeNotifier {
     required String email,
     required String relationship,
   }) async {
-    return _dependentService.sendLinkRequest(
-      token,
-      email: email,
-      relationship: relationship,
-    );
+    return _dependentService.sendLinkRequest(token, email: email, relationship: relationship);
   }
 
   Future<void> fetchIncomingRequests(String token) async {
@@ -104,16 +153,8 @@ class DependentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> respondToRequest(
-    String token,
-    String requestId,
-    bool accept,
-  ) async {
-    final response = await _dependentService.respondToRequest(
-      token,
-      requestId,
-      accept,
-    );
+  Future<bool> respondToRequest(String token, String requestId, bool accept) async {
+    final response = await _dependentService.respondToRequest(token, requestId, accept);
     if (response['success'] == true) {
       await fetchIncomingRequests(token);
       if (accept) await fetchDependents(token);
