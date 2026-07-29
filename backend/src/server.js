@@ -16,6 +16,17 @@ const dependentRoutes = require('./routes/dependents');
 const medicineRoutes = require('./routes/medicines');
 const { errorHandler } = require('./middleware/errorHandler');
 
+if (process.env.DATABASE_URL) {
+  console.log('Detected DATABASE_URL, attempting auto-migration...');
+  try {
+    const { execSync } = require('child_process');
+    const output = execSync('node scripts/runSqlMigrations.js', { encoding: 'utf-8' });
+    console.log('Migration output:', output);
+  } catch (err) {
+    console.error('Auto-migration failed:', err.message);
+  }
+}
+
 const { readFileSync } = require('fs');
 const { resolve } = require('path');
 
@@ -25,7 +36,6 @@ const PORT = Number(process.env.PORT || (require.main === module ? 3000 : 0));
 app.use('*', cors());
 
 
-//(Landing Page)
 
 app.get('/', (c) => {
   try {
@@ -42,7 +52,6 @@ app.get('/', (c) => {
 }
 );
 
-// صورة التطبيق
 app.get('/app_icon.png', (c) => {
   try {
     const image = readFileSync(
@@ -59,7 +68,6 @@ app.get('/app_icon.png', (c) => {
 );
 
 
-// Serve the invite HTML page at /invite
 app.get('/invite', async (c) => {
   try {
     const html = readFileSync(resolve(__dirname, '../public/invite.html'), 'utf-8');
@@ -90,4 +98,3 @@ const server = serve({ fetch: app.fetch, port: PORT }, () => {
 
 module.exports = server;
 module.exports.app = app;
-
