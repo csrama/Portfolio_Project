@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 class ApiService {
   static String get _baseUrl {
     if (kIsWeb) {
-      return 'https://dawai-app.up.railway.app'
+      return 'https://dawai-app.up.railway.app';
     }
      else {
       // للـ Android (محاكي)
