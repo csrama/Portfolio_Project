@@ -447,4 +447,32 @@ router.get('/:id/medications', async (c) => {
     const user = c.get('user');
 
     if (isNaN(dependentId)) {
-      return c
+      return c.json({ error: 'معرف التابع غير صحيح' }, 400);
+    }
+
+    const dependent = await pool.getDependentWithUser(dependentId, user.id);
+    if (!dependent) {
+      return c.json({ error: 'التابع غير موجود' }, 404);
+    }
+
+    const result = await pool.query(
+      `
+      SELECT *
+      FROM medications
+      WHERE dependent_id = $1
+      ORDER BY created_at DESC
+      `,
+      [dependentId]
+    );
+
+    return c.json({
+      success: true,
+      data: result.rows || []
+    });
+  } catch (error) {
+    console.error('Error fetching dependent medications:', error);
+    return c.json({ error: 'فشل جلب أدوية التابع' }, 500);
+  }
+});
+
+module.exports = router;
