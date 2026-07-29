@@ -5,7 +5,6 @@ const connectionString = process.env.DATABASE_URL;
 console.log(' DATABASE_URL exists:', !!connectionString);
 console.log(' DATABASE_URL starts with:', connectionString ? connectionString.substring(0, 30) : 'UNDEFINED');
 
-
 const isLocalDb = !connectionString || /localhost|127\.0\.0\.1/.test(connectionString);
 
 const pool = new Pool({
@@ -48,8 +47,7 @@ function normalizeUser(user) {
   };
 }
 
-async function queryWithFallback(text, params = []) 
-{
+async function queryWithFallback(text, params = []) {
   try {
     return await pool.query(text, params);
   } catch (error) {
@@ -63,8 +61,7 @@ const db = {
     return queryWithFallback(text, params);
   },
 
-  async searchMedicines(term)
-   {
+  async searchMedicines(term) {
     const { rows } = await queryWithFallback(
       `SELECT id, name_en, name_ar, dosage, category
        FROM medicines
@@ -73,12 +70,10 @@ const db = {
        LIMIT 15`,
       [`%${term}%`]
     );
-
     return rows;
   },
 
-  async createUser(data) 
-  {
+  async createUser(data) {
     const { rows } = await queryWithFallback(
       `INSERT INTO users (email, password_hash, full_name, user_type, age, sex, medical_condition, is_onboarding_complete, is_active)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -98,22 +93,18 @@ const db = {
     return normalizeUser(rows[0]);
   },
 
-  async findUserByEmail(email) 
-  {
+  async findUserByEmail(email) {
     const normalizedEmail = (email || '').toLowerCase();
-    
     const { rows } = await queryWithFallback('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
     return rows[0] || null;
   },
 
-  async findUserById(id) 
-  {
+  async findUserById(id) {
     const { rows } = await queryWithFallback('SELECT * FROM users WHERE id = $1', [id]);
     return rows[0] || null;
   },
 
-  async updateUser(userId, updates) 
-  {
+  async updateUser(userId, updates) {
     const fields = [];
     const values = [];
     let paramIndex = 1;
@@ -151,8 +142,7 @@ const db = {
     return rows[0] || null;
   },
 
-  async deleteUser(userId) 
-  {
+  async deleteUser(userId) {
     const { rows } = await queryWithFallback(
       `DELETE FROM users WHERE id = $1 RETURNING id`,
       [userId]
@@ -160,8 +150,7 @@ const db = {
     return rows[0] || null;
   },
 
-  async createMedication(data) 
-  {
+  async createMedication(data) {
     const { rows } = await queryWithFallback(
       `INSERT INTO medications (
         user_id, dependent_id, name, dosage, form, instructions, color,
@@ -190,8 +179,7 @@ const db = {
     return rows[0];
   },
 
-  async createDependentDirect(data) 
-  {
+  async createDependentDirect(data) {
     const { rows } = await queryWithFallback(
       `INSERT INTO dependents (
         caregiver_user_id, dependent_user_id, full_name, date_of_birth,
@@ -212,8 +200,7 @@ const db = {
     return rows[0];
   },
 
-  async createDependent(data) 
-  {
+  async createDependent(data) {
     const { rows } = await queryWithFallback(
       `INSERT INTO dependents (
         caregiver_user_id, dependent_user_id, full_name, date_of_birth,
@@ -237,8 +224,7 @@ const db = {
     return rows[0];
   },
 
-  async listDependents(caregiverId) 
-  {
+  async listDependents(caregiverId) {
     const { rows } = await queryWithFallback(
       'SELECT * FROM dependents WHERE caregiver_user_id = $1 ORDER BY created_at DESC',
       [caregiverId]
@@ -246,8 +232,7 @@ const db = {
     return rows;
   },
 
-  async listDependentsWithUsers(caregiverId)
-   {
+  async listDependentsWithUsers(caregiverId) {
     const { rows } = await queryWithFallback(
       `SELECT d.*, 
               u.id as user_id,
@@ -265,8 +250,7 @@ const db = {
     return rows;
   },
 
-  async getDependentWithUser(dependentId, caregiverId) 
-  {
+  async getDependentWithUser(dependentId, caregiverId) {
     const { rows } = await queryWithFallback(
       `SELECT d.*, 
               u.id as user_id,
@@ -283,8 +267,7 @@ const db = {
     return rows[0] || null;
   },
 
-  async getDependentById(dependentId, caregiverId) 
-  {
+  async getDependentById(dependentId, caregiverId) {
     const { rows } = await queryWithFallback(
       'SELECT * FROM dependents WHERE id = $1 AND caregiver_user_id = $2',
       [dependentId, caregiverId]
@@ -292,8 +275,7 @@ const db = {
     return rows[0] || null;
   },
 
-  async getDependentByInviteToken(token)
-  {
+  async getDependentByInviteToken(token) {
     const { rows } = await queryWithFallback(
       'SELECT * FROM dependents WHERE invitation_token = $1',
       [token]
@@ -301,8 +283,7 @@ const db = {
     return rows[0] || null;
   },
 
-  async updateDependent(dependentId, caregiverId, updates)
-   {
+  async updateDependent(dependentId, caregiverId, updates) {
     const fields = [];
     const values = [];
     let paramIndex = 1;
@@ -329,8 +310,7 @@ const db = {
     return rows[0] || null;
   },
 
-  async deleteDependent(dependentId, caregiverId)
-   {
+  async deleteDependent(dependentId, caregiverId) {
     const { rows } = await queryWithFallback(
       'DELETE FROM dependents WHERE id = $1 AND caregiver_user_id = $2 RETURNING id',
       [dependentId, caregiverId]
@@ -338,8 +318,7 @@ const db = {
     return rows[0] || null;
   },
 
-  async acceptDependentInvite(dependentId) 
-  {
+  async acceptDependentInvite(dependentId) {
     const { rows } = await queryWithFallback(
       `UPDATE dependents
        SET invitation_status = 'accepted', accepted_at = NOW(), updated_at = NOW()
@@ -350,13 +329,11 @@ const db = {
     return rows[0] || null;
   },
 
-  async claimDependentInvite(token, userId)
-   {
+  async claimDependentInvite(token, userId) {
     const dependent = await this.getDependentByInviteToken(token);
     if (!dependent) return null;
     if (dependent.invitation_status !== 'pending') return null;
-    if (dependent.dependent_user_id && dependent.dependent_user_id !== userId) 
-      {
+    if (dependent.dependent_user_id && dependent.dependent_user_id !== userId) {
       await queryWithFallback('DELETE FROM users WHERE id = $1', [dependent.dependent_user_id]);
     }
 
@@ -370,8 +347,53 @@ const db = {
     return rows[0] || null;
   },
 
-  async listMedications(userId, dependentId = null) 
-  {
+  async findDependentLink(caregiverId, dependentUserId) {
+    const { rows } = await queryWithFallback(
+      'SELECT * FROM dependents WHERE caregiver_user_id = $1 AND dependent_user_id = $2',
+      [caregiverId, dependentUserId]
+    );
+    return rows[0] || null;
+  },
+
+  async createDependentLinkRequest(data) {
+    const { rows } = await queryWithFallback(
+      `INSERT INTO dependents (
+        caregiver_user_id, dependent_user_id, full_name, relationship,
+        invitation_status, invited_at
+      ) VALUES ($1, $2, $3, $4, 'pending', NOW())
+      RETURNING *`,
+      [data.caregiver_user_id, data.dependent_user_id, data.full_name, data.relationship]
+    );
+    return rows[0];
+  },
+
+  async listIncomingRequests(dependentUserId) {
+    const { rows } = await queryWithFallback(
+      `SELECT d.*, u.full_name AS caregiver_name, u.email AS caregiver_email
+       FROM dependents d
+       JOIN users u ON u.id = d.caregiver_user_id
+       WHERE d.dependent_user_id = $1 AND d.invitation_status = 'pending'
+       ORDER BY d.invited_at DESC`,
+      [dependentUserId]
+    );
+    return rows;
+  },
+
+  async respondToLinkRequest(id, dependentUserId, accept) {
+    const status = accept ? 'accepted' : 'rejected';
+    const { rows } = await queryWithFallback(
+      `UPDATE dependents
+       SET invitation_status = $3,
+           accepted_at = CASE WHEN $3 = 'accepted' THEN NOW() ELSE accepted_at END,
+           updated_at = NOW()
+       WHERE id = $1 AND dependent_user_id = $2 AND invitation_status = 'pending'
+       RETURNING *`,
+      [id, dependentUserId, status]
+    );
+    return rows[0] || null;
+  },
+
+  async listMedications(userId, dependentId = null) {
     let queryText;
     let params;
 
@@ -387,14 +409,12 @@ const db = {
     return rows;
   },
 
-  async getMedicationById(id) 
-  {
+  async getMedicationById(id) {
     const { rows } = await queryWithFallback('SELECT * FROM medications WHERE id = $1', [id]);
     return rows[0] || null;
   },
 
-  async updateMedication({ id, userId, updates }) 
-  {
+  async updateMedication({ id, userId, updates }) {
     const { rows } = await queryWithFallback(
       `UPDATE medications
        SET
@@ -418,12 +438,10 @@ const db = {
         userId
       ]
     );
-
     return rows[0] || null;
   },
 
-  async deleteMedication({ id, userId }) 
-  {
+  async deleteMedication({ id, userId }) {
     const { rows } = await queryWithFallback(
       `UPDATE medications
        SET is_active = FALSE, updated_at = NOW()
@@ -431,12 +449,10 @@ const db = {
        RETURNING *`,
       [id, userId]
     );
-
     return rows[0] || null;
   },
 
-  async createSchedule(data) 
-  {
+  async createSchedule(data) {
     const { rows } = await queryWithFallback(
       `INSERT INTO schedules (user_id, medication_id, days_of_week, time_of_day, is_active)
        VALUES ($1, $2, $3, $4, $5)
@@ -452,14 +468,12 @@ const db = {
     return rows[0];
   },
 
-  async listSchedules(userId) 
-  {
+  async listSchedules(userId) {
     const { rows } = await queryWithFallback('SELECT * FROM schedules WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
     return rows;
   },
 
-  async createDoseRecord(data)
-   {
+  async createDoseRecord(data) {
     const { rows } = await queryWithFallback(
       `INSERT INTO dose_records (user_id, medication_id, schedule_id, scheduled_time, taken_time, status, dose_taken)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -477,14 +491,12 @@ const db = {
     return rows[0];
   },
 
-  async listDoseRecords(userId)
-   {
+  async listDoseRecords(userId) {
     const { rows } = await queryWithFallback('SELECT * FROM dose_records WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
     return rows;
   },
 
-  async updateDoseRecord(id, updates)
-   {
+  async updateDoseRecord(id, updates) {
     const { rows } = await queryWithFallback(
       `UPDATE dose_records SET status = COALESCE($2, status), taken_time = COALESCE($3, taken_time), dose_taken = COALESCE($4, dose_taken), updated_at = NOW()
        WHERE id = $1 RETURNING *`,
@@ -493,8 +505,7 @@ const db = {
     return rows[0] || null;
   },
 
-  async createNotification(data) 
-  {
+  async createNotification(data) {
     const { rows } = await queryWithFallback(
       `INSERT INTO notification_logs (user_id, type, title, body, data, sent_at, delivered)
        VALUES ($1, $2, $3, $4, $5, NOW(), TRUE)

@@ -23,16 +23,13 @@ class DependentService {
       token: token,
     );
 
-    // The backend returns: { success: true, data: { invite_link, token, dependent, caregiver } }
     return response;
   }
 
-  /// Add a dependent directly without sending an invite
   Future<Map<String, dynamic>> addDependentDirect(
     String token,
     Map<String, dynamic> data,
   ) async {
-    // Set invite: false to bypass the invite flow
     data['invite'] = false;
     final response = await ApiService.postJson(
       '/dependents',
@@ -42,12 +39,59 @@ class DependentService {
     return response;
   }
 
+  Future<Map<String, dynamic>> addNewDependent(
+    String token, {
+    required String fullName,
+    required String email,
+    required String password,
+    required String relationship,
+  }) async {
+    return ApiService.postJson(
+      '/dependents/new',
+      token: token,
+      body: {
+        'full_name': fullName,
+        'email': email,
+        'password': password,
+        'relationship': relationship,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> sendLinkRequest(
+    String token, {
+    required String email,
+    required String relationship,
+  }) async {
+    return ApiService.postJson(
+      '/dependents/link-request',
+      token: token,
+      body: {'email': email, 'relationship': relationship},
+    );
+  }
+
+  Future<List<dynamic>> getIncomingRequests(String token) async {
+    return ApiService.getJsonList('/dependents/requests', token: token);
+  }
+
+  Future<Map<String, dynamic>> respondToRequest(
+    String token,
+    String requestId,
+    bool accept,
+  ) async {
+    final action = accept ? 'accept' : 'reject';
+    return ApiService.postJson(
+      '/dependents/requests/$requestId/$action',
+      token: token,
+      body: {},
+    );
+  }
+
   Future<Map<String, dynamic>> getInviteInfo(String inviteToken) async {
     final response = await ApiService.getJsonDynamic(
       '/dependents/invite/$inviteToken',
     );
 
-    // The backend returns: { success: true, data: { dependent_name, relationship, caregiver_name, invited_at } }
     if (response is Map<String, dynamic> && response['success'] == true) {
       return response['data'] as Map<String, dynamic>? ?? {};
     }
@@ -79,7 +123,6 @@ class DependentService {
     return response;
   }
 
-  /// Update a dependent's info
   Future<Map<String, dynamic>> updateDependent(
     String token,
     String dependentId,
@@ -93,7 +136,6 @@ class DependentService {
     return response;
   }
 
-  /// Delete a dependent
   Future<Map<String, dynamic>> deleteDependent(
     String token,
     String dependentId,

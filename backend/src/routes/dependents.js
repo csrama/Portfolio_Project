@@ -4,6 +4,7 @@ const { authMiddleware } = require('../middleware/auth');
 const { caregiverCheck } = require('../middleware/caregiverCheck');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const { z } = require('zod');
 
 const router = new Hono();
 
@@ -26,7 +27,6 @@ router.get('/invite/:token', async (c) => {
       return c.json({ error: 'انتهت صلاحية الدعوة' }, 410);
     }
 
-    // Get caregiver info
     const caregiver = await pool.findUserById(dependent.caregiver_user_id);
 
     return c.json({
@@ -84,6 +84,171 @@ router.get('/:id', async (c) => {
   }
 });
 
+const newDependentSchema = z.object({
+  full_name: z.string().trim().min(1),
+  email: z.string().trim().email().transform((v) => v.toLowerCase()),
+  password: z.string().min(6),
+  relationship: z.enum(['spouse', 'child', 'parent', 'sibling', 'other'])
+});
+
+router.post('/new', caregiverCheck, async (c) => {
+  try {
+    const user = c.get('user');
+    const body = await c.req.json().catch(() => ({}));
+    const parsed = newDependentSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صحيحة' }, 400);
+    }
+    const { full_name, email, password, relationship } = parsed.data;
+
+    if (email === user.email) {
+      return c.json({ error: 'لا يمكنك إضافة نفسك كتابع' }, 400);
+    }
+
+    const existing = await pool.findUserByEmail(email);
+    if (existing) {
+      return c.json(
+        { error: 'البريد الإلكتروني مستخدم بالفعل، استخدم خيار "ربط تابع لديه حساب"' },
+        409
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const dependentUser = await pool.createUser({
+      email,
+      password_hash: passwordHash,
+      full_name: full_name.trim(),
+      user_type: 'dependent',
+      is_active: true,
+      is_onboarding_complete: false
+    });
+
+    const dependent = await pool.createDependentDirect({
+      caregiver_user_id: user.id,
+      dependent_user_id: dependentUser.id,
+      full_name: full_name.trim(),
+      relationship
+    });
+
+    return c.json(
+      {
+        success: true,
+        message: 'تم إنشاء حساب التابع وربطه بنجاح. شارك بيانات الدخول معه.',
+        data: {
+          dependent: { id: dependent.id, full_name: full_name.trim(), relationship, status: 'accepted' },
+          login_email: email
+        }
+      },
+      201
+    );
+  } catch (error) {
+    console.error('Error creating new dependent:', error);
+    return c.json({ error: 'فشل إضافة التابع' }, 500);
+  }
+});
+
+const linkRequestSchema = z.object({
+  email: z.string().trim().email().transform((v) => v.toLowerCase()),
+  relationship: z.enum(['spouse', 'child', 'parent', 'sibling', 'other'])
+});
+
+router.post('/link-request', caregiverCheck, async (c) => {
+  try {
+    const user = c.get('user');
+    const body = await c.req.json().catch(() => ({}));
+    const parsed = linkRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: parsed.error.issues[0]?.message || 'بيانات غير صحيحة' }, 400);
+    }
+    const { email, relationship } = parsed.data;
+
+    if (email === user.email) {
+      return c.json({ error: 'لا يمكنك ربط نفسك كتابع' }, 400);
+    }
+
+    const target = await pool.findUserByEmail(email);
+    if (!target) {
+      return c.json(
+        { error: 'لا يوجد حساب مرتبط بهذا البريد الإلكتروني', hint: 'يمكنك إنشاء حساب جديد للتابع بدلاً من ذلك' },
+        404
+      );
+    }
+
+    if (target.user_type === 'caregiver') {
+      return c.json({ error: 'هذا البريد مسجل كحساب مقدم رعاية ولا يمكن ربطه كتابع' }, 400);
+    }
+
+    const existingLink = await pool.findDependentLink(user.id, target.id);
+    if (existingLink) {
+      if (existingLink.invitation_status === 'accepted') {
+        return c.json({ error: 'هذا التابع مرتبط بحسابك بالفعل' }, 409);
+      }
+      if (existingLink.invitation_status === 'pending') {
+        return c.json({ error: 'يوجد طلب ربط سابق بانتظار رد التابع' }, 409);
+      }
+    }
+
+    const request = await pool.createDependentLinkRequest({
+      caregiver_user_id: user.id,
+      dependent_user_id: target.id,
+      full_name: target.full_name || email,
+      relationship
+    });
+
+    return c.json(
+      { success: true, message: 'تم إرسال طلب الربط، بانتظار موافقة التابع', data: { request_id: request.id, status: 'pending' } },
+      201
+    );
+  } catch (error) {
+    console.error('Error creating link request:', error);
+    return c.json({ error: 'فشل إرسال طلب الربط' }, 500);
+  }
+});
+
+router.get('/requests', async (c) => {
+  try {
+    const user = c.get('user');
+    const requests = await pool.listIncomingRequests(user.id);
+    return c.json({ success: true, data: requests });
+  } catch (error) {
+    console.error('Error fetching incoming requests:', error);
+    return c.json({ error: 'فشل جلب طلبات الربط' }, 500);
+  }
+});
+
+router.post('/requests/:id/accept', async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'));
+    const user = c.get('user');
+    if (isNaN(id)) return c.json({ error: 'معرف الطلب غير صحيح' }, 400);
+
+    const result = await pool.respondToLinkRequest(id, user.id, true);
+    if (!result) return c.json({ error: 'الطلب غير موجود أو تمت معالجته مسبقاً' }, 404);
+
+    return c.json({ success: true, message: 'تم قبول طلب الربط', data: result });
+  } catch (error) {
+    console.error('Error accepting request:', error);
+    return c.json({ error: 'فشل قبول الطلب' }, 500);
+  }
+});
+
+router.post('/requests/:id/reject', async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'));
+    const user = c.get('user');
+    if (isNaN(id)) return c.json({ error: 'معرف الطلب غير صحيح' }, 400);
+
+    const result = await pool.respondToLinkRequest(id, user.id, false);
+    if (!result) return c.json({ error: 'الطلب غير موجود أو تمت معالجته مسبقاً' }, 404);
+
+    return c.json({ success: true, message: 'تم رفض طلب الربط', data: result });
+  } catch (error) {
+    console.error('Error rejecting request:', error);
+    return c.json({ error: 'فشل رفض الطلب' }, 500);
+  }
+});
+
 router.post('/', caregiverCheck, async (c) => {
   try {
     const user = c.get('user');
@@ -92,7 +257,7 @@ router.post('/', caregiverCheck, async (c) => {
     console.log('Received body:', body);
 
     const { full_name, relationship, date_of_birth, invite } = body;
-    const sendInvite = invite !== false; // default to true (send invite)
+    const sendInvite = invite !== false;
 
     if (!full_name || full_name.trim() === '') {
       return c.json({ error: 'الاسم الكامل مطلوب' }, 400);

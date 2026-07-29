@@ -5,6 +5,7 @@ import '../services/dependent_service.dart';
 class DependentProvider extends ChangeNotifier {
   final DependentService _dependentService;
   List<Dependent> _dependents = [];
+  List<dynamic> _incomingRequests = [];
   Dependent? _selectedDependent;
   bool _isLoading = false;
 
@@ -12,6 +13,7 @@ class DependentProvider extends ChangeNotifier {
     : _dependentService = dependentService;
 
   List<Dependent> get dependents => _dependents;
+  List<dynamic> get incomingRequests => _incomingRequests;
   Dependent? get selectedDependent => _selectedDependent;
   bool get isLoading => _isLoading;
 
@@ -109,5 +111,55 @@ class DependentProvider extends ChangeNotifier {
       debugPrint('Error deleting dependent: $e');
       return false;
     }
+  }
+
+  Future<Map<String, dynamic>> addNewDependent(
+    String token, {
+    required String fullName,
+    required String email,
+    required String password,
+    required String relationship,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _dependentService.addNewDependent(
+        token,
+        fullName: fullName,
+        email: email,
+        password: password,
+        relationship: relationship,
+      );
+      if (response['success'] == true) {
+        await fetchDependents(token);
+      }
+      return response;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<Map<String, dynamic>> sendLinkRequest(
+    String token, {
+    required String email,
+    required String relationship,
+  }) async {
+    return _dependentService.sendLinkRequest(token, email: email, relationship: relationship);
+  }
+
+  Future<void> fetchIncomingRequests(String token) async {
+    _incomingRequests = await _dependentService.getIncomingRequests(token);
+    notifyListeners();
+  }
+
+  Future<bool> respondToRequest(String token, String requestId, bool accept) async {
+    final response = await _dependentService.respondToRequest(token, requestId, accept);
+    if (response['success'] == true) {
+      await fetchIncomingRequests(token);
+      if (accept) await fetchDependents(token);
+      return true;
+    }
+    return false;
   }
 }
