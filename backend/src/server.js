@@ -42,36 +42,22 @@ app.get('/', (c) => {
 }
 );
 
-
-// ملفات CSS
-app.get('/style.css', async (c) => {
+// صورة التطبيق
+app.get('/app_icon.png', (c) => {
   try {
-    const css = fs.readFileSync(
-      path.resolve(__dirname, '../public/style.css'),
-      'utf-8'
+    const image = readFileSync(
+      resolve(__dirname, '../public/app_icon.png')
     );
-    return c.body(css, 200, {
-      'Content-Type': 'text/css; charset=utf-8',
+
+    return c.body(image, 200, {
+      'Content-Type': 'image/png',
     });
   } catch (e) {
-    return c.text('CSS not found', 404);
+    return c.text('Image not found', 404);
   }
-});
+}
+);
 
-// ملفات JavaScript
-app.get('/script.js', async (c) => {
-  try {
-    const js = fs.readFileSync(
-      path.resolve(__dirname, '../public/script.js'),
-      'utf-8'
-    );
-    return c.body(js, 200, {
-      'Content-Type': 'application/javascript; charset=utf-8',
-    });
-  } catch (e) {
-    return c.text('JS not found', 404);
-  }
-});
 
 // Serve the invite HTML page at /invite
 app.get('/invite', async (c) => {
