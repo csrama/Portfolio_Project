@@ -5,10 +5,11 @@ import 'package:http/http.dart' as http;
 class ApiService {
   static String get _baseUrl {
     if (kIsWeb) {
-      return 'https://portfolioproject-production-2b3b.up.railway.app';
-    } else {
+      return 'https://dawai-app.up.railway.app'
+    }
+     else {
       // للـ Android (محاكي)
-      return 'https://portfolioproject-production-2b3b.up.railway.app';
+      return 'https://dawai-app.up.railway.app';
     }
   }
 
