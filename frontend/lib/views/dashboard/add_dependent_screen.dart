@@ -50,7 +50,6 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
         return;
       }
 
-      // Convert age to date_of_birth if provided
       String? dateOfBirth;
       final age = int.tryParse(_ageController.text.trim());
       if (age != null && age > 0) {
@@ -115,7 +114,6 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ── الاسم الكامل ──
               TextFormField(
                 controller: _nameController,
                 textAlign: TextAlign.right,
@@ -131,7 +129,6 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ── البريد الإلكتروني ──
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -149,7 +146,6 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ── كلمة المرور ──
               TextFormField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
@@ -174,14 +170,12 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ── العمر ──
               TextFormField(
                 controller: _ageController,
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.right,
                 decoration: const InputDecoration(
                   labelText: 'العمر (اختياري)',
-                  prefixIcon: Icon(Icons.cake_outlined),
                   border: OutlineInputBorder(),
                   filled: true,
                   fillColor: Color(0xFFF6F6F6),
@@ -189,7 +183,6 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ── العلاقة ──
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
                   labelText: 'العلاقة',
@@ -231,7 +224,6 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
               ),
               const SizedBox(height: 24),
 
-              // ── زر الإرسال ──
               SizedBox(
                 height: 54,
                 child: ElevatedButton(
