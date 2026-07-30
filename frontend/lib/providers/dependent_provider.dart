@@ -95,7 +95,7 @@ class DependentProvider extends ChangeNotifier {
       return false;
     }
   }
-
+//for deleting a dependent 
   Future<bool> deleteDependent(String token, String dependentId) async {
     try {
       final response = await _dependentService.deleteDependent(
