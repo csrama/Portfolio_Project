@@ -62,11 +62,11 @@ router.get('/:id', async (c) => {
   }
 });
 
-router.post('/create-with-account', caregiverCheck, async (c) => {
+router.post('/create-with-account', async (c) => {
   try {
     const user = c.get('user');
     const body = await c.req.json().catch(() => ({}));
-    const { full_name, email, password, relationship } = body;
+    const { full_name, email, password, relationship, date_of_birth } = body;
 
     if (!full_name || !email || !password || !relationship) {
       return c.json({ error: 'جميع الحقول مطلوبة' }, 400);
@@ -80,7 +80,7 @@ router.post('/create-with-account', caregiverCheck, async (c) => {
 
     const existing = await pool.findUserByEmail(email.toLowerCase());
     if (existing) {
-      return c.json({ error: 'هذا البريد الإلكتروني مستخدم مسبقاً، استخدم خيار "ربط تابع لديه حساب"' }, 409);
+      return c.json({ error: 'هذا البريد الإلكتروني مستخدم مسبقاً' }, 409);
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -93,12 +93,21 @@ router.post('/create-with-account', caregiverCheck, async (c) => {
       is_onboarding_complete: false,
     });
 
+    // Validate date_of_birth if provided
+    let dob = null;
+    if (date_of_birth) {
+      const parsed = new Date(date_of_birth);
+      if (!isNaN(parsed.getTime())) {
+        dob = parsed.toISOString();
+      }
+    }
+
     const result = await pool.query(
       `INSERT INTO dependents
-        (caregiver_user_id, dependent_user_id, full_name, relationship, invitation_status, accepted_at)
-       VALUES ($1, $2, $3, $4, 'accepted', NOW())
+        (caregiver_user_id, dependent_user_id, full_name, relationship, date_of_birth, invitation_status, accepted_at)
+       VALUES ($1, $2, $3, $4, $5, 'accepted', NOW())
        RETURNING *`,
-      [user.id, newDepUser.id, full_name.trim(), relationship]
+      [user.id, newDepUser.id, full_name.trim(), relationship, dob]
     );
 
     return c.json({

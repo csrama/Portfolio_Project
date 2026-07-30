@@ -119,6 +119,7 @@ class DependentProvider extends ChangeNotifier {
     required String email,
     required String password,
     required String relationship,
+    String? dateOfBirth,
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -129,6 +130,7 @@ class DependentProvider extends ChangeNotifier {
         email: email,
         password: password,
         relationship: relationship,
+        dateOfBirth: dateOfBirth,
       );
       if (response['success'] == true) {
         await fetchDependents(token);

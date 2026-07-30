@@ -1,26 +1,13 @@
-# Fix Plan - إصلاح المشاكل
+# TODO - تغيير واجهة إضافة التابع
 
-## ✅ Step 1: Fix auth_repository.dart
-- [ ] Remove `Null get SharedPreferences => null;` line
+## المهام
+- [x] الموافقة على الخطة
+- [x] 1. تعديل `backend/src/routes/dependents.js` - إضافة دعم `date_of_birth` + إزالة `caregiverCheck`
+- [x] 2. تعديل `frontend/lib/views/dashboard/add_dependent_screen.dart` - إزالة وضعي الاختيار، إضافة العمر، إزالة توليد الرابط
+- [x] 3. تعديل `frontend/lib/views/dashboard/dependents_screen.dart` - تعديل `_showAddDependentSheet` لحقول: الاسم، البريد، كلمة المرور، العمر، العلاقة
+- [x] 4. تعديل `frontend/lib/services/dependent_service.dart` - إضافة `dateOfBirth` وتصحيح endpoint إلى `/dependents/create-with-account`
+- [x] 5. تعديل `frontend/lib/providers/dependent_provider.dart` - إضافة `dateOfBirth` إلى `addNewDependent`
+- [x] 6. تعديل `frontend/lib/views/dashboard/dependents_screen.dart` - تمرير `dateOfBirth` إلى `addNewDependent`
 
-## ✅ Step 2: Fix home_screen.dart merge conflicts
-- [ ] Fix `_weekdayNameFromDate` method (corrupted array)
-- [ ] Fix merge conflict in medication list initializers
-- [ ] Fix merge conflict in `_checkInteractionsFor`
-- [ ] Fix merge conflict in `_buildInteractionDetailTile`
-- [ ] Fix merge conflict in `_deleteMedication` (ElevatedButton style)
-- [ ] Fix merge conflict in test paths section
-- [ ] Fix merge conflict in debugPrint emoji
-- [ ] Fix merge conflict in SnackBar success emoji
-- [ ] Fix merge conflict in SnackBar failure emoji
-- [ ] Fix merge conflict in update dependent snackbar
-- [ ] Fix merge conflict in `_selectSuggestion` method
-
-## ✅ Step 3: Remove all comments from dart files
-- [ ] Remove comments from all frontend .dart files
-
-## ✅ Step 4: Run flutter clean & pub get
-- [ ] cd frontend && flutter clean
-- [ ] cd frontend && flutter pub get
-- [ ] flutter analyze
+## ✅ تم الانتهاء من جميع التعديلات بنجاح
 
