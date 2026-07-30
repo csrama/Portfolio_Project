@@ -93,7 +93,6 @@ router.post('/create-with-account', async (c) => {
       is_onboarding_complete: false,
     });
 
-    // Validate date_of_birth if provided
     let dob = null;
     if (date_of_birth) {
       const parsed = new Date(date_of_birth);
