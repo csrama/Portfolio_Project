@@ -310,11 +310,45 @@ const db = {
     return rows[0] || null;
   },
 
-  async deleteDependent(dependentId, caregiverId) {
+async deleteDependent(dependentId, caregiverId) {
     const { rows } = await queryWithFallback(
       'DELETE FROM dependents WHERE id = $1 AND caregiver_user_id = $2 RETURNING id',
       [dependentId, caregiverId]
     );
+    return rows[0] || null;
+  },
+
+  async deleteDependentCascade(dependentId, caregiverId) {
+    // 1. أولاً: حذف جميع الـ schedules المرتبطة بأدوية التابع
+    await queryWithFallback(
+      `DELETE FROM schedules
+       WHERE medication_id IN (
+         SELECT id FROM medications WHERE dependent_id = $1
+       )`,
+      [dependentId]
+    );
+
+    // 2. ثانياً: حذف جميع الـ dose_records المرتبطة بأدوية التابع
+    await queryWithFallback(
+      `DELETE FROM dose_records
+       WHERE medication_id IN (
+         SELECT id FROM medications WHERE dependent_id = $1
+       )`,
+      [dependentId]
+    );
+
+    // 3. ثالثاً: حذف جميع الأدوية المرتبطة بالتابع
+    await queryWithFallback(
+      'DELETE FROM medications WHERE dependent_id = $1',
+      [dependentId]
+    );
+
+    // 4. رابعاً: حذف سجل التابع نفسه
+    const { rows } = await queryWithFallback(
+      'DELETE FROM dependents WHERE id = $1 AND caregiver_user_id = $2 RETURNING *',
+      [dependentId, caregiverId]
+    );
+
     return rows[0] || null;
   },
 

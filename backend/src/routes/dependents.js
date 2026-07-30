@@ -268,14 +268,21 @@ router.delete('/:id', caregiverCheck, async (c) => {
     const dependent = await pool.getDependentWithUser(id, user.id);
     if (!dependent) return c.json({ error: 'التابع غير موجود' }, 404);
 
-    const dependentUserId = dependent.dependent_user_id;
-    await pool.deleteDependent(id, user.id);
-    await pool.deleteUser(dependentUserId);
+    // حذف كل السجلات المرتبطة بالتابع (schedules, dose_records, medications, dependents)
+    const deleted = await pool.deleteDependentCascade(id, user.id);
+    if (!deleted) {
+      return c.json({ error: 'فشل حذف التابع' }, 500);
+    }
 
-    return c.json({ success: true, message: 'تم حذف التابع بنجاح' });
+    // حذف حساب المستخدم الخاص بالتابع
+    if (dependent.dependent_user_id) {
+      await pool.deleteUser(dependent.dependent_user_id);
+    }
+
+    return c.json({ success: true, message: 'تم حذف التابع وجميع البيانات المرتبطة به بنجاح' });
   } catch (error) {
     console.error('Error deleting dependent:', error);
-    return c.json({ error: 'فشل حذف التابع' }, 500);
+    return c.json({ error: 'فشل حذف التابع: ' + error.message }, 500);
   }
 });
 
