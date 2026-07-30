@@ -67,7 +67,6 @@ void _showAddDependentSheet() {
                 const SizedBox(height: 16),
 
                 if (resultMessage == null) ...[
-                  // ── الاسم الكامل ──
                   TextField(
                     controller: nameController,
                     decoration: InputDecoration(
@@ -79,7 +78,6 @@ void _showAddDependentSheet() {
                   ),
                   const SizedBox(height: 15),
 
-                  // ── البريد الإلكتروني ──
                   TextField(
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -92,7 +90,6 @@ void _showAddDependentSheet() {
                   ),
                   const SizedBox(height: 15),
 
-                  // ── كلمة المرور ──
                   TextField(
                     controller: passwordController,
                     obscureText: obscurePassword,
@@ -114,7 +111,6 @@ void _showAddDependentSheet() {
                   ),
                   const SizedBox(height: 15),
 
-                  // ── العمر ──
                   TextField(
                     controller: ageController,
                     keyboardType: TextInputType.number,
@@ -127,7 +123,6 @@ void _showAddDependentSheet() {
                   ),
                   const SizedBox(height: 15),
 
-                  // ── العلاقة ──
                   DropdownButtonFormField<String>(
                     initialValue: selectedRelationship,
                     decoration: InputDecoration(
@@ -152,7 +147,6 @@ void _showAddDependentSheet() {
                   ),
                   const SizedBox(height: 20),
 
-                  // ── زر الإرسال ──
                   ElevatedButton(
                     onPressed: isProcessing
                         ? null
@@ -278,7 +272,6 @@ void _showAddDependentSheet() {
                           ),
                   ),
                 ] else ...[
-                  // ── نتيجة العملية ──
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
