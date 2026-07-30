@@ -88,7 +88,7 @@ router.post('/create-with-account', async (c) => {
       email: email.toLowerCase(),
       password_hash: passwordHash,
       full_name: full_name.trim(),
-      user_type: 'patient',
+      user_type: 'dependent',
       is_active: true,
       is_onboarding_complete: false,
     });
@@ -258,7 +258,7 @@ router.put('/:id', caregiverCheck, async (c) => {
   }
 });
 
-router.delete('/:id', caregiverCheck, async (c) => {
+router.delete('/:id', async (c) => {
   try {
     const id = parseInt(c.req.param('id'));
     const user = c.get('user');

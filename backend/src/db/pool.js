@@ -18,14 +18,14 @@ pool.on('error', (err) => {
 
 function normalizeUserType(userType) {
   if (!userType) {
-    return 'general_user';
+    return 'dependent';
   }
-  return userType === 'patient' ? 'general_user' : userType;
+  return userType;
 }
 
 function denormalizeUserType(userType) {
-  if (userType === 'general_user' || !userType) {
-    return 'patient';
+  if (!userType) {
+    return 'dependent';
   }
   return userType;
 }

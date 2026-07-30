@@ -35,9 +35,9 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 function normalizeUserType(userType) {
   if (!userType) {
-    return 'general_user';
+    return 'dependent';
   }
-  return userType === 'patient' ? 'general_user' : userType;
+  return userType;
 }
 
 
