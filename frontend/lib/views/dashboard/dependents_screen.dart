@@ -511,25 +511,7 @@ void _showAddDependentSheet() {
         backgroundColor: const Color(0xFF085041),
         foregroundColor: Colors.white,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.mail_outline),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddDependentScreen()),
-              ).then((_) {
-                final auth = context.read<AuthProvider>();
-                if (auth.accessToken != null) {
-                  context.read<DependentProvider>().fetchDependents(
-                    auth.accessToken!,
-                  );
-                }
-              });
-            },
-            tooltip: Strings.tr(context, 'send_invite'),
-          ),
-        ],
+        actions: [],
       ),
       body: Consumer<DependentProvider>(
         builder: (context, provider, child) {
@@ -628,7 +610,19 @@ void _showAddDependentSheet() {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDependentSheet,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddDependentScreen()),
+          ).then((_) {
+            final auth = context.read<AuthProvider>();
+            if (auth.accessToken != null) {
+              context.read<DependentProvider>().fetchDependents(
+                auth.accessToken!,
+              );
+            }
+          });
+        },
         backgroundColor: const Color(0xFF085041),
         child: const Icon(Icons.add, color: Colors.white),
       ),
