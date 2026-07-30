@@ -320,9 +320,15 @@ router.get('/:id/medications', async (c) => {
     const dependent = await pool.getDependentWithUser(dependentId, user.id);
     if (!dependent) return c.json({ error: 'التابع غير موجود' }, 404);
 
+    // جلب جميع أدوية التابع:
+    // 1. الأدوية اللي أضافها مقدم الرعاية (dependent_id = dependentId)
+    // 2. الأدوية اللي أضافها التابع بنفسه (user_id = dependent_user_id)
     const result = await pool.query(
-      `SELECT * FROM medications WHERE dependent_id = $1 ORDER BY created_at DESC`,
-      [dependentId]
+      `SELECT * FROM medications 
+       WHERE dependent_id = $1 
+          OR (user_id = $2 AND dependent_id IS NULL)
+       ORDER BY created_at DESC`,
+      [dependentId, dependent.dependent_user_id]
     );
 
     return c.json({ success: true, data: result.rows || [] });

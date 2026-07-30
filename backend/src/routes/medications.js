@@ -42,14 +42,13 @@ router.get('/', async (c) => {
   // ===================================
   if (dependentId) {
 
-
     // تأكد أن المستخدم هو صاحب التابع
     const dependent = await pool.query(
       `
-      SELECT id
-      FROM dependents
-      WHERE id=$1
-      AND caregiver_user_id=$2
+      SELECT d.id, d.dependent_user_id
+      FROM dependents d
+      WHERE d.id=$1
+      AND d.caregiver_user_id=$2
       `,
       [
         Number(dependentId),
@@ -57,42 +56,39 @@ router.get('/', async (c) => {
       ]
     );
 
-
-
     if (dependent.rows.length === 0) {
-
       return c.json(
         {
           error: 'ليس لديك صلاحية لهذا التابع'
         },
         403
       );
-
     }
 
+    const dependentUserId = dependent.rows[0]?.dependent_user_id;
 
-
+    // جلب الأدوية اللي أضافها مقدم الرعاية (dependent_id = dependentId)
+    // + الأدوية اللي أضافها التابع بنفسه (user_id = dependentUserId)
     result = await pool.query(
       `
       SELECT *
       FROM medications
       WHERE dependent_id=$1
+         OR (user_id=$2 AND dependent_id IS NULL)
       ORDER BY created_at DESC
       `,
       [
-        Number(dependentId)
+        Number(dependentId),
+        dependentUserId
       ]
     );
 
-
   }
-
 
   // ===================================
   // أدوية المستخدم الحالي فقط
   // ===================================
   else {
-
 
     result = await pool.query(
       `
@@ -107,10 +103,7 @@ router.get('/', async (c) => {
       ]
     );
 
-
   }
-
-
 
   return c.json(result.rows);
 
@@ -243,7 +236,7 @@ router.delete('/:id', async (c) => {
     if (medication.user_id === user.id) {
       // مسموح
     }
-    // إذا كان الدواء لتابع
+    // إذا كان الدواء لتابع (أضافه مقدم الرعاية)
     else if (medication.dependent_id) {
       // تحقق أن المستخدم هو مالك التابع
       const dependentCheck = await pool.query(
@@ -257,6 +250,26 @@ router.delete('/:id', async (c) => {
       );
 
       if (dependentCheck.rows.length === 0) {
+        return c.json(
+          { error: 'ليس لديك صلاحية لحذف هذا الدواء' },
+          403
+        );
+      }
+    }
+    // إذا كان الدواء لتابع (أضافه التابع بنفسه - user_id = dependent_user_id)
+    else if (!medication.dependent_id) {
+      // تحقق هل هذا المستخدم هو مقدم رعاية لهذا التابع؟
+      const caregiverCheck = await pool.query(
+        `
+        SELECT id
+        FROM dependents
+        WHERE dependent_user_id = $1
+        AND caregiver_user_id = $2
+        `,
+        [medication.user_id, user.id]
+      );
+
+      if (caregiverCheck.rows.length === 0) {
         return c.json(
           { error: 'ليس لديك صلاحية لحذف هذا الدواء' },
           403
