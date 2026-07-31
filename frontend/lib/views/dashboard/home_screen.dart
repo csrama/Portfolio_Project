@@ -2187,7 +2187,7 @@ Widget _buildDoseActionRow(
                   size: 18,
                 ),
                 label: Text(
-                  taken ? 'تم ✓' : 'تم اخذ الدواء',
+                  taken ? 'تم ' : 'تم اخذ الدواء',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
@@ -2217,7 +2217,6 @@ Widget _buildDoseActionRow(
   }
 
   Widget _buildRemindersTab() {
-    // Auto-create PENDING records for past doses to ensure adherence tracking
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _autoCreatePendingForMissedDoses();
     });
@@ -2707,6 +2706,8 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   static const List<String> _dosageAmounts = [
     '5',
     '10',
+    '15',
+    '20',
     '25',
     '50',
     '100',
