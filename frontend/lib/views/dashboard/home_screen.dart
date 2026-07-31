@@ -2306,7 +2306,11 @@ Widget _buildDoseActionRow(
       _buildTodayTab(),
       _buildMedicationsTab(),
       _buildRemindersTab(),
-      const ProfileScreen(),
+      ProfileScreen(
+        onNavigateToTab: (tabIndex) {
+          setState(() => _selectedIndex = tabIndex);
+        },
+      ),
     ];
 
     final settings = context.watch<AppSettingsProvider>();
