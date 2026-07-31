@@ -630,13 +630,13 @@ class _AddDependentMedicationSheetState
   final TextEditingController _searchController = TextEditingController();
 
   static const List<String> _allDays = [
-    'الاثنين',
+    'الأحد',
+    'الأثنين',
     'الثلاثاء',
     'الأربعاء',
     'الخميس',
     'الجمعة',
     'السبت',
-    'الأحد',
   ];
   final Set<String> _selectedDays = {};
 

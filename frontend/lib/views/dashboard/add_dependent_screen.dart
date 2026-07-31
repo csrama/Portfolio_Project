@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
@@ -73,11 +74,11 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
       if (!mounted) return;
 
       if (response['success'] == true) {
-        _showSnack(
-          response['message'] ?? 'تم إنشاء حساب التابع وربطه بنجاح',
-          const Color(0xFF085041),
+        if (!mounted) return;
+        _showCredentialsDialog(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
         );
-        Navigator.pop(context, true);
       } else {
         _showSnack(response['error'] ?? 'حدث خطأ غير متوقع', Colors.red);
       }
@@ -86,6 +87,192 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showCredentialsDialog({
+    required String email,
+    required String password,
+  }) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Column(
+          children: [
+            const Icon(
+              Icons.check_circle,
+              color: Color(0xFF085041),
+              size: 56,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'تم إنشاء الحساب بنجاح',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF085041),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'يُرجى حفظ بيانات الدخول التالية وإرسالها للتابع:',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 20),
+            // Email field
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF6F6F6),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'البريد الإلكتروني',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          email,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF085041),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.copy, color: Color(0xFF085041)),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: email));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('تم نسخ البريد الإلكتروني'),
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Password field
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF6F6F6),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'كلمة المرور',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          password,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF085041),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.copy, color: Color(0xFF085041)),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: password));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('تم نسخ كلمة المرور'),
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'يمكنك نسخ كل البيانات مرة واحدة بزر أدناه',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              final textToCopy = 'بيانات دخول التابع:\n'
+                  'البريد الإلكتروني: $email\n'
+                  'كلمة المرور: $password';
+              Clipboard.setData(ClipboardData(text: textToCopy));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('تم نسخ جميع البيانات'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.copy_all, size: 18),
+                SizedBox(width: 6),
+                Text('نسخ جميع البيانات'),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              Navigator.pop(context, true);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF085041),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('حسناً'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showSnack(String msg, Color color) {
