@@ -2187,7 +2187,7 @@ Widget _buildDoseActionRow(
                   size: 18,
                 ),
                 label: Text(
-                  taken ? 'تم ' : 'تم اخذ الدواء',
+                  taken ? 'تم' : 'تم اخذ الدواء',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
