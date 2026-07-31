@@ -2335,8 +2335,8 @@ Widget _buildDoseActionRow(
           type: BottomNavigationBarType.fixed,
           items: [
             BottomNavigationBarItem(
-              icon: const Icon(CupertinoIcons.calendar),
-              label: Strings.tr(context, 'today'),
+              icon: const Icon(Icons.home_rounded),
+              label: 'الرئيسية',
             ),
             BottomNavigationBarItem(
               icon: const Icon(Icons.medication),
