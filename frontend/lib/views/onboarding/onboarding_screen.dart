@@ -180,7 +180,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         throw Exception(Strings.tr(context, 'incomplete_data'));
       }
 
-      // Ensure session is persisted correctly
       await context.read<AuthProvider>().login(token, refreshToken ?? '', user);
 
       if (!mounted) return;

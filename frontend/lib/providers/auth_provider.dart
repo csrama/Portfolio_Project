@@ -15,9 +15,6 @@ class AuthProvider extends ChangeNotifier {
   String? get refreshToken => _refreshToken;
   Map<String, dynamic>? get user => _user;
 
-  /// Reads the current session. Wrapped in try/catch + timeout because
-  /// flutter_secure_storage can hang or throw on Flutter Web where the
-  /// underlying platform channels are not fully implemented.
   Future<bool> checkLoginStatus() async {
     try {
       _accessToken = await _authService.getAccessToken().timeout(

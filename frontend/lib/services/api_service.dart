@@ -8,7 +8,6 @@ class ApiService {
       return 'https://dawai-app.up.railway.app';
     }
      else {
-      // للـ Android (محاكي)
       return 'https://dawai-app.up.railway.app';
     }
   }

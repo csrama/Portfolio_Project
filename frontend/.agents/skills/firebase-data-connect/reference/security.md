@@ -251,7 +251,7 @@ ______________________________________________________________________
 
 ## Anti-Patterns
 
-### ❌ Don't Pass User ID as Variable
+### Don't Pass User ID as Variable
 
 ```graphql
 # BAD - any user can pass any userId
@@ -265,7 +265,7 @@ query GetMyPosts @auth(level: USER) {
 }
 ```
 
-### ❌ Don't Use USER Without Filters
+### Don't Use USER Without Filters
 
 ```graphql
 # BAD - any authenticated user sees all documents
@@ -279,7 +279,7 @@ query MyDocs @auth(level: USER) {
 }
 ```
 
-### ❌ Don't Trust Unverified Email
+### Don't Trust Unverified Email
 
 ```graphql
 # BAD - email not verified
@@ -289,7 +289,7 @@ query MyDocs @auth(level: USER) {
 @auth(expr: "auth.token.email_verified && auth.token.email.endsWith('@company.com')")
 ```
 
-### ❌ Don't Use PUBLIC/USER for Prototyping
+### Don't Use PUBLIC/USER for Prototyping
 
 During development, set operations to `NO_ACCESS` until you implement proper
 authorization. Use emulator and VS Code extension for testing.

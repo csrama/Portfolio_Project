@@ -43,13 +43,11 @@ Future<void> _handleDeepLinks() async {
     try {
       final appLinks = AppLinks();
       
-      // getInitialLink() returns Uri? in app_links v6.4.1
       final initialLink = await appLinks.getInitialLink();
       if (initialLink != null) {
         _handleUri(initialLink);
       }
 
-      // uriLinkStream emits Uri objects in app_links v6.4.1
       appLinks.uriLinkStream.listen((uri) {
         _handleUri(uri);
       });

@@ -1,10 +1,3 @@
-// lib/views/dashboard/adherence_screen.dart
-//
-// صفحة كاملة مستقلة لمتابعة الجرعات (نسبة الالتزام + سجل الجرعات).
-// تُستدعى من HomeScreen عبر Navigator.push، وتاخذ قائمة الأدوية
-// الحالية (المستخدم نفسه أو التابع المختار) عشان تربط كل سجل جرعة
-// باسم الدواء الصحيح.
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -62,7 +55,7 @@ class _AdherenceScreenState extends State<AdherenceScreen> {
         final bTime =
             DateTime.tryParse((b['scheduled_time'] ?? '').toString()) ??
                 DateTime(0);
-        return bTime.compareTo(aTime); // الأحدث أول
+        return bTime.compareTo(aTime); 
       });
 
       if (!mounted) return;

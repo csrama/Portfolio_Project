@@ -65,7 +65,6 @@ async function loginRateLimiter(c, next) {
 }
 
 
-// Simple refresh-token store (DB-backed only when DB is available; otherwise memory fallback)
 const refreshTokensStore = new Map(); // refreshToken -> { userId, revokedAt }
 
 function generateRefreshToken() {
@@ -135,7 +134,6 @@ router.post('/login', loginRateLimiter, async (c) => {
 
     loginAttempts.delete(c.get('loginAttemptKey'));
 
-    // Issue access+refresh tokens
     const { password_hash, ...safeUser } = user;
     const tokens = issueTokensForUser({ ...safeUser, id: user.id });
 

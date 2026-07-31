@@ -202,7 +202,6 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
               ),
               const SizedBox(height: 20),
 
-              // ── ملاحظة ──
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(

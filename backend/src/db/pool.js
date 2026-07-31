@@ -319,14 +319,12 @@ async deleteDependent(dependentId, caregiverId) {
   },
 
   async deleteDependentCascade(dependentId, caregiverId) {
-    // 1. أولاً: جلب dependent_user_id قبل الحذف
     const depInfo = await queryWithFallback(
       'SELECT dependent_user_id FROM dependents WHERE id = $1 AND caregiver_user_id = $2',
       [dependentId, caregiverId]
     );
     const dependentUserId = depInfo.rows[0]?.dependent_user_id;
 
-    // 2. حذف جميع الـ schedules المرتبطة بأدوية التابع (التي أضافها مقدم الرعاية أو التابع بنفسه)
     await queryWithFallback(
       `DELETE FROM schedules
        WHERE medication_id IN (
@@ -336,7 +334,6 @@ async deleteDependent(dependentId, caregiverId) {
       [dependentId, dependentUserId]
     );
 
-    // 3. حذف جميع الـ dose_records المرتبطة بأدوية التابع
     await queryWithFallback(
       `DELETE FROM dose_records
        WHERE medication_id IN (
@@ -346,13 +343,11 @@ async deleteDependent(dependentId, caregiverId) {
       [dependentId, dependentUserId]
     );
 
-    // 4. حذف جميع أدوية التابع (التي أضافها مقدم الرعاية أو التابع بنفسه)
     await queryWithFallback(
       'DELETE FROM medications WHERE dependent_id = $1 OR (user_id = $2 AND dependent_id IS NULL)',
       [dependentId, dependentUserId]
     );
 
-    // 5. حذف سجل التابع نفسه
     const { rows } = await queryWithFallback(
       'DELETE FROM dependents WHERE id = $1 AND caregiver_user_id = $2 RETURNING *',
       [dependentId, caregiverId]

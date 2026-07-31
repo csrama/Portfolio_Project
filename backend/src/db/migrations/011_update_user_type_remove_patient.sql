@@ -1,11 +1,5 @@
--- ============================================
--- تحديث user_type_enum: إزالة 'patient' والاكتفاء بـ 'caregiver', 'dependent'
--- ============================================
-
--- تحديث جميع المستخدمين الذين نوعهم 'patient' إلى 'dependent'
 UPDATE users SET user_type = 'dependent' WHERE user_type = 'patient';
 
--- تغيير الـ ENUM
 ALTER TYPE public.user_type_enum RENAME TO user_type_enum_old;
 
 CREATE TYPE public.user_type_enum AS ENUM ('caregiver', 'dependent');

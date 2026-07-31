@@ -6,7 +6,7 @@ import 'auth_service.dart';
 class DrugInteraction {
   final String ingredientA;
   final String ingredientB;
-  final String severity; // minor | moderate | major | contraindicated
+  final String severity; 
   final String description;
   final String recommendation;
 

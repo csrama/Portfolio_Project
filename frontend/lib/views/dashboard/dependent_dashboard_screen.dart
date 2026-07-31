@@ -1090,7 +1090,7 @@ class _AddDependentMedicationSheetState
                         controller: _nameController,
                         textAlign: TextAlign.right,
                         decoration: InputDecoration(
-                          hintText: 'مثال: Eltroxin',
+                          hintText: 'اكتب اسم الدواء يدويًا',
                           hintStyle: TextStyle(color: Colors.grey[400]),
                           filled: true,
                           fillColor: const Color(0xFFF6F6F6),

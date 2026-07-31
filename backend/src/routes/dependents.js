@@ -268,13 +268,11 @@ router.delete('/:id', async (c) => {
     const dependent = await pool.getDependentWithUser(id, user.id);
     if (!dependent) return c.json({ error: 'التابع غير موجود' }, 404);
 
-    // حذف كل السجلات المرتبطة بالتابع (schedules, dose_records, medications, dependents)
     const deleted = await pool.deleteDependentCascade(id, user.id);
     if (!deleted) {
       return c.json({ error: 'فشل حذف التابع' }, 500);
     }
 
-    // حذف حساب المستخدم الخاص بالتابع
     if (dependent.dependent_user_id) {
       await pool.deleteUser(dependent.dependent_user_id);
     }
@@ -320,9 +318,7 @@ router.get('/:id/medications', async (c) => {
     const dependent = await pool.getDependentWithUser(dependentId, user.id);
     if (!dependent) return c.json({ error: 'التابع غير موجود' }, 404);
 
-    // جلب جميع أدوية التابع:
-    // 1. الأدوية اللي أضافها مقدم الرعاية (dependent_id = dependentId)
-    // 2. الأدوية اللي أضافها التابع بنفسه (user_id = dependent_user_id)
+    
     const result = await pool.query(
       `SELECT * FROM medications 
        WHERE dependent_id = $1 

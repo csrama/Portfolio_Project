@@ -1,13 +1,5 @@
-/// ترجمة عربية لبيانات التداخلات الدوائية (المواد الفعالة + الوصف + التوصية).
-/// المصدر الإنجليزي: backend/src/db/migrations/006_seed_drug_interactions.sql
-/// أي تحديث لتلك القائمة لازم ينعكس هنا أيضاً.
-///
-/// ملاحظة: التوصيات مكتوبة بصيغة عامة غير مخاطبة (بدون تذكير/تأنيث)،
-/// زي "يُنصح بمراقبة..." بدل "راقبي/راقب...".
 library;
 
-/// أسماء المواد الفعالة بالعربي (المفتاح: الاسم الإنجليزي lowercase تماماً
-/// زي ما هو مخزّن بعمود ingredient_a / ingredient_b بقاعدة البيانات).
 const Map<String, String> kIngredientNamesAr = {
   'amiodarone': 'أميودارون',
   'aspirin': 'أسبرين',
@@ -53,8 +45,6 @@ const Map<String, String> kIngredientNamesAr = {
   'warfarin': 'وارفارين',
 };
 
-/// وصف/توصية كل زوج بالعربي. المفتاح = "ingredient_a|ingredient_b"
-/// بنفس ترتيب وحروف قاعدة البيانات (a قبل b أبجدياً، lowercase).
 class InteractionArText {
   final String descriptionAr;
   final String recommendationAr;
@@ -255,7 +245,6 @@ InteractionArText? interactionTextAr(String ingredientA, String ingredientB) {
   return kInteractionTextAr['$a|$b'];
 }
 
-/// ترتيب رقمي للخطورة، يُستخدم للفرز تنازلياً (الأخطر أولاً).
 int severityRank(String severity) {
   switch (severity) {
     case 'contraindicated':

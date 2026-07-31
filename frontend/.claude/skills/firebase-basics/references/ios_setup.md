@@ -1,6 +1,6 @@
 # Firebase iOS Setup Guide
 
-# ⛔️ CRITICAL RULE: STATE MANAGEMENT (OBSERVATION VS COMBINE) ⛔️
+# CRITICAL RULE: STATE MANAGEMENT (OBSERVATION VS COMBINE) 
 
 When writing or updating SwiftUI code, you **MUST** prioritize the modern Swift
 **Observation framework (`@Observable` macro and `@State`)** as your default
@@ -16,7 +16,7 @@ However, it is acceptable to use **Combine** (`ObservableObject`, `@Published`,
 If neither of those conditions are true, default to the Swift 5.9+ Observation
 framework.
 
-# ⛔️ CRITICAL RULE: INITIALIZATION ORDER ⛔️
+# CRITICAL RULE: INITIALIZATION ORDER 
 
 When using SwiftUI, you **MUST** ensure `FirebaseApp.configure()` is called
 **BEFORE** any Firebase-dependent state objects are initialized.
@@ -74,15 +74,11 @@ import FirebaseCore
 
 @main
 struct YourApp: App {
-  // ⛔️ FATAL CRASH: @State private var auth = AuthManager()
-  // property initializers run before init(), causing FirebaseApp not configured error
   @State private var authManager: AuthManager
 
   init() {
-    // ✅ SAFE: This runs FIRST
     FirebaseApp.configure()
     
-    // ✅ SAFE: Initialize state ONLY AFTER Firebase is configured
     _authManager = State(initialValue: AuthManager())
   }
 
@@ -105,7 +101,6 @@ import FirebaseCore
 class AppDelegate: UIResponder, UIApplicationDelegate {
   func application(_ application: UIApplication,
                    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-    // ✅ SAFE: Always the first line in didFinishLaunching
     FirebaseApp.configure()
     return true
   }

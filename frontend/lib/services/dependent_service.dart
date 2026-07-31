@@ -38,7 +38,6 @@ class DependentService {
     );
     return response;
   }
-//the new method for adding dependent 
   Future<Map<String, dynamic>> addNewDependent(
     String token, {
     required String fullName,

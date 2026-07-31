@@ -1,8 +1,6 @@
 import 'api_service.dart';
 
 class AdherenceService {
-  /// Fetches the adherence rate from the backend.
-  /// Returns a map with { adherence_rate, completed, total }.
   static Future<Map<String, dynamic>> getAdherenceRate(String token) async {
     try {
       final result = await ApiService.getJsonDynamic(
@@ -18,7 +16,6 @@ class AdherenceService {
     }
   }
 
-  /// Fetches the dose log history from the backend.
   static Future<List<dynamic>> getDoseLogs(String token) async {
     try {
       return await ApiService.getJsonList(

@@ -198,7 +198,6 @@ void _showAddDependentSheet() {
                                 return;
                               }
 
-                              // Convert age to date_of_birth
                               String? dateOfBirth;
                               final age = int.tryParse(
                                 ageController.text.trim(),

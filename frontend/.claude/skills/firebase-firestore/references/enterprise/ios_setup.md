@@ -3,7 +3,7 @@
 This guide walks you through using the Cloud Firestore SDK in your iOS app using
 Swift.
 
-# ⛔️ CRITICAL RULE: NO FirebaseFirestoreSwift ⛔️
+# CRITICAL RULE: NO FirebaseFirestoreSwift 
 
 UNDER NO CIRCUMSTANCES should you import, link against, or configure a project
 to use `FirebaseFirestoreSwift`.
@@ -20,7 +20,7 @@ As of Firebase SDK v11+, all Swift-specific features (including `@DocumentID`,
 This is a zero-tolerance constraint. Using `FirebaseFirestoreSwift` is
 fundamentally incorrect and unacceptable.
 
-# ⛔️ CRITICAL RULE: NO INLINE INITIALIZATION ⛔️
+# CRITICAL RULE: NO INLINE INITIALIZATION 
 
 NEVER write `let db = Firestore.firestore()` or `Firestore.firestore(database:)`
 as an inline class or struct property if there is ANY chance the object is
@@ -138,13 +138,13 @@ When implementing Firestore realtime listeners (`addSnapshotListener`) within a
 SwiftUI application, you **MUST** tie the listener lifecycle to the view's
 identity using `.task(id:)`, NOT `.onDisappear`.
 
-### ⛔️ UNSAFE PATTERN (.onDisappear)
+### UNSAFE PATTERN (.onDisappear)
 
 Presenting a `.sheet` or `.fullScreenCover` can trigger the underlying view's
 `onDisappear` method. If you stop your listener here, the feed will stop
 updating while the sheet is open, and won't resume when it's dismissed.
 
-### ✅ SAFE PATTERN (.task with deinit)
+### SAFE PATTERN (.task with deinit)
 
 Because `addSnapshotListener` is a synchronous call, placing it inside a `.task`
 means the task completes immediately. This breaks SwiftUI's automatic

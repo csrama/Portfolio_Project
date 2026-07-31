@@ -1,8 +1,8 @@
-# 🛠️ Firebase Android Setup Guide
+# Firebase Android Setup Guide
 
 ______________________________________________________________________
 
-## 📋 Prerequisites
+## Prerequisites
 
 ## Before running these commands, ensure you are authenticated: `npx -y firebase-tools@latest login` (or `npx -y firebase-tools@latest login --no-localhost` on remote servers)
 
@@ -30,7 +30,7 @@ display name is passed as a positional argument at the end:
 
 ## Fetch the configuration file using the App ID (which is printed in the output of the previous command): `npx -y firebase-tools@latest apps:sdkconfig ANDROID <APP_ID> --project <PROJECT_ID>` *Example output extraction to file:* ` # (Output must be saved as app/google-services.json)`
 
-## ✅ Verification Plan
+## Verification Plan
 
 ### Manual Verification
 

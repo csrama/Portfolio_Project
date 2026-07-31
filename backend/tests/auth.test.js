@@ -87,15 +87,11 @@ it('normalizes email casing and uses the dependent default type', async () => {
     if (pgPool) {
       try {
         await pgPool.query('DELETE FROM users WHERE email = $1', ['test-user@example.com']);
-      } catch (error) {
-        // Ignore cleanup errors when the database is unavailable.
-      }
+      } catch (error) 
 
       try {
         await pgPool.end();
-      } catch (error) {
-        // Ignore cleanup errors when the database is unavailable.
-      }
+      } catch (error) 
     }
 
     if (server && typeof server.close === 'function') {
