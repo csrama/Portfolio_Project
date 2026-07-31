@@ -114,14 +114,10 @@ class AuthService {
   }
 
   Future<String?> getToken() async {
-    // For backward-compat usage in other services/tests.
     return await getAccessToken();
   }
 
-  /// Signs up the user.
-  ///
-  /// If the online request fails, falls back to an offline mode.
-  /// This is used by the existing unit tests.
+ 
   Future<Map<String, dynamic>> signUp({
     required String email,
     required String password,
@@ -176,7 +172,6 @@ class AuthService {
     }
   }
 
-  /// Calls backend /auth/login and persists session tokens + user.
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
@@ -203,7 +198,6 @@ class AuthService {
     return response.data as Map<String, dynamic>;
   }
 
-  /// Calls backend /auth/register and persists session tokens + user.
   Future<Map<String, dynamic>> register({
     required String email,
     required String password,
@@ -237,15 +231,12 @@ class AuthService {
     return response.data as Map<String, dynamic>;
   }
 
-  /// Server-side logout.
-  ///
-  /// Note: backend must implement POST /auth/logout for DB-backed invalidation.
+ 
   Future<void> logout() async {
     try {
       final token = await getAccessToken();
       final refreshToken = await getRefreshToken();
 
-      // If backend supports refresh-token logout, call it.
       if (refreshToken != null && refreshToken.isNotEmpty) {
         await _dio.post(
           '${ApiConfig.baseUrl}/auth/logout',
@@ -256,7 +247,6 @@ class AuthService {
         );
       }
     } catch (_) {
-      // Even if server logout fails, clear local session so UI logs out.
     }
 
     await clearTokens();

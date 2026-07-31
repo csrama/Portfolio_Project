@@ -1,7 +1,5 @@
 import 'package:flutter/widgets.dart';
 
-/// Fast, safe translations (no flutter_localizations / arb files).
-/// Add only keys used across the app.
 class Strings {
   static const Map<String, Map<String, String>> _values = {
     'ar': {
@@ -149,7 +147,7 @@ class Strings {
       'select_type': 'حدد نوع الدواء:',
       'medicine_name': 'اسم الدواء',
       'search_pharmacy': 'ابحث عن الدواء من نفس الصيدلية',
-      'example_medicine': 'مثال: Eltroxin',
+      'example_medicine': 'اكتب اسم الدواء يدويًا',
       'example_dosage': '100mcg',
       'morning_period': 'صباحا',
       'evening_period': 'مساء',
@@ -255,7 +253,7 @@ class Strings {
       'medication_time': 'حيث أن دوائك في وقته',
       'search_label': 'ابحث عن دواء لإضافته للتابع...',
       'retry_label': 'إعادة المحاولة',
-      'medicine_name_hint': 'مثال: Eltroxin',
+      'medicine_name_hint': 'اكتب اسم الدواء يدويًا',
       'dosage_hint': '100mcg',
       'save_with_reminder': 'حفظ',
       'add_medication_for': 'إضافة دواء للتابع',

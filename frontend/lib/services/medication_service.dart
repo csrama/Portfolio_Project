@@ -25,7 +25,6 @@ class MedicationService {
     }).toList();
   }
 
-  //  جلب جميع الأدوية
   Future<List<MedicationSummary>> fetchMedications() async {
     final token = await _authService.getToken();
     
@@ -60,7 +59,6 @@ class MedicationService {
     }
   }
 
-  //  البحث عن دواء
   Future<List<MedicationSummary>> searchMedicines(String query) async {
     if (query.isEmpty) {
       return fetchMedications();
@@ -102,7 +100,6 @@ class MedicationService {
     }
   }
 
-  //  إنشاء دواء جديد
   Future<MedicationSummary> createMedication({
     required String name,
     required String dosage,
@@ -138,12 +135,11 @@ class MedicationService {
         isActive: payload['is_active'] != false,
       );
     } catch (e) {
-      print('❌ Add error: $e');
+      print('Add error: $e');
       throw Exception('Failed to add medication: $e');
     }
   }
 
-  //  التحقق من التفاعلات الدوائية
   Future<List<Map<String, dynamic>>> checkInteractions(
       List<String> medicationNames) async {
     if (medicationNames.length < 2) {
@@ -164,13 +160,11 @@ class MedicationService {
     return [];
   }
 
-  //  حذف دواء
   Future<void> deleteMedication(int id) async {
     final token = await _authService.getToken();
     await ApiService.delete('/medicines/$id', token: token ?? '');
   }
 
-  // تحديث دواء
   Future<MedicationSummary> updateMedication({
     required int id,
     String? name,

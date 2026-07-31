@@ -2592,13 +2592,13 @@ Code review is a required step before any Pull Request is merged. The team has e
 
 A feature is considered complete only when:
 
-| ✅ | Implementation is complete and matches the acceptance criteria |
-| :---- | :---- |
-| ✅ | All unit tests written and pass successfully via `flutter test` |
-| ✅ | Manual testing on Android/iOS emulator confirms correct UI behavior and app flow |
-| ✅ | Pull Request is reviewed and approved by at least one team member |
-| ✅ | No critical or high-severity bugs remain open against this feature |
-| ✅ | Documentation is updated if the change introduces new behavior |
+ Implementation is complete and matches the acceptance criteria 
+
+ All unit tests written and pass successfully via `flutter test` 
+ Manual testing on Android/iOS emulator confirms correct UI behavior and app flow 
+ Pull Request is reviewed and approved by at least one team member 
+ No critical or high-severity bugs remain open against this feature 
+ Documentation is updated if the change introduces new behavior 
 
 ---
 
@@ -2874,13 +2874,13 @@ Manual testing confirms that:
 
 A Pull Request is only approved and merged after all of the following conditions are satisfied:
 
-| ✅ | All unit tests pass successfully: the full `flutter test` suite runs without failures in the developer's local environment |
-| :---- | :---- |
-| ✅ | The code review is approved: at least one team member has reviewed the changes and granted explicit approval |
-| ✅ | Manual testing confirms feature correctness: the developer has verified the feature on an emulator and documented the testing outcome in the Pull Request description |
-| ✅ | The Pull Request is up-to-date with the latest `dev` branch (no merge conflicts) |
-| ✅ | CI pipeline passes on GitHub Actions (all checks are green) |
-| ✅ | The commit history is clean (no merge commits, proper commit messages) |
+ All unit tests pass successfully: the full `flutter test` suite runs without failures in the developer's local environment 
+
+The code review is approved: at least one team member has reviewed the changes and granted explicit approval 
+ Manual testing confirms feature correctness: the developer has verified the feature on an emulator and documented the testing outcome in the Pull Request description 
+ The Pull Request is up-to-date with the latest `dev` branch (no merge conflicts) 
+ CI pipeline passes on GitHub Actions (all checks are green) 
+ The commit history is clean (no merge commits, proper commit messages) 
 
 This merge policy ensures that only stable, reviewed, and manually verified code enters the shared codebase, maintaining the integrity of the `dev` branch and protecting the `main` branch from regression.
 
@@ -3111,10 +3111,10 @@ The CI pipeline will execute the following steps automatically on every Pull Req
           `COVERAGE=$(lcov --summary coverage/lcov.info | grep 'lines' | awk '{print $2}' | sed 's/%//')`  
           `echo "Coverage: $COVERAGE%"`  
           `if (( $(echo "$COVERAGE < 70" | bc -l) )); then`  
-            `echo "❌ Coverage $COVERAGE% is below 70% threshold"`  
+            `echo "Coverage $COVERAGE% is below 70% threshold"`  
             `exit 1`  
           `fi`  
-          `echo "✅ Coverage $COVERAGE% meets 70% threshold"`
+          `echo "Coverage $COVERAGE% meets 70% threshold"`
 
       `- name: Upload coverage report`  
         `uses: actions/upload-artifact@v4`  

@@ -27,16 +27,15 @@ class _DependentsScreenState extends State<DependentsScreen> {
     });
   }
 
-  void _showAddDependentSheet() {
+void _showAddDependentSheet() {
     final nameController = TextEditingController();
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
     final ageController = TextEditingController();
     String? selectedRelationship;
     bool isProcessing = false;
+    bool obscurePassword = true;
     String? resultMessage;
-    bool showInviteLink = false;
-    String? generatedLink;
-    bool linkCopied = false;
-    bool inviteMode = true;
 
     showModalBottomSheet(
       context: context,
@@ -67,137 +66,63 @@ class _DependentsScreenState extends State<DependentsScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0F0F0),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.all(4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setSheetState(() {
-                            inviteMode = true;
-                            resultMessage = null;
-                            showInviteLink = false;
-                            generatedLink = null;
-                          }),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            decoration: BoxDecoration(
-                              color: inviteMode
-                                  ? const Color(0xFF085041)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              Strings.tr(context, 'send_invite'),
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: inviteMode
-                                    ? Colors.white
-                                    : Colors.black54,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setSheetState(() {
-                            inviteMode = false;
-                            resultMessage = null;
-                            showInviteLink = false;
-                            generatedLink = null;
-                          }),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            decoration: BoxDecoration(
-                              color: !inviteMode
-                                  ? const Color(0xFF085041)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              Strings.tr(context, 'add_directly'),
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: !inviteMode
-                                    ? Colors.white
-                                    : Colors.black54,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: inviteMode
-                        ? const Color(0xFFD9F2E7)
-                        : const Color(0xFFFFF3CD),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        inviteMode
-                            ? Icons.mail_outline
-                            : Icons.person_add_alt_1,
-                        size: 18,
-                        color: inviteMode
-                            ? const Color(0xFF085041)
-                            : const Color(0xFF856404),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          inviteMode
-                              ? Strings.tr(context, 'will_send_invite')
-                              : Strings.tr(context, 'will_add_directly'),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: inviteMode
-                                ? const Color(0xFF085041)
-                                : const Color(0xFF856404),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                if (resultMessage == null && !showInviteLink) ...[
+                if (resultMessage == null) ...[
                   TextField(
                     controller: nameController,
                     decoration: InputDecoration(
                       labelText: Strings.tr(context, 'full_name'),
+                      prefixIcon: const Icon(Icons.person_outline),
                       border: const OutlineInputBorder(),
                     ),
                     textAlign: TextAlign.right,
                   ),
                   const SizedBox(height: 15),
+
+                  TextField(
+                    controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'البريد الإلكتروني',
+                      prefixIcon: Icon(Icons.email_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                  const SizedBox(height: 15),
+
+                  TextField(
+                    controller: passwordController,
+                    obscureText: obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: 'كلمة المرور',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () =>
+                            setSheetState(() => obscurePassword = !obscurePassword),
+                      ),
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                  const SizedBox(height: 15),
+
                   TextField(
                     controller: ageController,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       labelText: Strings.tr(context, 'age_optional'),
+                      prefixIcon: const Icon(Icons.cake_outlined),
                       border: const OutlineInputBorder(),
                     ),
                     textAlign: TextAlign.right,
                   ),
                   const SizedBox(height: 15),
+
                   DropdownButtonFormField<String>(
                     initialValue: selectedRelationship,
                     decoration: InputDecoration(
@@ -221,106 +146,95 @@ class _DependentsScreenState extends State<DependentsScreen> {
                     },
                   ),
                   const SizedBox(height: 20),
+
                   ElevatedButton(
                     onPressed: isProcessing
                         ? null
                         : () async {
                             try {
-                              if (nameController.text.isNotEmpty &&
-                                  selectedRelationship != null) {
-                                final auth = context.read<AuthProvider>();
-
-                                if (auth.accessToken == null) {
-                                  ScaffoldMessenger.of(
-                                    sheetContext,
-                                  ).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        Strings.tr(
-                                          context,
-                                          'please_login_first',
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                  return;
-                                }
-
-                                String? dateOfBirth;
-                                final age = int.tryParse(
-                                  ageController.text.trim(),
-                                );
-                                if (age != null && age > 0) {
-                                  final now = DateTime.now();
-                                  dateOfBirth = DateTime(
-                                    now.year - age,
-                                    now.month,
-                                    now.day,
-                                  ).toIso8601String();
-                                }
-
-                                setSheetState(() => isProcessing = true);
-
-                                Map<String, dynamic> response;
-                                if (inviteMode) {
-                                  response = await context
-                                      .read<DependentProvider>()
-                                      .addDependent(auth.accessToken!, {
-                                        'full_name': nameController.text,
-                                        'relationship': selectedRelationship,
-                                        if (dateOfBirth != null)
-                                          'date_of_birth': dateOfBirth,
-                                      });
-                                } else {
-                                  response = await context
-                                      .read<DependentProvider>()
-                                      .addDependentDirect(auth.accessToken!, {
-                                        'full_name': nameController.text,
-                                        'relationship': selectedRelationship,
-                                        if (dateOfBirth != null)
-                                          'date_of_birth': dateOfBirth,
-                                      });
-                                }
-
-                                if (response['success'] == true) {
-                                  if (inviteMode) {
-                                    final data =
-                                        response['data']
-                                            as Map<String, dynamic>? ??
-                                        {};
-                                    final inviteLink =
-                                        data['invite_link'] as String? ?? '';
-                                    setSheetState(() {
-                                      isProcessing = false;
-                                      generatedLink = inviteLink;
-                                      showInviteLink = true;
-                                      linkCopied = false;
-                                    });
-                                  } else {
-                                    setSheetState(() {
-                                      isProcessing = false;
-                                      resultMessage = Strings.tr(
-                                        context,
-                                        'dependent_added_success',
-                                      );
-                                    });
-                                  }
-                                } else {
-                                  setSheetState(() {
-                                    isProcessing = false;
-                                    resultMessage =
-                                        response['error'] ??
-                                        Strings.tr(context, 'operation_failed');
-                                  });
-                                }
-                              } else {
+                              if (nameController.text.trim().isEmpty ||
+                                  emailController.text.trim().isEmpty ||
+                                  passwordController.text.trim().isEmpty ||
+                                  selectedRelationship == null) {
                                 ScaffoldMessenger.of(sheetContext).showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      Strings.tr(context, 'missing_data'),
+                                      'يرجى تعبئة جميع الحقول المطلوبة',
                                     ),
                                   ),
                                 );
+                                return;
+                              }
+
+                              if (!emailController.text.contains('@')) {
+                                ScaffoldMessenger.of(sheetContext).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('بريد إلكتروني غير صحيح'),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              if (passwordController.text.length < 6) {
+                                ScaffoldMessenger.of(sheetContext).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'كلمة المرور 6 أحرف على الأقل',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              final auth = context.read<AuthProvider>();
+                              if (auth.accessToken == null) {
+                                ScaffoldMessenger.of(sheetContext).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      Strings.tr(context, 'please_login_first'),
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              String? dateOfBirth;
+                              final age = int.tryParse(
+                                ageController.text.trim(),
+                              );
+                              if (age != null && age > 0) {
+                                final now = DateTime.now();
+                                dateOfBirth = DateTime(
+                                  now.year - age,
+                                  now.month,
+                                  now.day,
+                                ).toIso8601String();
+                              }
+
+                              setSheetState(() => isProcessing = true);
+
+                              final response = await context
+                                  .read<DependentProvider>()
+                                  .addNewDependent(auth.accessToken!,
+                                    fullName: nameController.text.trim(),
+                                    email: emailController.text.trim(),
+                                    password: passwordController.text,
+                                    relationship: selectedRelationship!,
+                                    dateOfBirth: dateOfBirth,
+                                  );
+
+                              if (response['success'] == true) {
+                                setSheetState(() {
+                                  isProcessing = false;
+                                  resultMessage = 'تم إنشاء حساب التابع وربطه بنجاح';
+                                });
+                              } else {
+                                setSheetState(() {
+                                  isProcessing = false;
+                                  resultMessage =
+                                      response['error'] ??
+                                      'فشلت العملية';
+                                });
                               }
                             } catch (e) {
                               print("ADD DEPENDENT ERROR: $e");
@@ -348,103 +262,15 @@ class _DependentsScreenState extends State<DependentsScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : Text(
-                            inviteMode
-                                ? Strings.tr(context, 'generate_invite_link')
-                                : Strings.tr(context, 'add_dependent'),
-                            style: const TextStyle(
+                        : const Text(
+                            'إنشاء الحساب وإضافة التابع',
+                            style: TextStyle(
                               color: Colors.white,
                               fontSize: 16,
                             ),
                           ),
                   ),
-                ] else if (showInviteLink && generatedLink != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FFF4),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: linkCopied
-                            ? const Color(0xFF1D9E75)
-                            : const Color(0xFF085041),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              linkCopied ? Icons.check_circle : Icons.link,
-                              color: linkCopied
-                                  ? const Color(0xFF1D9E75)
-                                  : const Color(0xFF085041),
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              linkCopied
-                                  ? Strings.tr(context, 'link_copied')
-                                  : Strings.tr(context, 'invite_link_label'),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: linkCopied
-                                    ? const Color(0xFF1D9E75)
-                                    : const Color(0xFF085041),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        SelectableText(
-                          generatedLink!,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF085041),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              Clipboard.setData(
-                                ClipboardData(text: generatedLink!),
-                              );
-                              setSheetState(() => linkCopied = true);
-                              ScaffoldMessenger.of(sheetContext).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    Strings.tr(context, 'link_copied_message'),
-                                  ),
-                                  backgroundColor: const Color(0xFF085041),
-                                ),
-                              );
-                            },
-                            icon: Icon(
-                              linkCopied ? Icons.check : Icons.copy,
-                              size: 18,
-                            ),
-                            label: Text(
-                              linkCopied
-                                  ? Strings.tr(context, 'link_copied')
-                                  : Strings.tr(context, 'copy_link'),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF085041),
-                              side: const BorderSide(color: Color(0xFF085041)),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ] else if (resultMessage != null) ...[
+                ] else ...[
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
@@ -480,9 +306,7 @@ class _DependentsScreenState extends State<DependentsScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                ],
 
-                if (resultMessage != null || showInviteLink)
                   ElevatedButton(
                     onPressed: () {
                       final auth = context.read<AuthProvider>();
@@ -505,6 +329,7 @@ class _DependentsScreenState extends State<DependentsScreen> {
                       style: const TextStyle(color: Colors.white, fontSize: 16),
                     ),
                   ),
+                ],
                 const SizedBox(height: 20),
               ],
             );
@@ -685,25 +510,7 @@ class _DependentsScreenState extends State<DependentsScreen> {
         backgroundColor: const Color(0xFF085041),
         foregroundColor: Colors.white,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.mail_outline),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddDependentScreen()),
-              ).then((_) {
-                final auth = context.read<AuthProvider>();
-                if (auth.accessToken != null) {
-                  context.read<DependentProvider>().fetchDependents(
-                    auth.accessToken!,
-                  );
-                }
-              });
-            },
-            tooltip: Strings.tr(context, 'send_invite'),
-          ),
-        ],
+        actions: [],
       ),
       body: Consumer<DependentProvider>(
         builder: (context, provider, child) {
@@ -802,7 +609,19 @@ class _DependentsScreenState extends State<DependentsScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDependentSheet,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddDependentScreen()),
+          ).then((_) {
+            final auth = context.read<AuthProvider>();
+            if (auth.accessToken != null) {
+              context.read<DependentProvider>().fetchDependents(
+                auth.accessToken!,
+              );
+            }
+          });
+        },
         backgroundColor: const Color(0xFF085041),
         child: const Icon(Icons.add, color: Colors.white),
       ),

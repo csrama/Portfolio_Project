@@ -6,10 +6,7 @@ const router = new Hono();
 
 router.use('*', authMiddleware);
 
-// =====================================
-// Search medicines
-// GET /medicines/search?q=para
-// =====================================
+
 router.get('/search', async (c) => {
   try {
     const q = (c.req.query('q') || '').trim();

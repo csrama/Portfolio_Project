@@ -2673,13 +2673,13 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   final TextEditingController _searchController = TextEditingController();
 
   static const List<String> _allDays = [
-    'الاثنين',
+    'الأحد',
+    'الأثنين',
     'الثلاثاء',
     'الأربعاء',
     'الخميس',
     'الجمعة',
     'السبت',
-    'الأحد',
   ];
   final Set<String> _selectedDays = {};
 
@@ -3096,7 +3096,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                         controller: _nameController,
                         textAlign: TextAlign.right,
                         decoration: InputDecoration(
-                          hintText: 'مثال: Eltroxin',
+                          hintText: 'اكتب اسم الدواء يدويًا',
                           hintStyle: TextStyle(color: Colors.grey[400]),
                           filled: true,
                           fillColor: const Color(0xFFF6F6F6),

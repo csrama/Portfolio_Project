@@ -18,14 +18,14 @@ pool.on('error', (err) => {
 
 function normalizeUserType(userType) {
   if (!userType) {
-    return 'general_user';
+    return 'dependent';
   }
-  return userType === 'patient' ? 'general_user' : userType;
+  return userType;
 }
 
 function denormalizeUserType(userType) {
-  if (userType === 'general_user' || !userType) {
-    return 'patient';
+  if (!userType) {
+    return 'dependent';
   }
   return userType;
 }
@@ -310,11 +310,49 @@ const db = {
     return rows[0] || null;
   },
 
-  async deleteDependent(dependentId, caregiverId) {
+async deleteDependent(dependentId, caregiverId) {
     const { rows } = await queryWithFallback(
       'DELETE FROM dependents WHERE id = $1 AND caregiver_user_id = $2 RETURNING id',
       [dependentId, caregiverId]
     );
+    return rows[0] || null;
+  },
+
+  async deleteDependentCascade(dependentId, caregiverId) {
+    const depInfo = await queryWithFallback(
+      'SELECT dependent_user_id FROM dependents WHERE id = $1 AND caregiver_user_id = $2',
+      [dependentId, caregiverId]
+    );
+    const dependentUserId = depInfo.rows[0]?.dependent_user_id;
+
+    await queryWithFallback(
+      `DELETE FROM schedules
+       WHERE medication_id IN (
+         SELECT id FROM medications WHERE dependent_id = $1
+           OR (user_id = $2 AND dependent_id IS NULL)
+       )`,
+      [dependentId, dependentUserId]
+    );
+
+    await queryWithFallback(
+      `DELETE FROM dose_records
+       WHERE medication_id IN (
+         SELECT id FROM medications WHERE dependent_id = $1
+           OR (user_id = $2 AND dependent_id IS NULL)
+       )`,
+      [dependentId, dependentUserId]
+    );
+
+    await queryWithFallback(
+      'DELETE FROM medications WHERE dependent_id = $1 OR (user_id = $2 AND dependent_id IS NULL)',
+      [dependentId, dependentUserId]
+    );
+
+    const { rows } = await queryWithFallback(
+      'DELETE FROM dependents WHERE id = $1 AND caregiver_user_id = $2 RETURNING *',
+      [dependentId, caregiverId]
+    );
+
     return rows[0] || null;
   },
 

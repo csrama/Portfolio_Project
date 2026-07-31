@@ -35,9 +35,9 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 function normalizeUserType(userType) {
   if (!userType) {
-    return 'general_user';
+    return 'dependent';
   }
-  return userType === 'patient' ? 'general_user' : userType;
+  return userType;
 }
 
 
@@ -65,7 +65,6 @@ async function loginRateLimiter(c, next) {
 }
 
 
-// Simple refresh-token store (DB-backed only when DB is available; otherwise memory fallback)
 const refreshTokensStore = new Map(); // refreshToken -> { userId, revokedAt }
 
 function generateRefreshToken() {
@@ -135,7 +134,6 @@ router.post('/login', loginRateLimiter, async (c) => {
 
     loginAttempts.delete(c.get('loginAttemptKey'));
 
-    // Issue access+refresh tokens
     const { password_hash, ...safeUser } = user;
     const tokens = issueTokensForUser({ ...safeUser, id: user.id });
 

@@ -22,9 +22,7 @@ const medicationSchema = z.object({
 });
 
 
-// ===================================
-// GET MEDICATIONS
-// ===================================
+
 router.get('/', async (c) => {
 
   const user = c.get('user');
@@ -37,19 +35,15 @@ router.get('/', async (c) => {
 
 
 
-  // ===================================
-  // طلب أدوية تابع
-  // ===================================
+  
   if (dependentId) {
 
-
-    // تأكد أن المستخدم هو صاحب التابع
     const dependent = await pool.query(
       `
-      SELECT id
-      FROM dependents
-      WHERE id=$1
-      AND caregiver_user_id=$2
+      SELECT d.id, d.dependent_user_id
+      FROM dependents d
+      WHERE d.id=$1
+      AND d.caregiver_user_id=$2
       `,
       [
         Number(dependentId),
@@ -57,42 +51,35 @@ router.get('/', async (c) => {
       ]
     );
 
-
-
     if (dependent.rows.length === 0) {
-
       return c.json(
         {
           error: 'ليس لديك صلاحية لهذا التابع'
         },
         403
       );
-
     }
 
-
+    const dependentUserId = dependent.rows[0]?.dependent_user_id;
 
     result = await pool.query(
       `
       SELECT *
       FROM medications
       WHERE dependent_id=$1
+         OR (user_id=$2 AND dependent_id IS NULL)
       ORDER BY created_at DESC
       `,
       [
-        Number(dependentId)
+        Number(dependentId),
+        dependentUserId
       ]
     );
 
-
   }
 
-
-  // ===================================
-  // أدوية المستخدم الحالي فقط
-  // ===================================
+ 
   else {
-
 
     result = await pool.query(
       `
@@ -107,10 +94,7 @@ router.get('/', async (c) => {
       ]
     );
 
-
   }
-
-
 
   return c.json(result.rows);
 
@@ -122,9 +106,7 @@ router.get('/', async (c) => {
 
 
 
-// ===================================
-// ADD MEDICATION
-// ===================================
+
 router.post('/', async (c) => {
 
 
@@ -156,9 +138,7 @@ router.post('/', async (c) => {
 
 
 
-  // ===================================
-  // إذا الدواء للتابع
-  // ===================================
+  
   if (parsed.data.dependent_id) {
 
 
@@ -214,15 +194,12 @@ router.post('/', async (c) => {
 
 
 module.exports = router;
-// ===================================
-// DELETE MEDICATION
-// ===================================
+
 router.delete('/:id', async (c) => {
   try {
     const user = c.get('user');
     const id = c.req.param('id');
 
-    // 1. تحقق من وجود الدواء وصلاحية المستخدم
     const checkResult = await pool.query(
       `
       SELECT id, user_id, dependent_id
@@ -238,14 +215,9 @@ router.delete('/:id', async (c) => {
 
     const medication = checkResult.rows[0];
 
-    // 2. التحقق من الصلاحية
-    // إذا كان الدواء للمستخدم الحالي
     if (medication.user_id === user.id) {
-      // مسموح
     }
-    // إذا كان الدواء لتابع
     else if (medication.dependent_id) {
-      // تحقق أن المستخدم هو مالك التابع
       const dependentCheck = await pool.query(
         `
         SELECT id
@@ -263,7 +235,24 @@ router.delete('/:id', async (c) => {
         );
       }
     }
-    // ليس للمستخدم ولا لتابع
+    else if (!medication.dependent_id) {
+      const caregiverCheck = await pool.query(
+        `
+        SELECT id
+        FROM dependents
+        WHERE dependent_user_id = $1
+        AND caregiver_user_id = $2
+        `,
+        [medication.user_id, user.id]
+      );
+
+      if (caregiverCheck.rows.length === 0) {
+        return c.json(
+          { error: 'ليس لديك صلاحية لحذف هذا الدواء' },
+          403
+        );
+      }
+    }
     else {
       return c.json(
         { error: 'ليس لديك صلاحية لحذف هذا الدواء' },
@@ -271,7 +260,6 @@ router.delete('/:id', async (c) => {
       );
     }
 
-    // 3. حذف الـ Schedules المرتبطة بالدواء أولاً
     await pool.query(
       `
       DELETE FROM schedules
@@ -280,7 +268,6 @@ router.delete('/:id', async (c) => {
       [id]
     );
 
-    // 4. حذف الدواء
     await pool.query(
       `
       DELETE FROM medications
@@ -301,19 +288,16 @@ router.delete('/:id', async (c) => {
     );
   }
 });
-// ===================================
-// UPDATE MEDICATION (PUT)
-// ===================================
+
 router.put('/:id', async (c) => {
   try {
     const user = c.get('user');
     const id = c.req.param('id');
     const body = await c.req.json().catch(() => ({}));
 
-    console.log(`🔍 Updating medication ID: ${id} for user: ${user.id}`);
-    console.log(`📦 Update data:`, body);
+    console.log(`Updating medication ID: ${id} for user: ${user.id}`);
+    console.log(`Update data:`, body);
 
-    // 1. تحقق من وجود الدواء وصلاحية المستخدم
     const checkResult = await pool.query(
       `
       SELECT id, user_id, dependent_id
@@ -324,15 +308,14 @@ router.put('/:id', async (c) => {
     );
 
     if (checkResult.rows.length === 0) {
-      console.log(`❌ Medication ${id} not found`);
+      console.log(`Medication ${id} not found`);
       return c.json({ error: 'الدواء غير موجود' }, 404);
     }
 
     const medication = checkResult.rows[0];
 
-    // 2. التحقق من الصلاحية
     if (medication.user_id === user.id) {
-      console.log(`✅ User owns this medication`);
+      console.log(`User owns this medication`);
     } else if (medication.dependent_id) {
       const dependentCheck = await pool.query(
         `
@@ -345,22 +328,21 @@ router.put('/:id', async (c) => {
       );
 
       if (dependentCheck.rows.length === 0) {
-        console.log(`❌ User does not own dependent: ${medication.dependent_id}`);
+        console.log(`User does not own dependent: ${medication.dependent_id}`);
         return c.json(
           { error: 'ليس لديك صلاحية لتعديل هذا الدواء' },
           403
         );
       }
-      console.log(`✅ User owns the dependent`);
+      console.log(`User owns the dependent`);
     } else {
-      console.log(`❌ User has no permission`);
+      console.log(`User has no permission`);
       return c.json(
         { error: 'ليس لديك صلاحية لتعديل هذا الدواء' },
         403
       );
     }
 
-    // 3. بناء كائن التحديث (فقط الحقول المرسلة)
     const updates = {};
     const allowedFields = [
       'name', 'dosage', 'form', 'instructions', 
@@ -378,7 +360,6 @@ router.put('/:id', async (c) => {
       return c.json({ error: 'لا توجد بيانات للتحديث' }, 400);
     }
 
-    // 4. تنفيذ التحديث
     const setClause = Object.keys(updates)
       .map((key, index) => `${key} = $${index + 1}`)
       .join(', ');
@@ -399,11 +380,11 @@ router.put('/:id', async (c) => {
       return c.json({ error: 'فشل تحديث الدواء' }, 500);
     }
 
-    console.log(`✅ Medication ${id} updated successfully`);
+    console.log(`Medication ${id} updated successfully`);
     return c.json(result.rows[0]);
 
   } catch (error) {
-    console.error('❌ Error updating medication:', error);
+    console.error('Error updating medication:', error);
     return c.json(
       { error: 'حدث خطأ أثناء تحديث الدواء' },
       500
@@ -411,19 +392,16 @@ router.put('/:id', async (c) => {
   }
 });
 
-// ===================================
-// PATCH MEDICATION (تحديث جزئي)
-// ===================================
+
 router.patch('/:id', async (c) => {
   try {
     const user = c.get('user');
     const id = c.req.param('id');
     const body = await c.req.json().catch(() => ({}));
 
-    console.log(`🔍 Patching medication ID: ${id} for user: ${user.id}`);
-    console.log(`📦 Patch data:`, body);
+    console.log(`Patching medication ID: ${id} for user: ${user.id}`);
+    console.log(`Patch data:`, body);
 
-    // 1. تحقق من وجود الدواء وصلاحية المستخدم
     const checkResult = await pool.query(
       `
       SELECT id, user_id, dependent_id
@@ -434,15 +412,14 @@ router.patch('/:id', async (c) => {
     );
 
     if (checkResult.rows.length === 0) {
-      console.log(`❌ Medication ${id} not found`);
+      console.log(`Medication ${id} not found`);
       return c.json({ error: 'الدواء غير موجود' }, 404);
     }
 
     const medication = checkResult.rows[0];
 
-    // 2. التحقق من الصلاحية
     if (medication.user_id === user.id) {
-      console.log(`✅ User owns this medication`);
+      console.log(`User owns this medication`);
     } else if (medication.dependent_id) {
       const dependentCheck = await pool.query(
         `
@@ -455,22 +432,21 @@ router.patch('/:id', async (c) => {
       );
 
       if (dependentCheck.rows.length === 0) {
-        console.log(`❌ User does not own dependent: ${medication.dependent_id}`);
+        console.log(`User does not own dependent: ${medication.dependent_id}`);
         return c.json(
           { error: 'ليس لديك صلاحية لتعديل هذا الدواء' },
           403
         );
       }
-      console.log(`✅ User owns the dependent`);
+      console.log(`User owns the dependent`);
     } else {
-      console.log(`❌ User has no permission`);
+      console.log(`User has no permission`);
       return c.json(
         { error: 'ليس لديك صلاحية لتعديل هذا الدواء' },
         403
       );
     }
 
-    // 3. بناء كائن التحديث (فقط الحقول المرسلة)
     const updates = {};
     const allowedFields = [
       'name', 'dosage', 'form', 'instructions', 
@@ -488,7 +464,6 @@ router.patch('/:id', async (c) => {
       return c.json({ error: 'لا توجد بيانات للتحديث' }, 400);
     }
 
-    // 4. تنفيذ التحديث
     const setClause = Object.keys(updates)
       .map((key, index) => `${key} = $${index + 1}`)
       .join(', ');
@@ -509,11 +484,11 @@ router.patch('/:id', async (c) => {
       return c.json({ error: 'فشل تحديث الدواء' }, 500);
     }
 
-    console.log(`✅ Medication ${id} patched successfully`);
+    console.log(`Medication ${id} patched successfully`);
     return c.json(result.rows[0]);
 
   } catch (error) {
-    console.error('❌ Error patching medication:', error);
+    console.error('Error patching medication:', error);
     return c.json(
       { error: 'حدث خطأ أثناء تحديث الدواء' },
       500

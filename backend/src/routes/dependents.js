@@ -62,11 +62,11 @@ router.get('/:id', async (c) => {
   }
 });
 
-router.post('/create-with-account', caregiverCheck, async (c) => {
+router.post('/create-with-account', async (c) => {
   try {
     const user = c.get('user');
     const body = await c.req.json().catch(() => ({}));
-    const { full_name, email, password, relationship } = body;
+    const { full_name, email, password, relationship, date_of_birth } = body;
 
     if (!full_name || !email || !password || !relationship) {
       return c.json({ error: 'جميع الحقول مطلوبة' }, 400);
@@ -80,7 +80,7 @@ router.post('/create-with-account', caregiverCheck, async (c) => {
 
     const existing = await pool.findUserByEmail(email.toLowerCase());
     if (existing) {
-      return c.json({ error: 'هذا البريد الإلكتروني مستخدم مسبقاً، استخدم خيار "ربط تابع لديه حساب"' }, 409);
+      return c.json({ error: 'هذا البريد الإلكتروني مستخدم مسبقاً' }, 409);
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -88,17 +88,25 @@ router.post('/create-with-account', caregiverCheck, async (c) => {
       email: email.toLowerCase(),
       password_hash: passwordHash,
       full_name: full_name.trim(),
-      user_type: 'patient',
+      user_type: 'dependent',
       is_active: true,
       is_onboarding_complete: false,
     });
 
+    let dob = null;
+    if (date_of_birth) {
+      const parsed = new Date(date_of_birth);
+      if (!isNaN(parsed.getTime())) {
+        dob = parsed.toISOString();
+      }
+    }
+
     const result = await pool.query(
       `INSERT INTO dependents
-        (caregiver_user_id, dependent_user_id, full_name, relationship, invitation_status, accepted_at)
-       VALUES ($1, $2, $3, $4, 'accepted', NOW())
+        (caregiver_user_id, dependent_user_id, full_name, relationship, date_of_birth, invitation_status, accepted_at)
+       VALUES ($1, $2, $3, $4, $5, 'accepted', NOW())
        RETURNING *`,
-      [user.id, newDepUser.id, full_name.trim(), relationship]
+      [user.id, newDepUser.id, full_name.trim(), relationship, dob]
     );
 
     return c.json({
@@ -250,7 +258,7 @@ router.put('/:id', caregiverCheck, async (c) => {
   }
 });
 
-router.delete('/:id', caregiverCheck, async (c) => {
+router.delete('/:id', async (c) => {
   try {
     const id = parseInt(c.req.param('id'));
     const user = c.get('user');
@@ -260,14 +268,19 @@ router.delete('/:id', caregiverCheck, async (c) => {
     const dependent = await pool.getDependentWithUser(id, user.id);
     if (!dependent) return c.json({ error: 'التابع غير موجود' }, 404);
 
-    const dependentUserId = dependent.dependent_user_id;
-    await pool.deleteDependent(id, user.id);
-    await pool.deleteUser(dependentUserId);
+    const deleted = await pool.deleteDependentCascade(id, user.id);
+    if (!deleted) {
+      return c.json({ error: 'فشل حذف التابع' }, 500);
+    }
 
-    return c.json({ success: true, message: 'تم حذف التابع بنجاح' });
+    if (dependent.dependent_user_id) {
+      await pool.deleteUser(dependent.dependent_user_id);
+    }
+
+    return c.json({ success: true, message: 'تم حذف التابع وجميع البيانات المرتبطة به بنجاح' });
   } catch (error) {
     console.error('Error deleting dependent:', error);
-    return c.json({ error: 'فشل حذف التابع' }, 500);
+    return c.json({ error: 'فشل حذف التابع: ' + error.message }, 500);
   }
 });
 
@@ -305,9 +318,13 @@ router.get('/:id/medications', async (c) => {
     const dependent = await pool.getDependentWithUser(dependentId, user.id);
     if (!dependent) return c.json({ error: 'التابع غير موجود' }, 404);
 
+    
     const result = await pool.query(
-      `SELECT * FROM medications WHERE dependent_id = $1 ORDER BY created_at DESC`,
-      [dependentId]
+      `SELECT * FROM medications 
+       WHERE dependent_id = $1 
+          OR (user_id = $2 AND dependent_id IS NULL)
+       ORDER BY created_at DESC`,
+      [dependentId, dependent.dependent_user_id]
     );
 
     return c.json({ success: true, data: result.rows || [] });

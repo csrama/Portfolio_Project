@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 class NotificationService {
   static String _isArabic = 'ar';
 
-  /// Call this to update the language preference before scheduling
   static void setLanguage(String languageCode) {
     _isArabic = languageCode;
   }

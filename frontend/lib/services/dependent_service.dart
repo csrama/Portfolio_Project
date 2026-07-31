@@ -38,22 +38,23 @@ class DependentService {
     );
     return response;
   }
-
   Future<Map<String, dynamic>> addNewDependent(
     String token, {
     required String fullName,
     required String email,
     required String password,
     required String relationship,
+    String? dateOfBirth,
   }) async {
     return ApiService.postJson(
-      '/dependents/new',
+      '/dependents/create-with-account',
       token: token,
       body: {
         'full_name': fullName,
         'email': email,
         'password': password,
         'relationship': relationship,
+        if (dateOfBirth != null) 'date_of_birth': dateOfBirth,
       },
     );
   }

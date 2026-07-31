@@ -68,7 +68,6 @@ class _InviteScreenState extends State<InviteScreen> {
       final token = authProvider.accessToken;
 
       if (token == null) {
-        // User is not logged in, redirect to login
         if (!mounted) return;
         final loggedIn = await Navigator.push<bool>(
           context,
@@ -78,7 +77,6 @@ class _InviteScreenState extends State<InviteScreen> {
         );
 
         if (loggedIn == true && mounted) {
-          // Retry accept after login
           await _acceptInvite();
         } else {
           setState(() => _isProcessing = false);
@@ -296,7 +294,6 @@ class _InviteScreenState extends State<InviteScreen> {
       );
     }
 
-    // Show invite details
     final dependentName = _inviteInfo?['dependent_name'] ?? '';
     final relationship = _inviteInfo?['relationship'] ?? '';
     final caregiverName = _inviteInfo?['caregiver_name'] ?? '';
@@ -329,7 +326,6 @@ class _InviteScreenState extends State<InviteScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Icon
           Container(
             width: 80,
             height: 80,
@@ -451,7 +447,6 @@ class _InviteScreenState extends State<InviteScreen> {
               ],
             ),
           ] else ...[
-            // Login prompt for non-logged-in user
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -463,7 +458,6 @@ class _InviteScreenState extends State<InviteScreen> {
                     ),
                   );
                   if (loggedIn == true && mounted) {
-                    // User logged in, show the accept UI again
                     setState(() {});
                   }
                 },
