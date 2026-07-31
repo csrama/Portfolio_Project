@@ -85,8 +85,12 @@ router.get('/', async (c) => {
       `
       SELECT *
       FROM medications
-      WHERE user_id=$1
-      AND dependent_id IS NULL
+      WHERE (user_id=$1 AND dependent_id IS NULL)
+         OR dependent_id IN (
+           SELECT id FROM dependents
+           WHERE dependent_user_id=$1
+             AND invitation_status='accepted'
+         )
       ORDER BY created_at DESC
       `,
       [
@@ -223,7 +227,7 @@ router.delete('/:id', async (c) => {
         SELECT id
         FROM dependents
         WHERE id = $1
-        AND caregiver_user_id = $2
+        AND (caregiver_user_id = $2 OR dependent_user_id = $2)
         `,
         [medication.dependent_id, user.id]
       );
@@ -322,7 +326,7 @@ router.put('/:id', async (c) => {
         SELECT id
         FROM dependents
         WHERE id = $1
-        AND caregiver_user_id = $2
+        AND (caregiver_user_id = $2 OR dependent_user_id = $2)
         `,
         [medication.dependent_id, user.id]
       );
@@ -426,7 +430,7 @@ router.patch('/:id', async (c) => {
         SELECT id
         FROM dependents
         WHERE id = $1
-        AND caregiver_user_id = $2
+        AND (caregiver_user_id = $2 OR dependent_user_id = $2)
         `,
         [medication.dependent_id, user.id]
       );
