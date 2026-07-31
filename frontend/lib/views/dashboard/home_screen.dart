@@ -585,10 +585,11 @@ class _HomeScreenState extends State<HomeScreen> {
               isActive: m['is_active'] ?? true,
             );
           }).toList(),
-        );
+);
       });
 
       await _loadDoseRecords();
+      await _autoCreatePendingForMissedDoses();
       await _checkAllInteractions();
     } catch (e) {
       debugPrint("LOAD MEDICATION ERROR = $e");
@@ -2098,103 +2099,114 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDoseActionRow(
+Future<void> _autoCreatePendingForMissedDoses() async {
+  final authProvider = context.read<AuthProvider>();
+  final token = authProvider.accessToken;
+  if (token == null) return;
+
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final todayMeds = _medicationsForDate(today);
+
+  for (final medication in todayMeds) {
+    for (int doseIndex = 0; doseIndex < medication.dosesPerDay; doseIndex++) {
+      final doseTime = _doseDateTime(medication, today, doseIndex);
+      if (!doseTime.isBefore(now)) continue;
+
+      final key = _medicationDoseKey(medication, today, doseIndex);
+      if (_isTaken(medication, today, doseIndex)) continue;
+      if (_doseRecordIds.containsKey(key)) continue;
+
+      final medId = int.tryParse(medication.id);
+      if (medId == null) continue;
+
+      try {
+        final created = await ApiService.postJson(
+          '/dose-logs',
+          body: {
+            'medication_id': medId,
+            'scheduled_time': doseTime.toIso8601String(),
+            'status': 'PENDING',
+            'dose_taken': false,
+          },
+          token: token,
+        );
+        final newId = created['id'];
+        if (newId != null) {
+          setState(() {
+            _doseRecordIds[key] = newId is int
+                ? newId
+                : int.tryParse(newId.toString()) ?? -1;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error auto-creating pending dose: $e');
+      }
+    }
+  }
+}
+
+Widget _buildDoseActionRow(
     MedicationItem medication,
     DateTime date,
     int doseIndex,
     bool enabled,
   ) {
     final taken = _isTaken(medication, date, doseIndex);
-    final notTaken = _isNotTaken(medication, date, doseIndex);
     final label = _doseTimeLabel(medication, doseIndex);
+    final now = DateTime.now();
+    final doseTime = _doseDateTime(medication, date, doseIndex);
+    final isPast = doseTime.isBefore(now);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Expanded(
+            flex: 2,
             child: Text(
               label,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsetsDirectional.only(end: 4),
-              child: ElevatedButton(
-                onPressed: enabled
-                    ? () => _updateDoseStatus(medication, date, doseIndex, true)
-                    : null,
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.resolveWith((states) {
-                    if (taken) {
-                      return const Color(0xFF1D9E75);
-                    }
-                    return const Color(0xFFE1F5EE).withValues(
-                      alpha: states.contains(WidgetState.disabled) ? 0.4 : 1.0,
-                    );
-                  }),
-                  foregroundColor: WidgetStateProperty.resolveWith((states) {
-                    if (taken) {
-                      return Colors.white;
-                    }
-                    return const Color(0xFF1D9E75).withValues(
-                      alpha: states.contains(WidgetState.disabled) ? 0.4 : 1.0,
-                    );
-                  }),
-                  side: WidgetStateProperty.resolveWith((states) {
-                    final color = const Color(0xFF1D9E75);
-                    return BorderSide(
-                      color: states.contains(WidgetState.disabled)
-                          ? color.withValues(alpha: 0.4)
-                          : color,
-                      width: 1.5,
-                    );
-                  }),
-                  minimumSize: WidgetStateProperty.all(
-                    const Size.fromHeight(30),
-                  ),
-                  padding: WidgetStateProperty.all(
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  ),
-                  shape: WidgetStateProperty.all(
-                    RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                ),
-                child: const Text(
-                  'مأخوذة',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                ),
+              style: TextStyle(
+                color: taken ? Colors.white70 : Colors.white,
+                fontSize: 14,
+                decoration: taken ? TextDecoration.lineThrough : null,
               ),
             ),
           ),
+          const SizedBox(width: 12),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsetsDirectional.only(start: 4),
-              child: ElevatedButton(
-                onPressed: enabled
-                    ? () =>
-                          _updateDoseStatus(medication, date, doseIndex, false)
+            flex: 3,
+            child: SizedBox(
+              height: 40,
+              child: ElevatedButton.icon(
+                onPressed: enabled && !taken
+                    ? () => _updateDoseStatus(medication, date, doseIndex, true)
                     : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: notTaken
-                      ? const Color(0xFFB85C5C)
-                      : Colors.white,
-                  foregroundColor: notTaken ? Colors.white : _Colors.darkGreen,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                icon: Icon(
+                  taken ? Icons.check_circle : Icons.check_circle_outline,
+                  size: 18,
+                ),
+                label: Text(
+                  taken ? 'تم ✓' : 'تم اخذ الدواء',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                child: Text(
-                  'لم تُؤخذ',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: notTaken ? Colors.white : _Colors.darkGreen,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: taken
+                      ? const Color(0xFF1D9E75)
+                      : Colors.white,
+                  foregroundColor: taken ? Colors.white : const Color(0xFF1D9E75),
+                  disabledBackgroundColor: const Color(0xFF1D9E75),
+                  disabledForegroundColor: Colors.white,
+                  side: taken
+                      ? null
+                      : const BorderSide(color: Color(0xFF1D9E75), width: 1.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
                   ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
               ),
             ),
@@ -2205,6 +2217,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildRemindersTab() {
+    // Auto-create PENDING records for past doses to ensure adherence tracking
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoCreatePendingForMissedDoses();
+    });
+
     final selectedMeds = _medicationsForDate(_selectedDate);
     final isToday =
         _selectedDate.year == DateTime.now().year &&
