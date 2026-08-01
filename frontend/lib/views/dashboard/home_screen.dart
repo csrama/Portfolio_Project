@@ -69,11 +69,40 @@ const Map<String, String> _dayValueToKey = {
 class _Colors {
   static const Color primaryGreen = Color(0xFF1D9E75);
   static const Color darkGreen = Color(0xFF085041);
-  static const Color lightGreenBg = Color(0xFFD9F2E7);
   static const Color mutedGreen = Color(0xFF7FBF9E);
-  static const Color textPrimary = Colors.black;
-  static const Color textSecondary = Colors.black54;
-  static const Color borderGrey = Color(0xFFE0E0E0);
+
+  static bool _isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+
+  static Color textPrimary(BuildContext context) =>
+      _isDark(context) ? Colors.white : Colors.black;
+
+  static Color textSecondary(BuildContext context) =>
+      _isDark(context) ? Colors.white70 : Colors.black54;
+
+  static Color borderGrey(BuildContext context) =>
+      _isDark(context) ? const Color(0xFF3A3A3A) : const Color(0xFFE0E0E0);
+
+  static Color surface(BuildContext context) =>
+      _isDark(context) ? const Color(0xFF1E1E1E) : Colors.white;
+
+  static Color surfaceMuted(BuildContext context) =>
+      _isDark(context) ? const Color(0xFF2A2A2A) : const Color(0xFFF6F6F6);
+
+  static Color lightGreenBg(BuildContext context) =>
+      _isDark(context) ? const Color(0xFF1A3A2E) : const Color(0xFFD9F2E7);
+
+  static Color softGreenBg(BuildContext context) =>
+      _isDark(context) ? const Color(0xFF14332A) : const Color(0xFFE1F5EE);
+
+  static Color softRedBg(BuildContext context) =>
+      _isDark(context) ? const Color(0xFF3A201D) : const Color(0xFFFFF3F0);
+
+  static Color infoBg(BuildContext context) =>
+      _isDark(context) ? const Color(0xFF3A3318) : const Color(0xFFFFF8E1);
+
+  static Color darkGreenText(BuildContext context) =>
+      _isDark(context) ? const Color(0xFF5FC9A5) : const Color(0xFF085041);
 }
 
 class HomeScreen extends StatefulWidget {
@@ -411,7 +440,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showAdherenceSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: _Colors.surface(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -480,7 +509,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       Strings.tr(context, 'adherence_rate_percent'),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: _Colors.textSecondary),
+                      style: TextStyle(color: _Colors.textSecondary(context)),
                     ),
                     const SizedBox(height: 20),
                     Row(
@@ -497,8 +526,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             Text(
                               Strings.tr(context, 'doses_taken'),
-                              style: const TextStyle(
-                                color: _Colors.textSecondary,
+                              style: TextStyle(
+                                color: _Colors.textSecondary(context),
                               ),
                             ),
                           ],
@@ -514,8 +543,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             Text(
                               Strings.tr(context, 'total_doses'),
-                              style: const TextStyle(
-                                color: _Colors.textSecondary,
+                              style: TextStyle(
+                                color: _Colors.textSecondary(context),
                               ),
                             ),
                           ],
@@ -783,7 +812,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF3F0),
+        color: _Colors.softRedBg(context),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: _severityColor(highestSeverity).withValues(alpha: 0.35),
@@ -861,10 +890,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                           ),
-                          const Icon(
+                          Icon(
                             Icons.chevron_left_rounded,
                             size: 16,
-                            color: Colors.black45,
+                            color: _Colors.textSecondary(context),
                           ),
                         ],
                       ),
@@ -1489,8 +1518,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ? FontWeight.bold
                                   : FontWeight.normal,
                               color: selectedDep != null
-                                  ? const Color.fromARGB(255, 8, 78, 3)
-                                  : _Colors.textSecondary,
+                                  ? _Colors.darkGreenText(context)
+                                  : _Colors.textSecondary(context),
                             ),
                           ),
                           if (selectedDep == null && hasName) ...[
@@ -1498,10 +1527,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             Text(
                               widget.userName!,
                               textAlign: TextAlign.right,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: _Colors.textPrimary,
+                                color: _Colors.textPrimary(context),
                               ),
                             ),
                           ],
@@ -1576,10 +1605,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: selected ? _Colors.darkGreen : Colors.white,
+                    color: selected
+                        ? _Colors.darkGreen
+                        : _Colors.surface(context),
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                      color: selected ? _Colors.darkGreen : _Colors.borderGrey,
+                      color: selected
+                          ? _Colors.darkGreen
+                          : _Colors.borderGrey(context),
                     ),
                   ),
                   child: Column(
@@ -1590,7 +1623,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
-                          color: selected ? Colors.white : _Colors.textPrimary,
+                          color: selected
+                              ? Colors.white
+                              : _Colors.textPrimary(context),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -1602,7 +1637,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontSize: 12,
                           color: selected
                               ? Colors.white
-                              : _Colors.textSecondary,
+                              : _Colors.textSecondary(context),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -1649,8 +1684,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () => _openAddMedicationSheet(),
                     child: Text(
                       Strings.tr(context, 'add_medication'),
-                      style: const TextStyle(
-                        color: _Colors.darkGreen,
+                      style: TextStyle(
+                        color: _Colors.darkGreenText(context),
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
@@ -1662,8 +1697,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     child: Text(
                       Strings.tr(context, 'view_all'),
-                      style: const TextStyle(
-                        color: _Colors.darkGreen,
+                      style: TextStyle(
+                        color: _Colors.darkGreenText(context),
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
@@ -1675,12 +1710,12 @@ class _HomeScreenState extends State<HomeScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: Text(
-                  Strings.tr(context, 'added_medications'),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: _Colors.textPrimary,
-                  ),
+                      Strings.tr(context, 'added_medications'),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: _Colors.textPrimary(context),
+                      ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -1688,7 +1723,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE1F5EE),
+                    color: _Colors.softGreenBg(context),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -1702,8 +1737,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(width: 8),
                       Text(
                         Strings.tr(context, 'no_medications_today'),
-                        style: const TextStyle(
-                          color: Color(0xFF085041),
+                        style: TextStyle(
+                          color: _Colors.darkGreenText(context),
                           fontSize: 14,
                         ),
                       ),
@@ -1753,8 +1788,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     child: Text(
                       Strings.tr(context, 'add_dependents'),
-                      style: const TextStyle(
-                        color: _Colors.darkGreen,
+                      style: TextStyle(
+                        color: _Colors.darkGreenText(context),
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
@@ -1772,8 +1807,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     child: Text(
                       Strings.tr(context, 'view_all'),
-                      style: const TextStyle(
-                        color: _Colors.darkGreen,
+                      style: TextStyle(
+                        color: _Colors.darkGreenText(context),
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
@@ -1785,12 +1820,12 @@ class _HomeScreenState extends State<HomeScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: Text(
-                  Strings.tr(context, 'dependents_added'),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: _Colors.textPrimary,
-                  ),
+                      Strings.tr(context, 'dependents_added'),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: _Colors.textPrimary(context),
+                      ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -1798,22 +1833,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF6F6F6),
+                    color: _Colors.surfaceMuted(context),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.people_outline,
-                        color: _Colors.textSecondary,
+                        color: _Colors.textSecondary(context),
                         size: 20,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         Strings.tr(context, 'no_dependents_added_yet'),
-                        style: const TextStyle(
-                          color: _Colors.textSecondary,
+                        style: TextStyle(
+                          color: _Colors.textSecondary(context),
                           fontSize: 14,
                         ),
                       ),
@@ -1835,18 +1870,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: _Colors.surface(context),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: const Color(0xFF085041),
+                      color: _Colors.darkGreenText(context),
                       width: 1.5,
                     ),
                   ),
                   child: Text(
                     Strings.tr(context, 'add_dependent_button'),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xFF085041),
+                    style: TextStyle(
+                      color: _Colors.darkGreenText(context),
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1883,9 +1918,9 @@ class _HomeScreenState extends State<HomeScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF6F6F6),
+          color: _Colors.surfaceMuted(context),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE0E0E0)),
+          border: Border.all(color: _Colors.borderGrey(context)),
         ),
         child: Row(
           children: [
@@ -1908,17 +1943,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(
                     dependent.fullName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: _Colors.textPrimary,
+                      color: _Colors.textPrimary(context),
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     _relationshipDisplay(context, dependent.relationship),
-                    style: const TextStyle(
-                      color: _Colors.textSecondary,
+                    style: TextStyle(
+                      color: _Colors.textSecondary(context),
                       fontSize: 13,
                     ),
                   ),
@@ -1926,8 +1961,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             PopupMenuButton<String>(
-              color: Colors.white,
-              icon: const Icon(Icons.more_vert, color: _Colors.textSecondary),
+              color: _Colors.surface(context),
+              icon: Icon(Icons.more_vert, color: _Colors.textSecondary(context)),
               onSelected: (value) {
                 if (value == 'edit') {
                   _showEditDependentDialog(dependent);
@@ -2135,18 +2170,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: _Colors.lightGreenBg,
+                  color: _Colors.lightGreenBg(context),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   Strings.tr(context, 'active'),
-                  style: const TextStyle(color: _Colors.darkGreen),
+                  style: TextStyle(color: _Colors.darkGreenText(context)),
                 ),
               ),
               const Spacer(),
               Text(
                 Strings.tr(context, 'saved_medications'),
-                style: const TextStyle(color: _Colors.textPrimary),
+                style: TextStyle(color: _Colors.textPrimary(context)),
               ),
             ],
           ),
@@ -2156,7 +2191,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ? Center(
                   child: Text(
                     Strings.tr(context, 'no_medications_yet'),
-                    style: const TextStyle(color: _Colors.textSecondary),
+                    style: TextStyle(color: _Colors.textSecondary(context)),
                   ),
                 )
               : ListView.builder(
@@ -2317,8 +2352,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Text(
                       Strings.tr(context, 'no_scheduled_medications_dot'),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: _Colors.textSecondary,
+                      style: TextStyle(
+                        color: _Colors.textSecondary(context),
                         fontSize: 16,
                       ),
                     ),
@@ -2398,7 +2433,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Directionality(
       textDirection: textDirection,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: _Colors.surface(context),
         body: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2937,9 +2972,13 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
               duration: const Duration(milliseconds: 150),
               padding: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                color: selected ? _Colors.darkGreen : Colors.white,
+                color: selected
+                    ? _Colors.darkGreen
+                    : _Colors.surface(context),
                 border: Border.all(
-                  color: selected ? _Colors.darkGreen : _Colors.borderGrey,
+                  color: selected
+                      ? _Colors.darkGreen
+                      : _Colors.borderGrey(context),
                   width: selected ? 1.5 : 1,
                 ),
                 borderRadius: BorderRadius.circular(12),
@@ -2959,7 +2998,9 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12.5,
-                    color: selected ? Colors.white : _Colors.textPrimary,
+                    color: selected
+                        ? Colors.white
+                        : _Colors.textPrimary(context),
                     fontWeight: selected ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
@@ -2997,7 +3038,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: _Colors.lightGreenBg,
+                color: _Colors.lightGreenBg(context),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -3029,9 +3070,11 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
         builder: (context, scrollController) {
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            decoration: BoxDecoration(
+              color: _Colors.surface(context),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
             ),
             child: ListView(
               controller: scrollController,
@@ -3042,7 +3085,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: _Colors.borderGrey,
+                      color: _Colors.borderGrey(context),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -3050,10 +3093,10 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                 Text(
                   Strings.tr(context, 'schedule_medication'),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: _Colors.textPrimary,
+                    color: _Colors.textPrimary(context),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -3061,9 +3104,9 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   alignment: Alignment.centerRight,
                   child: Text(
                     Strings.tr(context, 'select_type_label'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: _Colors.textSecondary,
+                      color: _Colors.textSecondary(context),
                     ),
                   ),
                 ),
@@ -3087,11 +3130,13 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                                 child: Container(
                                   height: 80,
                                   decoration: BoxDecoration(
-                                    color: selected ? _Colors.darkGreen : Colors.white,
+                                    color: selected
+                                        ? _Colors.darkGreen
+                                        : _Colors.surface(context),
                                     border: Border.all(
                                       color: selected
                                           ? _Colors.darkGreen
-                                          : _Colors.borderGrey,
+                                          : _Colors.borderGrey(context),
                                       width: selected ? 2 : 1,
                                     ),
                                     borderRadius: BorderRadius.circular(14),
@@ -3118,9 +3163,13 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                                         label,
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
-                                          color: selected ? Colors.white : Colors.grey[600],
+                                          color: selected
+                                              ? Colors.white
+                                              : _Colors.textSecondary(context),
                                           fontSize: 10,
-                                          fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                                          fontWeight: selected
+                                              ? FontWeight.bold
+                                              : FontWeight.w500,
                                         ),
                                       ),
                                     ],
@@ -3139,7 +3188,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   alignment: Alignment.centerRight,
                   child: Text(
                     Strings.tr(context, 'medication_name_label'),
-                    style: const TextStyle(color: _Colors.textSecondary),
+                    style: TextStyle(color: _Colors.textSecondary(context)),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -3164,7 +3213,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                     decoration: BoxDecoration(
                       color: const Color(0xFFF8FFF9),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _Colors.borderGrey),
+                      border: Border.all(color: _Colors.borderGrey(context)),
                     ),
                     child: ListView.builder(
                       shrinkWrap: true,
@@ -3273,7 +3322,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   alignment: Alignment.centerRight,
                   child: Text(
                     Strings.tr(context, 'days_of_week_label'),
-                    style: const TextStyle(color: _Colors.textSecondary),
+                    style: TextStyle(color: _Colors.textSecondary(context)),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -3291,8 +3340,8 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                               alignment: Alignment.centerRight,
                               child: Text(
                                 Strings.tr(context, 'time_label'),
-                                style: const TextStyle(
-                                  color: _Colors.textSecondary,
+                                style: TextStyle(
+                                  color: _Colors.textSecondary(context),
                                   fontSize: 13,
                                 ),
                               ),
@@ -3341,8 +3390,8 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                               alignment: Alignment.centerRight,
                               child: Text(
                                 Strings.tr(context, 'period_label'),
-                                style: const TextStyle(
-                                  color: _Colors.textSecondary,
+                                style: TextStyle(
+                                  color: _Colors.textSecondary(context),
                                   fontSize: 13,
                                 ),
                               ),
@@ -3406,7 +3455,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   alignment: Alignment.centerRight,
                   child: Text(
                     Strings.tr(context, 'doses_per_day_label'),
-                    style: const TextStyle(color: _Colors.textSecondary),
+                    style: TextStyle(color: _Colors.textSecondary(context)),
                   ),
                 ),
                 const SizedBox(height: 8),
