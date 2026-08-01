@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/notification_service.dart';
 
 class AppSettingsProvider extends ChangeNotifier {
   static const _kLang = 'app_settings_lang';
@@ -26,11 +27,13 @@ class AppSettingsProvider extends ChangeNotifier {
     _languageCode = prefs.getString(_kLang) ?? 'ar';
     _notificationsEnabled = prefs.getBool(_kNotificationsEnabled) ?? true;
     _darkModeEnabled = prefs.getBool(_kDarkModeEnabled) ?? false;
+    NotificationService.setLanguage(_languageCode);
     notifyListeners();
   }
 
   Future<void> setLanguageCode(String code) async {
     _languageCode = code;
+    NotificationService.setLanguage(code);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kLang, code);
     notifyListeners();

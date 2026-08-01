@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import '../../i18n/strings.dart';
 
 class AddDependentScreen extends StatefulWidget {
   const AddDependentScreen({super.key});
@@ -24,11 +25,11 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
   bool _obscurePassword = true;
 
   final List<Map<String, String>> _relationships = [
-    {'value': 'spouse', 'label': 'زوج / زوجة'},
-    {'value': 'child', 'label': 'ابن / ابنة'},
-    {'value': 'parent', 'label': 'أب / أم'},
-    {'value': 'sibling', 'label': 'أخ / أخت'},
-    {'value': 'other', 'label': 'أخرى'},
+    {'value': 'spouse', 'key': 'spouse'},
+    {'value': 'child', 'key': 'child'},
+    {'value': 'parent', 'key': 'parent'},
+    {'value': 'sibling', 'key': 'sibling'},
+    {'value': 'other', 'key': 'other'},
   ];
 
   @override
@@ -47,7 +48,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
     try {
       final token = context.read<AuthProvider>().accessToken;
       if (token == null) {
-        _showSnack('يرجى تسجيل الدخول أولاً', Colors.red);
+        _showSnack(Strings.tr(context, 'please_login_first'), Colors.red);
         return;
       }
 
@@ -80,10 +81,17 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
           password: _passwordController.text,
         );
       } else {
-        _showSnack(response['error'] ?? 'حدث خطأ غير متوقع', Colors.red);
+        _showSnack(
+          response['error']?.toString() ??
+              Strings.tr(context, 'unexpected_error'),
+          Colors.red,
+        );
       }
     } catch (e) {
-      _showSnack('خطأ: ${e.toString()}', Colors.red);
+      _showSnack(
+        '${Strings.tr(context, 'error_label')}${e.toString()}',
+        Colors.red,
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -108,9 +116,9 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
               size: 56,
             ),
             const SizedBox(height: 12),
-            const Text(
-              'تم إنشاء الحساب بنجاح',
-              style: TextStyle(
+            Text(
+              Strings.tr(context, 'credentials_dialog_title'),
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF085041),
@@ -122,10 +130,10 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'يُرجى حفظ بيانات الدخول التالية وإرسالها للتابع:',
+            Text(
+              Strings.tr(context, 'credentials_dialog_subtitle'),
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14),
+              style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 20),
             // Email field
@@ -142,9 +150,9 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'البريد الإلكتروني',
-                          style: TextStyle(
+                        Text(
+                          Strings.tr(context, 'email'),
+                          style: const TextStyle(
                             fontSize: 12,
                             color: Colors.grey,
                           ),
@@ -166,9 +174,9 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: email));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('تم نسخ البريد الإلكتروني'),
-                          duration: Duration(seconds: 1),
+                        SnackBar(
+                          content: Text(Strings.tr(context, 'email_copied')),
+                          duration: const Duration(seconds: 1),
                         ),
                       );
                     },
@@ -191,9 +199,9 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'كلمة المرور',
-                          style: TextStyle(
+                        Text(
+                          Strings.tr(context, 'password'),
+                          style: const TextStyle(
                             fontSize: 12,
                             color: Colors.grey,
                           ),
@@ -215,9 +223,9 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: password));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('تم نسخ كلمة المرور'),
-                          duration: Duration(seconds: 1),
+                        SnackBar(
+                          content: Text(Strings.tr(context, 'password_copied')),
+                          duration: const Duration(seconds: 1),
                         ),
                       );
                     },
@@ -226,33 +234,34 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'يمكنك نسخ كل البيانات مرة واحدة بزر أدناه',
+            Text(
+              Strings.tr(context, 'copy_all_hint'),
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () {
-              final textToCopy = 'بيانات دخول التابع:\n'
-                  'البريد الإلكتروني: $email\n'
-                  'كلمة المرور: $password';
+              final textToCopy =
+                  '${Strings.tr(context, 'dependent_login_info')}\n'
+                  '${Strings.tr(context, 'email')}: $email\n'
+                  '${Strings.tr(context, 'password')}: $password';
               Clipboard.setData(ClipboardData(text: textToCopy));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('تم نسخ جميع البيانات'),
-                  duration: Duration(seconds: 1),
+                SnackBar(
+                  content: Text(Strings.tr(context, 'copy_all')),
+                  duration: const Duration(seconds: 1),
                 ),
               );
             },
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.copy_all, size: 18),
-                SizedBox(width: 6),
-                Text('نسخ جميع البيانات'),
+                const Icon(Icons.copy_all, size: 18),
+                const SizedBox(width: 6),
+                Text(Strings.tr(context, 'copy_all')),
               ],
             ),
           ),
@@ -268,7 +277,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text('حسناً'),
+            child: Text(Strings.tr(context, 'ok')),
           ),
         ],
       ),
@@ -289,7 +298,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إضافة تابع'),
+        title: Text(Strings.tr(context, 'add_dependent_title')),
         backgroundColor: const Color(0xFF085041),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -304,15 +313,16 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
               TextFormField(
                 controller: _nameController,
                 textAlign: TextAlign.right,
-                decoration: const InputDecoration(
-                  labelText: 'الاسم الكامل',
-                  prefixIcon: Icon(Icons.person_outline),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: Strings.tr(context, 'full_name'),
+                  prefixIcon: const Icon(Icons.person_outline),
+                  border: const OutlineInputBorder(),
                   filled: true,
-                  fillColor: Color(0xFFF6F6F6),
+                  fillColor: const Color(0xFFF6F6F6),
                 ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? Strings.tr(context, 'name_required')
+                    : null,
               ),
               const SizedBox(height: 16),
 
@@ -320,15 +330,15 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 textAlign: TextAlign.right,
-                decoration: const InputDecoration(
-                  labelText: 'البريد الإلكتروني للتابع',
-                  prefixIcon: Icon(Icons.email_outlined),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: Strings.tr(context, 'dependent_email'),
+                  prefixIcon: const Icon(Icons.email_outlined),
+                  border: const OutlineInputBorder(),
                   filled: true,
-                  fillColor: Color(0xFFF6F6F6),
+                  fillColor: const Color(0xFFF6F6F6),
                 ),
                 validator: (v) => (v == null || !v.contains('@'))
-                    ? 'بريد إلكتروني غير صحيح'
+                    ? Strings.tr(context, 'enter_valid_email')
                     : null,
               ),
               const SizedBox(height: 16),
@@ -338,7 +348,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                 obscureText: _obscurePassword,
                 textAlign: TextAlign.right,
                 decoration: InputDecoration(
-                  labelText: 'كلمة المرور',
+                  labelText: Strings.tr(context, 'password'),
                   prefixIcon: const Icon(Icons.lock_outline),
                   border: const OutlineInputBorder(),
                   filled: true,
@@ -352,7 +362,7 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                   ),
                 ),
                 validator: (v) => (v == null || v.length < 6)
-                    ? 'كلمة المرور 6 أحرف على الأقل'
+                    ? Strings.tr(context, 'password_min_characters')
                     : null,
               ),
               const SizedBox(height: 16),
@@ -361,31 +371,33 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                 controller: _ageController,
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.right,
-                decoration: const InputDecoration(
-                  labelText: 'العمر (اختياري)',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: Strings.tr(context, 'age_optional'),
+                  border: const OutlineInputBorder(),
                   filled: true,
-                  fillColor: Color(0xFFF6F6F6),
+                  fillColor: const Color(0xFFF6F6F6),
                 ),
               ),
               const SizedBox(height: 16),
 
               DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'العلاقة',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: Strings.tr(context, 'dependent_relationship'),
+                  border: const OutlineInputBorder(),
                   filled: true,
-                  fillColor: Color(0xFFF6F6F6),
+                  fillColor: const Color(0xFFF6F6F6),
                 ),
                 value: _selectedRelationship,
                 items: _relationships
                     .map((r) => DropdownMenuItem(
                           value: r['value'],
-                          child: Text(r['label']!),
+                          child: Text(Strings.tr(context, r['key']!)),
                         ))
                     .toList(),
                 onChanged: (v) => setState(() => _selectedRelationship = v),
-                validator: (v) => v == null ? 'يرجى اختيار العلاقة' : null,
+                validator: (v) => v == null
+                    ? Strings.tr(context, 'relationship_required')
+                    : null,
               ),
               const SizedBox(height: 20),
 
@@ -395,14 +407,14 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                   color: const Color(0xFFFFF8E1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.orange),
-                    SizedBox(width: 8),
+                    const Icon(Icons.info_outline, color: Colors.orange),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'سيتم إنشاء حساب للتابع. شارك بيانات الدخول (البريد الإلكتروني وكلمة المرور) معه.',
-                        style: TextStyle(fontSize: 13),
+                        Strings.tr(context, 'share_login_info'),
+                        style: const TextStyle(fontSize: 13),
                       ),
                     ),
                   ],
@@ -429,9 +441,9 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
                             strokeWidth: 2,
                           ),
                         )
-                      : const Text(
-                          'إنشاء الحساب وإضافة التابع',
-                          style: TextStyle(
+                      : Text(
+                          Strings.tr(context, 'create_dependent_account'),
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -446,3 +458,4 @@ class _AddDependentScreenState extends State<AddDependentScreen> {
     );
   }
 }
+

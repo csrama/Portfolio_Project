@@ -35,6 +35,7 @@ void _showAddDependentSheet() {
     String? selectedRelationship;
     bool isProcessing = false;
     bool obscurePassword = true;
+    bool resultSuccess = false;
     String? resultMessage;
 
     showModalBottomSheet(
@@ -81,10 +82,10 @@ void _showAddDependentSheet() {
                   TextField(
                     controller: emailController,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'البريد الإلكتروني',
-                      prefixIcon: Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: Strings.tr(context, 'email'),
+                      prefixIcon: const Icon(Icons.email_outlined),
+                      border: const OutlineInputBorder(),
                     ),
                     textAlign: TextAlign.right,
                   ),
@@ -94,7 +95,7 @@ void _showAddDependentSheet() {
                     controller: passwordController,
                     obscureText: obscurePassword,
                     decoration: InputDecoration(
-                      labelText: 'كلمة المرور',
+                      labelText: Strings.tr(context, 'password'),
                       prefixIcon: const Icon(Icons.lock_outline),
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
@@ -129,15 +130,27 @@ void _showAddDependentSheet() {
                       labelText: Strings.tr(context, 'relationship_label'),
                       border: const OutlineInputBorder(),
                     ),
-                    items: const [
+                    items: [
                       DropdownMenuItem(
                         value: 'spouse',
-                        child: Text('زوج/زوجة'),
+                        child: Text(Strings.tr(context, 'spouse')),
                       ),
-                      DropdownMenuItem(value: 'child', child: Text('ابن/ابنة')),
-                      DropdownMenuItem(value: 'parent', child: Text('أب/أم')),
-                      DropdownMenuItem(value: 'sibling', child: Text('أخ/أخت')),
-                      DropdownMenuItem(value: 'other', child: Text('أخرى')),
+                      DropdownMenuItem(
+                        value: 'child',
+                        child: Text(Strings.tr(context, 'child')),
+                      ),
+                      DropdownMenuItem(
+                        value: 'parent',
+                        child: Text(Strings.tr(context, 'parent')),
+                      ),
+                      DropdownMenuItem(
+                        value: 'sibling',
+                        child: Text(Strings.tr(context, 'sibling')),
+                      ),
+                      DropdownMenuItem(
+                        value: 'other',
+                        child: Text(Strings.tr(context, 'other')),
+                      ),
                     ],
                     onChanged: (value) {
                       setSheetState(() {
@@ -159,7 +172,7 @@ void _showAddDependentSheet() {
                                 ScaffoldMessenger.of(sheetContext).showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      'يرجى تعبئة جميع الحقول المطلوبة',
+                                      Strings.tr(context, 'fill_all_required'),
                                     ),
                                   ),
                                 );
@@ -168,8 +181,10 @@ void _showAddDependentSheet() {
 
                               if (!emailController.text.contains('@')) {
                                 ScaffoldMessenger.of(sheetContext).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('بريد إلكتروني غير صحيح'),
+                                  SnackBar(
+                                    content: Text(
+                                      Strings.tr(context, 'invalid_email'),
+                                    ),
                                   ),
                                 );
                                 return;
@@ -177,9 +192,12 @@ void _showAddDependentSheet() {
 
                               if (passwordController.text.length < 6) {
                                 ScaffoldMessenger.of(sheetContext).showSnackBar(
-                                  const SnackBar(
+                                  SnackBar(
                                     content: Text(
-                                      'كلمة المرور 6 أحرف على الأقل',
+                                      Strings.tr(
+                                        context,
+                                        'password_min_characters',
+                                      ),
                                     ),
                                   ),
                                 );
@@ -226,14 +244,19 @@ void _showAddDependentSheet() {
                               if (response['success'] == true) {
                                 setSheetState(() {
                                   isProcessing = false;
-                                  resultMessage = 'تم إنشاء حساب التابع وربطه بنجاح';
+                                  resultSuccess = true;
+                                  resultMessage = Strings.tr(
+                                    context,
+                                    'dependent_account_created',
+                                  );
                                 });
                               } else {
                                 setSheetState(() {
                                   isProcessing = false;
+                                  resultSuccess = false;
                                   resultMessage =
-                                      response['error'] ??
-                                      'فشلت العملية';
+                                      response['error']?.toString() ??
+                                      Strings.tr(context, 'operation_failed');
                                 });
                               }
                             } catch (e) {
@@ -262,9 +285,9 @@ void _showAddDependentSheet() {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            'إنشاء الحساب وإضافة التابع',
-                            style: TextStyle(
+                        : Text(
+                            Strings.tr(context, 'create_dependent_account'),
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 16,
                             ),
@@ -274,7 +297,7 @@ void _showAddDependentSheet() {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: resultMessage!.contains('نجاح')
+                      color: resultSuccess
                           ? const Color(0xFFF0FFF4)
                           : const Color(0xFFFFF0F0),
                       borderRadius: BorderRadius.circular(12),
@@ -282,11 +305,9 @@ void _showAddDependentSheet() {
                     child: Column(
                       children: [
                         Icon(
-                          resultMessage!.contains('نجاح')
-                              ? Icons.check_circle
-                              : Icons.error,
+                          resultSuccess ? Icons.check_circle : Icons.error,
                           size: 48,
-                          color: resultMessage!.contains('نجاح')
+                          color: resultSuccess
                               ? const Color(0xFF1D9E75)
                               : Colors.red,
                         ),
@@ -297,7 +318,7 @@ void _showAddDependentSheet() {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: resultMessage!.contains('نجاح')
+                            color: resultSuccess
                                 ? const Color(0xFF085041)
                                 : Colors.red,
                           ),
@@ -344,22 +365,29 @@ void _showAddDependentSheet() {
     return name[0];
   }
 
-  String _getSafeName(String? name) {
-    if (name == null || name.isEmpty) return 'مستخدم';
+  String _getSafeName(BuildContext context, String? name) {
+    if (name == null || name.isEmpty) {
+      return Strings.tr(context, 'default_user');
+    }
     return name;
   }
 
-  static const Map<String, String> _relationshipLabels = {
-    'spouse': 'زوج/زوجة',
-    'child': 'ابن/ابنة',
-    'parent': 'أب/أم',
-    'sibling': 'أخ/أخت',
-    'other': 'أخرى',
-  };
+  static const List<String> _relationshipKeys = [
+    'spouse',
+    'child',
+    'parent',
+    'sibling',
+    'other',
+  ];
 
-  String _getSafeRelationship(String? relationship) {
-    if (relationship == null || relationship.isEmpty) return 'لا يوجد';
-    return _relationshipLabels[relationship] ?? relationship;
+  String _getSafeRelationship(BuildContext context, String? relationship) {
+    if (relationship == null || relationship.isEmpty) {
+      return Strings.tr(context, 'no_relationship');
+    }
+    if (_relationshipKeys.contains(relationship)) {
+      return Strings.tr(context, relationship);
+    }
+    return relationship;
   }
 
   void _showEditDialog(Dependent dependent) {
@@ -390,12 +418,27 @@ void _showAddDependentSheet() {
                   labelText: Strings.tr(context, 'relationship_label'),
                   border: const OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'spouse', child: Text('زوج/زوجة')),
-                  DropdownMenuItem(value: 'child', child: Text('ابن/ابنة')),
-                  DropdownMenuItem(value: 'parent', child: Text('أب/أم')),
-                  DropdownMenuItem(value: 'sibling', child: Text('أخ/أخت')),
-                  DropdownMenuItem(value: 'other', child: Text('أخرى')),
+                items: [
+                  DropdownMenuItem(
+                    value: 'spouse',
+                    child: Text(Strings.tr(context, 'spouse')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'child',
+                    child: Text(Strings.tr(context, 'child')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'parent',
+                    child: Text(Strings.tr(context, 'parent')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'sibling',
+                    child: Text(Strings.tr(context, 'sibling')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'other',
+                    child: Text(Strings.tr(context, 'other')),
+                  ),
                 ],
                 onChanged: (value) => selectedRelationship = value,
               ),
@@ -530,9 +573,10 @@ void _showAddDependentSheet() {
               final dependent = provider.dependents[index];
               final isSelected = provider.selectedDependent?.id == dependent.id;
 
-              final String displayName = _getSafeName(dependent.fullName);
+              final String displayName = _getSafeName(context, dependent.fullName);
               final String firstLetter = _getFirstLetter(dependent.fullName);
               final String displayRelationship = _getSafeRelationship(
+                context,
                 dependent.relationship,
               );
 
@@ -628,3 +672,4 @@ void _showAddDependentSheet() {
     );
   }
 }
+

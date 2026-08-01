@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import '../../i18n/strings.dart';
 
 class LinkRequestsScreen extends StatefulWidget {
   const LinkRequestsScreen({super.key});
@@ -36,6 +37,15 @@ class _LinkRequestsScreenState extends State<LinkRequestsScreen> {
     }
   }
 
+  String _relationshipLabel(BuildContext context, String? relationship) {
+    const knownKeys = ['spouse', 'child', 'parent', 'sibling', 'other'];
+    if (relationship == null || relationship.isEmpty) return '';
+    if (knownKeys.contains(relationship)) {
+      return Strings.tr(context, relationship);
+    }
+    return relationship;
+  }
+
   Future<void> _respond(int requestId, String action) async {
     try {
       final token = context.read<AuthProvider>().accessToken;
@@ -50,7 +60,10 @@ class _LinkRequestsScreenState extends State<LinkRequestsScreen> {
       if (response['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(response['message'] ?? 'تمت العملية'),
+            content: Text(
+              response['message']?.toString() ??
+                  Strings.tr(context, 'operation_success'),
+            ),
             backgroundColor: const Color(0xFF085041),
           ),
         );
@@ -58,14 +71,20 @@ class _LinkRequestsScreenState extends State<LinkRequestsScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(response['error'] ?? 'حدث خطأ'),
+            content: Text(
+              response['error']?.toString() ??
+                  Strings.tr(context, 'an_error_occurred'),
+            ),
             backgroundColor: Colors.red,
           ),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('${Strings.tr(context, 'error_prefix')}$e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -74,7 +93,7 @@ class _LinkRequestsScreenState extends State<LinkRequestsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('طلبات الربط'),
+        title: Text(Strings.tr(context, 'link_requests')),
         backgroundColor: const Color(0xFF085041),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -91,7 +110,7 @@ class _LinkRequestsScreenState extends State<LinkRequestsScreen> {
                           size: 64, color: Colors.grey.shade400),
                       const SizedBox(height: 16),
                       Text(
-                        'لا توجد طلبات ربط حالياً',
+                        Strings.tr(context, 'no_link_requests'),
                         style: TextStyle(
                             fontSize: 16, color: Colors.grey.shade600),
                       ),
@@ -131,14 +150,16 @@ class _LinkRequestsScreenState extends State<LinkRequestsScreen> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          req['caregiver_name'] ?? 'مجهول',
+                                          req['caregiver_name']?.toString() ??
+                                              Strings.tr(context, 'unknown'),
                                           style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 16,
                                           ),
                                         ),
                                         Text(
-                                          req['caregiver_email'] ?? '',
+                                          req['caregiver_email']?.toString() ??
+                                              '',
                                           style: TextStyle(
                                             color: Colors.grey.shade600,
                                             fontSize: 13,
@@ -158,7 +179,7 @@ class _LinkRequestsScreenState extends State<LinkRequestsScreen> {
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
-                                  'العلاقة: ${req['relationship'] ?? ''}',
+                                  '${Strings.tr(context, 'relationship_prefix')}${_relationshipLabel(context, req['relationship']?.toString())}',
                                   style: const TextStyle(
                                     fontSize: 13,
                                     color: Color(0xFF085041),
@@ -173,7 +194,9 @@ class _LinkRequestsScreenState extends State<LinkRequestsScreen> {
                                       onPressed: () =>
                                           _respond(req['id'], 'accept'),
                                       icon: const Icon(Icons.check, size: 18),
-                                      label: const Text('قبول'),
+                                      label: Text(
+                                        Strings.tr(context, 'accept'),
+                                      ),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor:
                                             const Color(0xFF085041),
@@ -191,7 +214,9 @@ class _LinkRequestsScreenState extends State<LinkRequestsScreen> {
                                       onPressed: () =>
                                           _respond(req['id'], 'reject'),
                                       icon: const Icon(Icons.close, size: 18),
-                                      label: const Text('رفض'),
+                                      label: Text(
+                                        Strings.tr(context, 'reject'),
+                                      ),
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor: Colors.red,
                                         side: const BorderSide(
@@ -215,3 +240,4 @@ class _LinkRequestsScreenState extends State<LinkRequestsScreen> {
     );
   }
 }
+

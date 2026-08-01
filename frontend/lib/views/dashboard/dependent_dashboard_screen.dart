@@ -9,17 +9,11 @@ import '../../services/api_service.dart';
 import '../../services/dependent_service.dart';
 import '../../i18n/strings.dart';
 
-const Map<String, String> _relationshipLabels = {
-  'spouse': 'زوج/زوجة',
-  'child': 'ابن/ابنة',
-  'parent': 'أب/أم',
-  'sibling': 'أخ/أخت',
-  'other': 'أخرى',
-};
-
-String _relationshipDisplay(String? relationship) {
-  if (relationship == null || relationship.isEmpty) return 'لا يوجد';
-  return _relationshipLabels[relationship] ?? relationship;
+String _relationshipDisplay(BuildContext context, String? relationship) {
+  if (relationship == null || relationship.isEmpty) {
+    return Strings.tr(context, 'no_relationship');
+  }
+  return Strings.tr(context, relationship);
 }
 
 String _medicineDisplayName(Map<String, dynamic> medicine, String langCode) {
@@ -30,6 +24,21 @@ String _medicineDisplayName(Map<String, dynamic> medicine, String langCode) {
   }
   return nameAr.isNotEmpty ? nameAr : nameEn;
 }
+
+const Map<String, String> _periodDisplayKeys = {
+  'صباحا': 'morning_period',
+  'مساء': 'evening_period',
+};
+
+const Map<String, String> _dayValueToKey = {
+  'الأحد': 'weekday_sun',
+  'الأثنين': 'weekday_mon',
+  'الثلاثاء': 'weekday_tue',
+  'الأربعاء': 'weekday_wed',
+  'الخميس': 'weekday_thu',
+  'الجمعة': 'weekday_fri',
+  'السبت': 'weekday_sat',
+};
 
 class _Colors {
   static const Color primaryGreen = Color(0xFF1D9E75);
@@ -128,17 +137,24 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('حذف الدواء'),
-        content: Text('هل تريد حذف ${med.name} ؟'),
+        title: Text(Strings.tr(context, 'delete_medication_title')),
+        content: Text(
+          Strings.tr(context, 'confirm_delete_medication', params: {
+            'name': med.name,
+          }),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('إلغاء'),
+            child: Text(Strings.tr(context, 'cancel')),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('حذف'),
+            child: Text(
+              Strings.tr(context, 'delete'),
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -157,16 +173,16 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
       await _loadMedications();
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(' تم حذف الدواء بنجاح'),
+          SnackBar(
+            content: Text(Strings.tr(context, 'medication_deleted')),
             backgroundColor: Colors.green,
           ),
         );
     } catch (e) {
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(' فشل الحذف'),
+          SnackBar(
+            content: Text(Strings.tr(context, 'delete_failed')),
             backgroundColor: Colors.red,
           ),
         );
@@ -236,8 +252,8 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
       await _loadMedications();
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(' تم إضافة الدواء بنجاح'),
+          SnackBar(
+            content: Text(Strings.tr(context, 'medication_added_success')),
             backgroundColor: _Colors.darkGreen,
           ),
         );
@@ -246,7 +262,9 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(' فشل الإضافة: $e'),
+            content: Text(
+              '${Strings.tr(context, 'medication_add_failed')} $e',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -261,7 +279,9 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          title: Text('ملف: ${widget.dependent.fullName}'),
+          title: Text(
+            '${Strings.tr(context, 'dependent_file')} ${widget.dependent.fullName}',
+          ),
           backgroundColor: _Colors.darkGreen,
           foregroundColor: Colors.white,
           elevation: 0,
@@ -277,7 +297,7 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                 textAlign: TextAlign.right,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  hintText: 'ابحث عن دواء لإضافته للتابع...',
+                  hintText: Strings.tr(context, 'search_medication_hint'),
                   hintStyle: const TextStyle(color: Colors.white60),
                   prefixIcon: _isSearching
                       ? const SizedBox(
@@ -356,7 +376,7 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: _loadMedications,
-                            child: const Text('إعادة المحاولة'),
+                            child: Text(Strings.tr(context, 'retry')),
                           ),
                         ],
                       ),
@@ -405,7 +425,7 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        'صلة القرابة: ${_relationshipDisplay(widget.dependent.relationship)}',
+                                        '${Strings.tr(context, 'relationship_colon')} ${_relationshipDisplay(context, widget.dependent.relationship)}',
                                         style: const TextStyle(
                                           color: _Colors.textSecondary,
                                           fontSize: 13,
@@ -417,7 +437,7 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                                             top: 2,
                                           ),
                                           child: Text(
-                                            'تاريخ الميلاد: ${widget.dependent.dateOfBirth!.toString().split(' ')[0]}',
+                                            '${Strings.tr(context, 'date_of_birth_colon')} ${widget.dependent.dateOfBirth!.toString().split(' ')[0]}',
                                             style: const TextStyle(
                                               color: _Colors.textSecondary,
                                               fontSize: 12,
@@ -436,9 +456,9 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                             children: [
                               GestureDetector(
                                 onTap: () => _openAddMedicationSheet(),
-                                child: const Text(
-                                  'إضافة دواء',
-                                  style: TextStyle(
+                                child: Text(
+                                  Strings.tr(context, 'add_medication'),
+                                  style: const TextStyle(
                                     color: _Colors.darkGreen,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
@@ -455,11 +475,11 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                             ],
                           ),
                           const SizedBox(height: 8),
-                          const Align(
+                          Align(
                             alignment: Alignment.centerRight,
                             child: Text(
-                              'الأدوية',
-                              style: TextStyle(
+                              Strings.tr(context, 'medications'),
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: _Colors.textPrimary,
@@ -483,9 +503,12 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                                     size: 20,
                                   ),
                                   const SizedBox(width: 8),
-                                  const Text(
-                                    'لم يتم إضافة أي أدوية لهذا التابع بعد',
-                                    style: TextStyle(
+                                  Text(
+                                    Strings.tr(
+                                      context,
+                                      'no_medications_for_dependent',
+                                    ),
+                                    style: const TextStyle(
                                       color: Color(0xFF085041),
                                       fontSize: 14,
                                     ),
@@ -507,10 +530,10 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                                 color: _Colors.darkGreen,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Text(
-                                '+ إضافة دواء',
+                              child: Text(
+                                Strings.tr(context, 'add_medication_button'),
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 15,
                                 ),
@@ -547,14 +570,14 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                 _openAddMedicationSheet(existingMedication: medication);
               if (value == "delete") _deleteMedication(medication);
             },
-            itemBuilder: (_) => const [
+            itemBuilder: (context) => [
               PopupMenuItem(
                 value: "edit",
                 child: Row(
                   children: [
-                    Icon(Icons.edit, color: Colors.green),
-                    SizedBox(width: 8),
-                    Text("تعديل"),
+                    const Icon(Icons.edit, color: Colors.green),
+                    const SizedBox(width: 8),
+                    Text(Strings.tr(context, 'edit')),
                   ],
                 ),
               ),
@@ -562,9 +585,9 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                 value: "delete",
                 child: Row(
                   children: [
-                    Icon(Icons.delete, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text("حذف"),
+                    const Icon(Icons.delete, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Text(Strings.tr(context, 'delete')),
                   ],
                 ),
               ),
@@ -594,7 +617,7 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${medication.timeLabel}. x${medication.dosesPerDay}/اليوم',
+                  '${medication.timeLabel}. ${Strings.tr(context, 'medication_per_day', params: {'doses': medication.dosesPerDay.toString()})}',
                   style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               ],
@@ -659,13 +682,13 @@ class _AddDependentMedicationSheetState
 
   List<Map<String, dynamic>> _pharmacySuggestions = [];
 
-  final Map<MedicationType, String> _typeLabels = {
-    MedicationType.tablets: 'أقراص',
-    MedicationType.capsule: 'كبسولات',
-    MedicationType.bottle: 'شراب',
-    MedicationType.injection: 'حقن',
-    MedicationType.cream: 'كريم',
-    MedicationType.drops: 'قطرات',
+  static const Map<MedicationType, String> _typeKeys = {
+    MedicationType.tablets: 'tablet',
+    MedicationType.capsule: 'capsule',
+    MedicationType.bottle: 'bottle',
+    MedicationType.injection: 'injection',
+    MedicationType.cream: 'cream',
+    MedicationType.drops: 'drops',
   };
 
   Future<void> _searchMedicines(String query) async {
@@ -848,7 +871,7 @@ class _AddDependentMedicationSheetState
               ),
               child: Center(
                 child: Text(
-                  day,
+                  Strings.tr(context, _dayValueToKey[day] ?? 'no_relationship'),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12.5,
@@ -894,7 +917,9 @@ class _AddDependentMedicationSheetState
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                allSelected ? 'إلغاء تحديد الكل' : 'كل أيام الأسبوع',
+                allSelected
+                    ? Strings.tr(context, 'deselect_all_days')
+                    : Strings.tr(context, 'select_all_days'),
                 style: const TextStyle(
                   color: _Colors.darkGreen,
                   fontSize: 12,
@@ -940,8 +965,8 @@ class _AddDependentMedicationSheetState
                 ),
                 Text(
                   widget.existingMedication != null
-                      ? 'تعديل دواء للتابع'
-                      : 'إضافة دواء للتابع',
+                      ? Strings.tr(context, 'edit_medication_for')
+                      : Strings.tr(context, 'add_medication_for'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 20,
@@ -950,11 +975,14 @@ class _AddDependentMedicationSheetState
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Align(
+                Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    'حدد نوع الدواء:',
-                    style: TextStyle(fontSize: 14, color: _Colors.textSecondary),
+                    Strings.tr(context, 'select_type_label'),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: _Colors.textSecondary,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -962,11 +990,13 @@ class _AddDependentMedicationSheetState
                   height: 90,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final itemWidth = constraints.maxWidth / 3.5;
                       return Row(
                         children: MedicationType.values.map((type) {
                           final selected = type == _selectedType;
-                          final label = _typeLabels[type] ?? type.toString();
+                          final label = Strings.tr(
+                            context,
+                            _typeKeys[type] ?? 'no_relationship',
+                          );
                           return Expanded(
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -1023,11 +1053,11 @@ class _AddDependentMedicationSheetState
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Align(
+                Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    'اسم الدواء',
-                    style: TextStyle(color: _Colors.textSecondary),
+                    Strings.tr(context, 'medication_name_label'),
+                    style: const TextStyle(color: _Colors.textSecondary),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -1036,7 +1066,7 @@ class _AddDependentMedicationSheetState
                   onChanged: _searchMedicines,
                   textAlign: TextAlign.right,
                   decoration: InputDecoration(
-                    hintText: 'ابحث عن الدواء من نفس الصيدلية',
+                    hintText: Strings.tr(context, 'search_pharmacy_hint_more'),
                     hintStyle: TextStyle(color: Colors.grey[400]),
                     filled: true,
                     fillColor: const Color(0xFFF6F6F6),
@@ -1090,7 +1120,7 @@ class _AddDependentMedicationSheetState
                         controller: _nameController,
                         textAlign: TextAlign.right,
                         decoration: InputDecoration(
-                          hintText: 'اكتب اسم الدواء يدويًا',
+                          hintText: Strings.tr(context, 'medicine_name_hint'),
                           hintStyle: TextStyle(color: Colors.grey[400]),
                           filled: true,
                           fillColor: const Color(0xFFF6F6F6),
@@ -1117,7 +1147,7 @@ class _AddDependentMedicationSheetState
                             alignment: AlignmentDirectional.centerEnd,
                             dropdownColor: Colors.white,
                             hint: Text(
-                              'الجرعة',
+                              Strings.tr(context, 'dosage_label'),
                               textAlign: TextAlign.right,
                               style: TextStyle(color: Colors.grey[400], fontSize: 13),
                             ),
@@ -1157,11 +1187,11 @@ class _AddDependentMedicationSheetState
                   ],
                 ),
                 const SizedBox(height: 20),
-                const Align(
+                Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    'أيام الأسبوع',
-                    style: TextStyle(color: _Colors.textSecondary),
+                    Strings.tr(context, 'days_of_week_label'),
+                    style: const TextStyle(color: _Colors.textSecondary),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -1173,13 +1203,13 @@ class _AddDependentMedicationSheetState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Padding(
-                            padding: EdgeInsets.only(right: 4),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 4),
                             child: Align(
                               alignment: Alignment.centerRight,
                               child: Text(
-                                'الوقت',
-                                style: TextStyle(
+                                Strings.tr(context, 'time_label'),
+                                style: const TextStyle(
                                   color: _Colors.textSecondary,
                                   fontSize: 13,
                                 ),
@@ -1223,13 +1253,13 @@ class _AddDependentMedicationSheetState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Padding(
-                            padding: EdgeInsets.only(right: 4),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 4),
                             child: Align(
                               alignment: Alignment.centerRight,
                               child: Text(
-                                'الفترة',
-                                style: TextStyle(
+                                Strings.tr(context, 'period_label'),
+                                style: const TextStyle(
                                   color: _Colors.textSecondary,
                                   fontSize: 13,
                                 ),
@@ -1260,18 +1290,18 @@ class _AddDependentMedicationSheetState
                                 ),
                                 iconSize: 24,
                                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                                items: const [
+                                items: [
                                   DropdownMenuItem(
                                     value: 'صباحا',
                                     child: Text(
-                                      'صباحا',
+                                      Strings.tr(context, 'morning_period'),
                                       textAlign: TextAlign.right,
                                     ),
                                   ),
                                   DropdownMenuItem(
                                     value: 'مساء',
                                     child: Text(
-                                      'مساء',
+                                      Strings.tr(context, 'evening_period'),
                                       textAlign: TextAlign.right,
                                     ),
                                   ),
@@ -1290,11 +1320,11 @@ class _AddDependentMedicationSheetState
                   ],
                 ),
                 const SizedBox(height: 20),
-                const Align(
+                Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    'عدد الجرعات في اليوم',
-                    style: TextStyle(color: _Colors.textSecondary),
+                    Strings.tr(context, 'doses_per_day_label'),
+                    style: const TextStyle(color: _Colors.textSecondary),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -1302,11 +1332,11 @@ class _AddDependentMedicationSheetState
                   children: List.generate(4, (i) {
                     final value = i + 1;
                     final selected = _dosesPerDay == value;
-                    final doseLabels = [
-                      'مرة واحدة',
-                      'مرتين',
-                      '3 مرات',
-                      '4 مرات',
+                    const doseKeys = [
+                      'once',
+                      'twice',
+                      'three_times',
+                      'four_times',
                     ];
                     return Expanded(
                       child: Padding(
@@ -1322,7 +1352,7 @@ class _AddDependentMedicationSheetState
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              doseLabels[i],
+                              Strings.tr(context, doseKeys[i]),
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: selected ? Colors.white : Colors.grey[300],
@@ -1350,9 +1380,9 @@ class _AddDependentMedicationSheetState
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: const Text(
-                        'حفظ',
-                        style: TextStyle(
+                      child: Text(
+                        Strings.tr(context, 'save'),
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -1394,3 +1424,4 @@ class _AddDependentMedicationSheetState
     );
   }
 }
+

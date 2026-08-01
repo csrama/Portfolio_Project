@@ -22,8 +22,9 @@ class _SettingsBody extends StatelessWidget {
     final settings = context.watch<AppSettingsProvider>();
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.user;
-    final name = user?['full_name'] ?? user?['name'] ?? 'مستخدم';
-    final email = user?['email'] ?? 'لا يوجد بريد إلكتروني';
+    final name =
+        user?['full_name'] ?? user?['name'] ?? Strings.tr(context, 'default_user');
+    final email = user?['email'] ?? Strings.tr(context, 'no_email');
 
     return Scaffold(
       appBar: AppBar(

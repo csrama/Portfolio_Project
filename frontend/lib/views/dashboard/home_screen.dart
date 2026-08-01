@@ -24,16 +24,18 @@ import 'dependent_dashboard_screen.dart';
 import 'link_requests_screen.dart';
 
 const Map<String, String> _relationshipLabels = {
-  'spouse': 'زوج/زوجة',
-  'child': 'ابن/ابنة',
-  'parent': 'أب/أم',
-  'sibling': 'أخ/أخت',
-  'other': 'أخرى',
+  'spouse': 'spouse',
+  'child': 'child',
+  'parent': 'parent',
+  'sibling': 'sibling',
+  'other': 'other',
 };
 
-String _relationshipDisplay(String? relationship) {
-  if (relationship == null || relationship.isEmpty) return 'لا يوجد';
-  return _relationshipLabels[relationship] ?? relationship;
+String _relationshipDisplay(BuildContext context, String? relationship) {
+  if (relationship == null || relationship.isEmpty) {
+    return Strings.tr(context, 'no_relationship');
+  }
+  return Strings.tr(context, relationship);
 }
 
 String _relationshipValue(String? arabicLabel) {
@@ -53,6 +55,16 @@ String _medicineDisplayName(Map<String, dynamic> medicine, String langCode) {
   }
   return nameAr.isNotEmpty ? nameAr : nameEn;
 }
+
+const Map<String, String> _dayValueToKey = {
+  'الأحد': 'weekday_sun',
+  'الأثنين': 'weekday_mon',
+  'الثلاثاء': 'weekday_tue',
+  'الأربعاء': 'weekday_wed',
+  'الخميس': 'weekday_thu',
+  'الجمعة': 'weekday_fri',
+  'السبت': 'weekday_sat',
+};
 
 class _Colors {
   static const Color primaryGreen = Color(0xFF1D9E75);
@@ -76,14 +88,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  final List<MedicationItem> _medications =
-      []; 
-  final Set<String> _takenMedications = {}; 
-  final Set<String> _notTakenMedications = {}; 
-  final Map<String, int> _doseRecordIds =
-      {}; 
-  List<DrugInteraction> _interactions =
-      []; 
+  final List<MedicationItem> _medications = [];
+  final Set<String> _takenMedications = {};
+  final Set<String> _notTakenMedications = {};
+  final Map<String, int> _doseRecordIds = {};
+  List<DrugInteraction> _interactions = [];
   final DrugInteractionService _interactionService = DrugInteractionService();
   bool _interactionsBannerExpanded = false;
 
@@ -114,12 +123,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
-    if (hour >= 5 && hour < 12) return 'صباح الخير';
-    if (hour >= 12 && hour < 17) return 'مساء الخير';
-    return 'مساء الخير';
+    if (hour >= 5 && hour < 12) return Strings.tr(context, 'morning_greeting');
+    return Strings.tr(context, 'evening_greeting');
   }
 
   String _arabicDigits(String input) {
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    if (!isArabic) return input;
     const arabic = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
     return input.split('').map((c) {
       final digit = int.tryParse(c);
@@ -127,8 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }).join();
   }
 
-  String _weekdayNameFromDate(DateTime date) {
-    final weekday = date.weekday;
+  String _internalWeekdayName(DateTime date) {
     const names = [
       'الاثنين',
       'الثلاثاء',
@@ -138,11 +147,24 @@ class _HomeScreenState extends State<HomeScreen> {
       'السبت',
       'الأحد',
     ];
-    return names[weekday - 1];
+    return names[date.weekday - 1];
+  }
+
+  String _weekdayNameFromDate(DateTime date) {
+    const keys = [
+      'weekday_mon',
+      'weekday_tue',
+      'weekday_wed',
+      'weekday_thu',
+      'weekday_fri',
+      'weekday_sat',
+      'weekday_sun',
+    ];
+    return Strings.tr(context, keys[date.weekday - 1]);
   }
 
   List<MedicationItem> _medicationsForDate(DateTime date) {
-    final dayName = _weekdayNameFromDate(date);
+    final dayName = _internalWeekdayName(date);
     return _medications.where((med) {
       final scheduledEveryDay = med.daysOfWeek.isEmpty;
       return med.isActive &&
@@ -417,11 +439,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 final data = snapshot.data;
                 if (data == null || data is! Map) {
-                  return const SizedBox(
+                  return SizedBox(
                     height: 100,
                     child: Center(
                       child: Text(
-                        'تعذر جلب بيانات متابعة الجرعات',
+                        Strings.tr(context, 'loading_failed'),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -436,10 +458,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text(
-                      'متابعة الجرعات',
+                    Text(
+                      Strings.tr(context, 'adherence_tracking'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -455,10 +477,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'نسبة الالتزام بالجرعات',
+                    Text(
+                      Strings.tr(context, 'adherence_rate_percent'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: _Colors.textSecondary),
+                      style: const TextStyle(color: _Colors.textSecondary),
                     ),
                     const SizedBox(height: 20),
                     Row(
@@ -473,9 +495,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const Text(
-                              'جرعات مأخوذة',
-                              style: TextStyle(color: _Colors.textSecondary),
+                            Text(
+                              Strings.tr(context, 'doses_taken'),
+                              style: const TextStyle(
+                                color: _Colors.textSecondary,
+                              ),
                             ),
                           ],
                         ),
@@ -488,9 +512,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const Text(
-                              'إجمالي الجرعات',
-                              style: TextStyle(color: _Colors.textSecondary),
+                            Text(
+                              Strings.tr(context, 'total_doses'),
+                              style: const TextStyle(
+                                color: _Colors.textSecondary,
+                              ),
                             ),
                           ],
                         ),
@@ -585,7 +611,7 @@ class _HomeScreenState extends State<HomeScreen> {
               isActive: m['is_active'] ?? true,
             );
           }).toList(),
-);
+        );
       });
 
       await _loadDoseRecords();
@@ -612,7 +638,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<List<DrugInteraction>> _checkInteractionsFor(String newMedName) async {
-
     try {
       return await _interactionService.checkNewMedication(
         newMedName,
@@ -627,13 +652,13 @@ class _HomeScreenState extends State<HomeScreen> {
   String _severityLabelAr(String severity) {
     switch (severity) {
       case 'contraindicated':
-        return 'خطر جداً - يمنع الجمع بينهما';
+        return Strings.tr(context, 'severity_contraindicated');
       case 'major':
-        return 'خطورة عالية';
+        return Strings.tr(context, 'severity_major');
       case 'moderate':
-        return 'خطورة متوسطة';
+        return Strings.tr(context, 'severity_moderate');
       case 'minor':
-        return 'خطورة بسيطة';
+        return Strings.tr(context, 'severity_minor');
       default:
         return severity;
     }
@@ -658,7 +683,6 @@ class _HomeScreenState extends State<HomeScreen> {
     DrugInteraction i, {
     bool emphasize = false,
   }) {
-
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -687,7 +711,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (i.recommendationAr.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
-              'التوصية: ${i.recommendationAr}',
+              '${Strings.tr(context, 'interaction_recommendation')}${i.recommendationAr}',
               style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
             ),
           ],
@@ -706,10 +730,10 @@ class _HomeScreenState extends State<HomeScreen> {
         textDirection: TextDirection.rtl,
         child: AlertDialog(
           title: Row(
-            children: const [
-              Icon(Icons.warning_amber_rounded, color: Color(0xFFD32F2F)),
-              SizedBox(width: 8),
-              Text('تنبيه: تداخل دوائي'),
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Color(0xFFD32F2F)),
+              const SizedBox(width: 8),
+              Text(Strings.tr(context, 'interaction_warning_title')),
             ],
           ),
           content: SingleChildScrollView(
@@ -724,7 +748,7 @@ class _HomeScreenState extends State<HomeScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('فهمت'),
+              child: Text(Strings.tr(context, 'i_understand')),
             ),
           ],
         ),
@@ -746,13 +770,15 @@ class _HomeScreenState extends State<HomeScreen> {
     for (final i in _interactions) {
       counts[i.severity] = (counts[i.severity] ?? 0) + 1;
     }
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final separator = isAr ? '، ' : ', ';
     final summaryParts = ['contraindicated', 'major', 'moderate', 'minor']
         .where((s) => counts.containsKey(s))
         .map(
           (s) =>
-              '${_arabicDigits(counts[s].toString())} ${_severityLabelAr(s).replaceFirst('خطر جداً - يمنع الجمع بينهما', 'ممنوع')}',
+              '${_arabicDigits(counts[s].toString())} ${s == 'contraindicated' ? Strings.tr(context, 'severity_contraindicated_short') : _severityLabelAr(s)}',
         )
-        .join('، ');
+        .join(separator);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -783,7 +809,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'تداخلات دوائية (${_arabicDigits(_interactions.length.toString())})'
+                      '${Strings.tr(context, 'interactions_count')} (${_arabicDigits(_interactions.length.toString())})'
                       '${summaryParts.isNotEmpty ? ' — $summaryParts' : ''}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
@@ -906,11 +932,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _dosePeriodLabel(TimeOfDay time) {
     final hour = time.hour;
-    if (hour == 0) return 'منتصف الليل';
-    if (hour < 12) return 'صباحاً';
-    if (hour == 12) return 'ظهراً';
-    if (hour < 18) return 'مساءً';
-    return 'مساءً';
+    if (hour == 0) return Strings.tr(context, 'midnight');
+    if (hour < 12) return Strings.tr(context, 'morning');
+    if (hour == 12) return Strings.tr(context, 'noon');
+    return Strings.tr(context, 'evening');
   }
 
   void _openAddMedicationSheet({MedicationItem? existingMedication}) {
@@ -1060,18 +1085,24 @@ class _HomeScreenState extends State<HomeScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("حذف الدواء"),
-        content: Text("هل تريد حذف ${med.name} ؟"),
+        title: Text(Strings.tr(context, 'delete_medication_title')),
+        content: Text(
+          Strings.tr(context, 'confirm_delete_medication', params: {
+            'name': med.name,
+          }),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("إلغاء"),
+            child: Text(Strings.tr(context, 'cancel')),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-
-            child: const Text("حذف"),
+            child: Text(
+              Strings.tr(context, 'delete'),
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -1083,8 +1114,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (auth.accessToken == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('الرجاء تسجيل الدخول أولاً'),
+          SnackBar(
+            content: Text(Strings.tr(context, 'please_login_first')),
             backgroundColor: Colors.orange,
           ),
         );
@@ -1152,7 +1183,6 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       } catch (e) {
         debugPrint(' Error with ${test['path']}: $e');
-
       }
     }
 
@@ -1160,11 +1190,10 @@ class _HomeScreenState extends State<HomeScreen> {
       await _loadMedications();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(' تم حذف الدواء بنجاح'),
-
+          SnackBar(
+            content: Text(Strings.tr(context, 'medication_deleted')),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -1172,10 +1201,11 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(' فشل الحذف: الكود $lastStatusCode'),
-
+            content: Text(
+              '${Strings.tr(context, 'delete_failed_with_code')} $lastStatusCode',
+            ),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -1219,14 +1249,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       elevation: 4,
                       itemBuilder: (context) => [
-                        const PopupMenuItem<String>(
+                        PopupMenuItem<String>(
                           enabled: false,
                           child: Padding(
-                            padding: EdgeInsets.symmetric(vertical: 4),
+                            padding: const EdgeInsets.symmetric(vertical: 4),
                             child: Text(
-                              ' حسابي',
+                              ' ${Strings.tr(context, 'my_account')}',
                               textAlign: TextAlign.right,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
                                 color: _Colors.darkGreen,
@@ -1235,14 +1265,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const PopupMenuDivider(height: 8),
-                        const PopupMenuItem<String>(
+                        PopupMenuItem<String>(
                           value: 'my_account',
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Text('حسابي', style: TextStyle(fontSize: 16)),
-                              SizedBox(width: 12),
-                              Icon(
+                              Text(
+                                Strings.tr(context, 'my_account'),
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                              const SizedBox(width: 12),
+                              const Icon(
                                 Icons.person_outline_rounded,
                                 color: _Colors.darkGreen,
                                 size: 24,
@@ -1250,14 +1283,17 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
-                        const PopupMenuItem<String>(
+                        PopupMenuItem<String>(
                           value: 'settings',
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Text('الإعدادات', style: TextStyle(fontSize: 16)),
-                              SizedBox(width: 12),
-                              Icon(
+                              Text(
+                                Strings.tr(context, 'settings'),
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                              const SizedBox(width: 12),
+                              const Icon(
                                 Icons.settings_outlined,
                                 color: _Colors.darkGreen,
                                 size: 24,
@@ -1265,14 +1301,17 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
-                        const PopupMenuItem<String>(
+                        PopupMenuItem<String>(
                           value: 'reminders',
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Text('تذكيراتي', style: TextStyle(fontSize: 16)),
-                              SizedBox(width: 12),
-                              Icon(
+                              Text(
+                                Strings.tr(context, 'my_reminders'),
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                              const SizedBox(width: 12),
+                              const Icon(
                                 Icons.notifications_outlined,
                                 color: _Colors.darkGreen,
                                 size: 24,
@@ -1280,14 +1319,17 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
-                        const PopupMenuItem<String>(
+                        PopupMenuItem<String>(
                           value: 'my_meds',
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Text('أدويتي', style: TextStyle(fontSize: 16)),
-                              SizedBox(width: 12),
-                              Icon(
+                              Text(
+                                Strings.tr(context, 'my_medications'),
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                              const SizedBox(width: 12),
+                              const Icon(
                                 Icons.medication_outlined,
                                 color: _Colors.darkGreen,
                                 size: 24,
@@ -1295,17 +1337,17 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
-                        const PopupMenuItem<String>(
+                        PopupMenuItem<String>(
                           value: 'adherence',
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               Text(
-                                'متابعة الجرعات',
-                                style: TextStyle(fontSize: 16),
+                                Strings.tr(context, 'adherence_tracking'),
+                                style: const TextStyle(fontSize: 16),
                               ),
-                              SizedBox(width: 12),
-                              Icon(
+                              const SizedBox(width: 12),
+                              const Icon(
                                 Icons.fact_check_outlined,
                                 color: _Colors.darkGreen,
                                 size: 24,
@@ -1313,14 +1355,17 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
-                        const PopupMenuItem<String>(
+                        PopupMenuItem<String>(
                           value: 'dependents',
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Text('التابعون', style: TextStyle(fontSize: 16)),
-                              SizedBox(width: 12),
-                              Icon(
+                              Text(
+                                Strings.tr(context, 'dependents'),
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                              const SizedBox(width: 12),
+                              const Icon(
                                 Icons.people_outline_rounded,
                                 color: _Colors.darkGreen,
                                 size: 24,
@@ -1328,14 +1373,17 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
-                        const PopupMenuItem<String>(
+                        PopupMenuItem<String>(
                           value: 'link_requests',
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Text('طلبات الربط', style: TextStyle(fontSize: 16)),
-                              SizedBox(width: 12),
-                              Icon(
+                              Text(
+                                Strings.tr(context, 'link_requests'),
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                              const SizedBox(width: 12),
+                              const Icon(
                                 Icons.link,
                                 color: _Colors.darkGreen,
                                 size: 24,
@@ -1344,21 +1392,21 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const PopupMenuDivider(height: 8),
-                        const PopupMenuItem<String>(
+                        PopupMenuItem<String>(
                           value: 'logout',
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               Text(
-                                'تسجيل الخروج',
-                                style: TextStyle(
+                                Strings.tr(context, 'logout'),
+                                style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                   color: Colors.redAccent,
                                 ),
                               ),
-                              SizedBox(width: 12),
-                              Icon(
+                              const SizedBox(width: 12),
+                              const Icon(
                                 Icons.logout_rounded,
                                 color: Colors.redAccent,
                                 size: 24,
@@ -1430,7 +1478,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Text(
                             selectedDep != null
-                                ? 'ملف: ${selectedDep.fullName}'
+                                ? '${Strings.tr(context, 'file_label')} ${selectedDep.fullName}'
                                 : (hasName
                                       ? '${_getGreeting()}،'
                                       : _getGreeting()),
@@ -1464,9 +1512,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 depProvider.selectDependent(null);
                                 _loadMedications();
                               },
-                              child: const Text(
-                                'العودة لملفي الشخصي',
-                                style: TextStyle(
+                              child: Text(
+                                Strings.tr(context, 'back_to_my_profile'),
+                                style: const TextStyle(
                                   color: _Colors.primaryGreen,
                                   fontSize: 12,
                                   decoration: TextDecoration.underline,
@@ -1599,9 +1647,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   GestureDetector(
                     onTap: () => _openAddMedicationSheet(),
-                    child: const Text(
-                      'إضافة دواء',
-                      style: TextStyle(
+                    child: Text(
+                      Strings.tr(context, 'add_medication'),
+                      style: const TextStyle(
                         color: _Colors.darkGreen,
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
@@ -1612,9 +1660,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       setState(() => _selectedIndex = 1);
                     },
-                    child: const Text(
-                      'عرض المزيد',
-                      style: TextStyle(
+                    child: Text(
+                      Strings.tr(context, 'view_all'),
+                      style: const TextStyle(
                         color: _Colors.darkGreen,
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
@@ -1624,11 +1672,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              const Align(
+              Align(
                 alignment: Alignment.centerRight,
                 child: Text(
-                  'الأدوية المضافه',
-                  style: TextStyle(
+                  Strings.tr(context, 'added_medications'),
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: _Colors.textPrimary,
@@ -1643,18 +1691,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: const Color(0xFFE1F5EE),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.check_circle_outline,
                         color: Color(0xFF1D9E75),
                         size: 20,
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Text(
-                        'لا توجد أدوية مجدولة لهذا اليوم',
-                        style: TextStyle(
+                        Strings.tr(context, 'no_medications_today'),
+                        style: const TextStyle(
                           color: Color(0xFF085041),
                           fontSize: 14,
                         ),
@@ -1681,10 +1729,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: const Color(0xFF085041),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Text(
-                    '+ إضافة دواء',
+                  child: Text(
+                    Strings.tr(context, 'add_medication_button'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white, fontSize: 15),
+                    style: const TextStyle(color: Colors.white, fontSize: 15),
                   ),
                 ),
               ),
@@ -1703,9 +1751,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                       if (changed == true) _loadMedications();
                     },
-                    child: const Text(
-                      'إضافة تابعين',
-                      style: TextStyle(
+                    child: Text(
+                      Strings.tr(context, 'add_dependents'),
+                      style: const TextStyle(
                         color: _Colors.darkGreen,
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
@@ -1722,9 +1770,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                       if (changed == true) _loadMedications();
                     },
-                    child: const Text(
-                      'عرض المزيد',
-                      style: TextStyle(
+                    child: Text(
+                      Strings.tr(context, 'view_all'),
+                      style: const TextStyle(
                         color: _Colors.darkGreen,
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
@@ -1734,11 +1782,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              const Align(
+              Align(
                 alignment: Alignment.centerRight,
                 child: Text(
-                  'التابعين المضافين',
-                  style: TextStyle(
+                  Strings.tr(context, 'dependents_added'),
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: _Colors.textPrimary,
@@ -1753,18 +1801,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: const Color(0xFFF6F6F6),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.people_outline,
                         color: _Colors.textSecondary,
                         size: 20,
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Text(
-                        'لا يوجد تابعين مضافين بعد',
-                        style: TextStyle(
+                        Strings.tr(context, 'no_dependents_added_yet'),
+                        style: const TextStyle(
                           color: _Colors.textSecondary,
                           fontSize: 14,
                         ),
@@ -1794,10 +1842,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 1.5,
                     ),
                   ),
-                  child: const Text(
-                    '+ إضافة تابع',
+                  child: Text(
+                    Strings.tr(context, 'add_dependent_button'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Color(0xFF085041),
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -1868,7 +1916,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _relationshipDisplay(dependent.relationship),
+                    _relationshipDisplay(context, dependent.relationship),
                     style: const TextStyle(
                       color: _Colors.textSecondary,
                       fontSize: 13,
@@ -1887,14 +1935,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   _confirmDeleteDependent(dependent);
                 }
               },
-              itemBuilder: (_) => const [
+              itemBuilder: (context) => [
                 PopupMenuItem(
                   value: "edit",
                   child: Row(
                     children: [
-                      Icon(Icons.edit, color: Colors.green),
-                      SizedBox(width: 8),
-                      Text("تعديل"),
+                      const Icon(Icons.edit, color: Colors.green),
+                      const SizedBox(width: 8),
+                      Text(Strings.tr(context, 'edit')),
                     ],
                   ),
                 ),
@@ -1902,9 +1950,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   value: "delete",
                   child: Row(
                     children: [
-                      Icon(Icons.delete, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text("حذف"),
+                      const Icon(Icons.delete, color: Colors.red),
+                      const SizedBox(width: 8),
+                      Text(Strings.tr(context, 'delete')),
                     ],
                   ),
                 ),
@@ -1925,31 +1973,46 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (dialogContext) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          title: const Text('تعديل بيانات التابع'),
+          title: Text(Strings.tr(context, 'edit_dependent_title')),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameController,
                 textAlign: TextAlign.right,
-                decoration: const InputDecoration(
-                  labelText: 'الاسم الكامل',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: Strings.tr(context, 'full_name'),
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: selectedRelationship,
-                decoration: const InputDecoration(
-                  labelText: 'صلة القرابة',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: Strings.tr(context, 'relationship_label'),
+                  border: const OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'spouse', child: Text('زوج/زوجة')),
-                  DropdownMenuItem(value: 'child', child: Text('ابن/ابنة')),
-                  DropdownMenuItem(value: 'parent', child: Text('أب/أم')),
-                  DropdownMenuItem(value: 'sibling', child: Text('أخ/أخت')),
-                  DropdownMenuItem(value: 'other', child: Text('أخرى')),
+                items: [
+                  DropdownMenuItem(
+                    value: 'spouse',
+                    child: Text(Strings.tr(context, 'spouse')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'child',
+                    child: Text(Strings.tr(context, 'child')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'parent',
+                    child: Text(Strings.tr(context, 'parent')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'sibling',
+                    child: Text(Strings.tr(context, 'sibling')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'other',
+                    child: Text(Strings.tr(context, 'other')),
+                  ),
                 ],
                 onChanged: (value) => selectedRelationship = value,
               ),
@@ -1958,7 +2021,7 @@ class _HomeScreenState extends State<HomeScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('إلغاء'),
+              child: Text(Strings.tr(context, 'cancel')),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -1981,12 +2044,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        success ? 'تم التحديث بنجاح ' : 'فشل التحديث',
+                        success
+                            ? Strings.tr(context, 'update_success')
+                            : Strings.tr(context, 'update_failed'),
                       ),
                       backgroundColor: success
                           ? const Color(0xFF1D9E75)
                           : Colors.red,
-
                     ),
                   );
                 }
@@ -1994,7 +2058,10 @@ class _HomeScreenState extends State<HomeScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF085041),
               ),
-              child: const Text('حفظ', style: TextStyle(color: Colors.white)),
+              child: Text(
+                Strings.tr(context, 'save'),
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -2008,19 +2075,24 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (dialogContext) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          title: const Text('حذف التابع'),
+          title: Text(Strings.tr(context, 'delete_dependent_title')),
           content: Text(
-            'هل أنت متأكد من حذف "${dependent.fullName}"؟ لا يمكن التراجع عن هذا الإجراء.',
+            Strings.tr(context, 'confirm_delete_dependent', params: {
+              'name': dependent.fullName,
+            }),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('إلغاء'),
+              child: Text(Strings.tr(context, 'cancel')),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(dialogContext, true),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('حذف', style: TextStyle(color: Colors.white)),
+              child: Text(
+                Strings.tr(context, 'delete'),
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -2037,7 +2109,11 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(success ? 'تم حذف التابع بنجاح ' : 'فشل الحذف'),
+            content: Text(
+              success
+                  ? Strings.tr(context, 'dependent_deleted_success')
+                  : Strings.tr(context, 'delete_failed'),
+            ),
             backgroundColor: success ? const Color(0xFF1D9E75) : Colors.red,
           ),
         );
@@ -2062,25 +2138,25 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: _Colors.lightGreenBg,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  'نشطة',
-                  style: TextStyle(color: _Colors.darkGreen),
+                child: Text(
+                  Strings.tr(context, 'active'),
+                  style: const TextStyle(color: _Colors.darkGreen),
                 ),
               ),
               const Spacer(),
-              const Text(
-                'الأدوية المحفوظة',
-                style: TextStyle(color: _Colors.textPrimary),
+              Text(
+                Strings.tr(context, 'saved_medications'),
+                style: const TextStyle(color: _Colors.textPrimary),
               ),
             ],
           ),
         ),
         Expanded(
           child: active.isEmpty
-              ? const Center(
+              ? Center(
                   child: Text(
-                    'لا يوجد أدوية محفوظة بعد',
-                    style: TextStyle(color: _Colors.textSecondary),
+                    Strings.tr(context, 'no_medications_yet'),
+                    style: const TextStyle(color: _Colors.textSecondary),
                   ),
                 )
               : ListView.builder(
@@ -2099,54 +2175,54 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-Future<void> _autoCreatePendingForMissedDoses() async {
-  final authProvider = context.read<AuthProvider>();
-  final token = authProvider.accessToken;
-  if (token == null) return;
+  Future<void> _autoCreatePendingForMissedDoses() async {
+    final authProvider = context.read<AuthProvider>();
+    final token = authProvider.accessToken;
+    if (token == null) return;
 
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final todayMeds = _medicationsForDate(today);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final todayMeds = _medicationsForDate(today);
 
-  for (final medication in todayMeds) {
-    for (int doseIndex = 0; doseIndex < medication.dosesPerDay; doseIndex++) {
-      final doseTime = _doseDateTime(medication, today, doseIndex);
-      if (!doseTime.isBefore(now)) continue;
+    for (final medication in todayMeds) {
+      for (int doseIndex = 0; doseIndex < medication.dosesPerDay; doseIndex++) {
+        final doseTime = _doseDateTime(medication, today, doseIndex);
+        if (!doseTime.isBefore(now)) continue;
 
-      final key = _medicationDoseKey(medication, today, doseIndex);
-      if (_isTaken(medication, today, doseIndex)) continue;
-      if (_doseRecordIds.containsKey(key)) continue;
+        final key = _medicationDoseKey(medication, today, doseIndex);
+        if (_isTaken(medication, today, doseIndex)) continue;
+        if (_doseRecordIds.containsKey(key)) continue;
 
-      final medId = int.tryParse(medication.id);
-      if (medId == null) continue;
+        final medId = int.tryParse(medication.id);
+        if (medId == null) continue;
 
-      try {
-        final created = await ApiService.postJson(
-          '/dose-logs',
-          body: {
-            'medication_id': medId,
-            'scheduled_time': doseTime.toIso8601String(),
-            'status': 'PENDING',
-            'dose_taken': false,
-          },
-          token: token,
-        );
-        final newId = created['id'];
-        if (newId != null) {
-          setState(() {
-            _doseRecordIds[key] = newId is int
-                ? newId
-                : int.tryParse(newId.toString()) ?? -1;
-          });
+        try {
+          final created = await ApiService.postJson(
+            '/dose-logs',
+            body: {
+              'medication_id': medId,
+              'scheduled_time': doseTime.toIso8601String(),
+              'status': 'PENDING',
+              'dose_taken': false,
+            },
+            token: token,
+          );
+          final newId = created['id'];
+          if (newId != null) {
+            setState(() {
+              _doseRecordIds[key] = newId is int
+                  ? newId
+                  : int.tryParse(newId.toString()) ?? -1;
+            });
+          }
+        } catch (e) {
+          debugPrint('Error auto-creating pending dose: $e');
         }
-      } catch (e) {
-        debugPrint('Error auto-creating pending dose: $e');
       }
     }
   }
-}
 
-Widget _buildDoseActionRow(
+  Widget _buildDoseActionRow(
     MedicationItem medication,
     DateTime date,
     int doseIndex,
@@ -2187,8 +2263,10 @@ Widget _buildDoseActionRow(
                   size: 18,
                 ),
                 label: Text(
-                  taken ? 'تم' : 'تم اخذ الدواء',
-                  style: TextStyle(
+                  taken
+                      ? Strings.tr(context, 'done_short')
+                      : Strings.tr(context, 'dose_taken'),
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
@@ -2233,13 +2311,13 @@ Widget _buildDoseActionRow(
         const SizedBox(height: 24),
         Expanded(
           child: selectedMeds.isEmpty
-              ? const Center(
+              ? Center(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
                     child: Text(
-                      'لا توجد أدوية مجدولة لهذا اليوم.',
+                      Strings.tr(context, 'no_scheduled_medications_dot'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: _Colors.textSecondary,
                         fontSize: 16,
                       ),
@@ -2340,7 +2418,7 @@ Widget _buildDoseActionRow(
           items: [
             BottomNavigationBarItem(
               icon: const Icon(Icons.home_rounded),
-              label: 'الرئيسية',
+              label: Strings.tr(context, 'home'),
             ),
             BottomNavigationBarItem(
               icon: const Icon(Icons.medication),
@@ -2418,14 +2496,14 @@ class _MedicationCard extends StatelessWidget {
                 onDelete?.call();
               }
             },
-            itemBuilder: (_) => const [
+            itemBuilder: (context) => [
               PopupMenuItem(
                 value: "edit",
                 child: Row(
                   children: [
-                    Icon(Icons.edit, color: Colors.green),
-                    SizedBox(width: 8),
-                    Text("تعديل"),
+                    const Icon(Icons.edit, color: Colors.green),
+                    const SizedBox(width: 8),
+                    Text(Strings.tr(context, 'edit')),
                   ],
                 ),
               ),
@@ -2433,9 +2511,9 @@ class _MedicationCard extends StatelessWidget {
                 value: "delete",
                 child: Row(
                   children: [
-                    Icon(Icons.delete, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text("حذف"),
+                    const Icon(Icons.delete, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Text(Strings.tr(context, 'delete')),
                   ],
                 ),
               ),
@@ -2465,7 +2543,7 @@ class _MedicationCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${medication.timeLabel}. x${medication.dosesPerDay}/اليوم',
+                  '${medication.timeLabel}. ${Strings.tr(context, 'medication_per_day', params: {'doses': medication.dosesPerDay.toString()})}',
                   style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
                 if (showDoseActions &&
@@ -2572,9 +2650,9 @@ class _MedicationCard extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                                child: const Text(
-                                  'تناولت',
-                                  style: TextStyle(
+                                child: Text(
+                                  Strings.tr(context, 'took_it'),
+                                  style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -2652,9 +2730,9 @@ class _MedicationCard extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                                child: const Text(
-                                  'لم أتناول',
-                                  style: TextStyle(
+                                child: Text(
+                                  Strings.tr(context, 'did_not_take'),
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -2723,13 +2801,13 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
 
   List<Map<String, dynamic>> _pharmacySuggestions = [];
 
-  final Map<MedicationType, String> _typeLabels = {
-    MedicationType.tablets: 'أقراص',
-    MedicationType.capsule: 'كبسولات',
-    MedicationType.bottle: 'شراب',
-    MedicationType.injection: 'حقن',
-    MedicationType.cream: 'كريم',
-    MedicationType.drops: 'قطرات',
+  static const Map<MedicationType, String> _typeKeys = {
+    MedicationType.tablets: 'tablet',
+    MedicationType.capsule: 'capsule',
+    MedicationType.bottle: 'bottle',
+    MedicationType.injection: 'injection',
+    MedicationType.cream: 'cream',
+    MedicationType.drops: 'drops',
   };
 
   Future<void> _searchMedicines(String query) async {
@@ -2801,7 +2879,6 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
 
       _applyDosageString((suggestion['dosage'] ?? '').toString());
 
-
       _searchController.clear();
       _pharmacySuggestions.clear();
     });
@@ -2820,7 +2897,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
   void _save({required bool withReminder}) {
     if (!_isValid) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('الرجاء إدخال اسم الدواء واختيار الأيام')),
+        SnackBar(content: Text(Strings.tr(context, 'enter_name_and_days'))),
       );
       return;
     }
@@ -2878,7 +2955,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
               ),
               child: Center(
                 child: Text(
-                  day,
+                  Strings.tr(context, _dayValueToKey[day] ?? 'no_relationship'),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12.5,
@@ -2924,7 +3001,9 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                allSelected ? 'إلغاء تحديد الكل' : 'كل أيام الأسبوع',
+                allSelected
+                    ? Strings.tr(context, 'deselect_all_days')
+                    : Strings.tr(context, 'select_all_days'),
                 style: const TextStyle(
                   color: _Colors.darkGreen,
                   fontSize: 12,
@@ -2968,21 +3047,24 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                     ),
                   ),
                 ),
-                const Text(
-                  'جدول دوائك',
+                Text(
+                  Strings.tr(context, 'schedule_medication'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: _Colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Align(
+                Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    'حدد نوع الدواء:',
-                    style: TextStyle(fontSize: 14, color: _Colors.textSecondary),
+                    Strings.tr(context, 'select_type_label'),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: _Colors.textSecondary,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -2990,11 +3072,13 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   height: 90,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final itemWidth = constraints.maxWidth / 3.5;
                       return Row(
                         children: MedicationType.values.map((type) {
                           final selected = type == _selectedType;
-                          final label = _typeLabels[type] ?? type.toString();
+                          final label = Strings.tr(
+                            context,
+                            _typeKeys[type] ?? 'no_relationship',
+                          );
                           return Expanded(
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -3051,11 +3135,11 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Align(
+                Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    'اسم الدواء',
-                    style: TextStyle(color: _Colors.textSecondary),
+                    Strings.tr(context, 'medication_name_label'),
+                    style: const TextStyle(color: _Colors.textSecondary),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -3064,7 +3148,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   onChanged: _searchMedicines,
                   textAlign: TextAlign.right,
                   decoration: InputDecoration(
-                    hintText: 'ابحث عن الدواء من نفس الصيدلية',
+                    hintText: Strings.tr(context, 'search_pharmacy_hint_more'),
                     hintStyle: TextStyle(color: Colors.grey[400]),
                     filled: true,
                     fillColor: const Color(0xFFF6F6F6),
@@ -3118,7 +3202,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                         controller: _nameController,
                         textAlign: TextAlign.right,
                         decoration: InputDecoration(
-                          hintText: 'اكتب اسم الدواء يدويًا',
+                          hintText: Strings.tr(context, 'medicine_name_hint'),
                           hintStyle: TextStyle(color: Colors.grey[400]),
                           filled: true,
                           fillColor: const Color(0xFFF6F6F6),
@@ -3145,7 +3229,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                             alignment: AlignmentDirectional.centerEnd,
                             dropdownColor: Colors.white,
                             hint: Text(
-                              'الجرعة',
+                              Strings.tr(context, 'dosage_label'),
                               textAlign: TextAlign.right,
                               style: TextStyle(color: Colors.grey[400], fontSize: 13),
                             ),
@@ -3185,11 +3269,11 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                const Align(
+                Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    'أيام الأسبوع',
-                    style: TextStyle(color: _Colors.textSecondary),
+                    Strings.tr(context, 'days_of_week_label'),
+                    style: const TextStyle(color: _Colors.textSecondary),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -3201,13 +3285,13 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Padding(
-                            padding: EdgeInsets.only(right: 4),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 4),
                             child: Align(
                               alignment: Alignment.centerRight,
                               child: Text(
-                                'الوقت',
-                                style: TextStyle(
+                                Strings.tr(context, 'time_label'),
+                                style: const TextStyle(
                                   color: _Colors.textSecondary,
                                   fontSize: 13,
                                 ),
@@ -3251,13 +3335,13 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Padding(
-                            padding: EdgeInsets.only(right: 4),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 4),
                             child: Align(
                               alignment: Alignment.centerRight,
                               child: Text(
-                                'الفترة',
-                                style: TextStyle(
+                                Strings.tr(context, 'period_label'),
+                                style: const TextStyle(
                                   color: _Colors.textSecondary,
                                   fontSize: 13,
                                 ),
@@ -3288,18 +3372,18 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                                 ),
                                 iconSize: 24,
                                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                                items: const [
+                                items: [
                                   DropdownMenuItem(
                                     value: 'صباحا',
                                     child: Text(
-                                      'صباحا',
+                                      Strings.tr(context, 'morning_period'),
                                       textAlign: TextAlign.right,
                                     ),
                                   ),
                                   DropdownMenuItem(
                                     value: 'مساء',
                                     child: Text(
-                                      'مساء',
+                                      Strings.tr(context, 'evening_period'),
                                       textAlign: TextAlign.right,
                                     ),
                                   ),
@@ -3318,11 +3402,11 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                const Align(
+                Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    'عدد الجرعات في اليوم',
-                    style: TextStyle(color: _Colors.textSecondary),
+                    Strings.tr(context, 'doses_per_day_label'),
+                    style: const TextStyle(color: _Colors.textSecondary),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -3330,11 +3414,11 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                   children: List.generate(4, (i) {
                     final value = i + 1;
                     final selected = _dosesPerDay == value;
-                    final doseLabels = [
-                      'مرة واحدة',
-                      'مرتين',
-                      '3 مرات',
-                      '4 مرات',
+                    const doseKeys = [
+                      'once',
+                      'twice',
+                      'three_times',
+                      'four_times',
                     ];
                     return Expanded(
                       child: Padding(
@@ -3350,7 +3434,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              doseLabels[i],
+                              Strings.tr(context, doseKeys[i]),
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: selected ? Colors.white : Colors.grey[300],
@@ -3375,9 +3459,9 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text(
-                      'حفظ',
-                      style: TextStyle(
+                    child: Text(
+                      Strings.tr(context, 'save'),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -3400,9 +3484,9 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text(
-                      'حفظ الدواء بدون التنبيه',
-                      style: TextStyle(
+                    child: Text(
+                      Strings.tr(context, 'save_without_reminder'),
+                      style: const TextStyle(
                         color: _Colors.darkGreen,
                         fontSize: 15,
                       ),
@@ -3418,3 +3502,4 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
     );
   }
 }
+

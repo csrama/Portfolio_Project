@@ -130,12 +130,12 @@ class _AdherenceScreenState extends State<AdherenceScreen> {
           ),
           const SizedBox(height: 12),
           if (_records.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 60),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 60),
               child: Center(
                 child: Text(
-                  'لا توجد سجلات',
-                  style: TextStyle(color: _Colors.textSecondary),
+                  Strings.tr(context, 'no_records'),
+                  style: const TextStyle(color: _Colors.textSecondary),
                 ),
               ),
             )

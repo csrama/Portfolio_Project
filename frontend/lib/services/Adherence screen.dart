@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
-import '../models/medication_item.dart'; 
+import '../models/medication_item.dart';
+import '../i18n/strings.dart';
 
 class _Colors {
   static const Color primaryGreen = Color(0xFF1D9E75);
@@ -55,7 +56,7 @@ class _AdherenceScreenState extends State<AdherenceScreen> {
         final bTime =
             DateTime.tryParse((b['scheduled_time'] ?? '').toString()) ??
                 DateTime(0);
-        return bTime.compareTo(aTime); 
+        return bTime.compareTo(aTime);
       });
 
       if (!mounted) return;
@@ -77,7 +78,7 @@ class _AdherenceScreenState extends State<AdherenceScreen> {
     for (final m in widget.medications) {
       if (m.id == medicationId.toString()) return m.name;
     }
-    return 'دواء';
+    return Strings.tr(context, 'no_data');
   }
 
   String _formatDateTime(DateTime dt) {
@@ -98,7 +99,7 @@ class _AdherenceScreenState extends State<AdherenceScreen> {
           backgroundColor: _Colors.darkGreen,
           foregroundColor: Colors.white,
           centerTitle: true,
-          title: const Text('متابعة الجرعات'),
+          title: Text(Strings.tr(context, 'adherence_tracking')),
         ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
@@ -109,11 +110,11 @@ class _AdherenceScreenState extends State<AdherenceScreen> {
                   children: [
                     _buildRateCard(),
                     const SizedBox(height: 24),
-                    const Align(
+                    Align(
                       alignment: Alignment.centerRight,
                       child: Text(
-                        'سجل الجرعات',
-                        style: TextStyle(
+                        Strings.tr(context, 'adherence_rate'),
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -121,12 +122,14 @@ class _AdherenceScreenState extends State<AdherenceScreen> {
                     ),
                     const SizedBox(height: 12),
                     if (_records.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 60),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 60),
                         child: Center(
                           child: Text(
-                            'ما فيه سجلات جرعات لسا',
-                            style: TextStyle(color: _Colors.textSecondary),
+                            Strings.tr(context, 'no_records'),
+                            style: const TextStyle(
+                              color: _Colors.textSecondary,
+                            ),
                           ),
                         ),
                       )
@@ -158,17 +161,17 @@ class _AdherenceScreenState extends State<AdherenceScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'نسبة الالتزام بالجرعات',
-            style: TextStyle(color: _Colors.textSecondary),
+          Text(
+            Strings.tr(context, 'adherence_rate_percent'),
+            style: const TextStyle(color: _Colors.textSecondary),
           ),
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildStatColumn('$_completed', 'جرعات مأخوذة'),
+              _buildStatColumn('$_completed', Strings.tr(context, 'doses_taken')),
               Container(width: 1, height: 32, color: _Colors.borderGrey),
-              _buildStatColumn('$_total', 'إجمالي الجرعات'),
+              _buildStatColumn('$_total', Strings.tr(context, 'total_doses')),
             ],
           ),
         ],
@@ -188,7 +191,10 @@ class _AdherenceScreenState extends State<AdherenceScreen> {
           ),
         ),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: _Colors.textSecondary, fontSize: 12)),
+        Text(
+          label,
+          style: const TextStyle(color: _Colors.textSecondary, fontSize: 12),
+        ),
       ],
     );
   }
@@ -230,14 +236,19 @@ class _AdherenceScreenState extends State<AdherenceScreen> {
                   Text(
                     _formatDateTime(scheduled),
                     textAlign: TextAlign.right,
-                    style: const TextStyle(fontSize: 12, color: _Colors.textSecondary),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: _Colors.textSecondary,
+                    ),
                   ),
                 ],
               ],
             ),
           ),
           Text(
-            taken ? 'تم أخذها' : 'لم تؤخذ',
+            taken
+                ? Strings.tr(context, 'medication_taken')
+                : Strings.tr(context, 'medication_not_taken'),
             style: TextStyle(
               color: taken ? _Colors.darkGreen : Colors.redAccent,
               fontWeight: FontWeight.bold,
@@ -249,3 +260,4 @@ class _AdherenceScreenState extends State<AdherenceScreen> {
     );
   }
 }
+
