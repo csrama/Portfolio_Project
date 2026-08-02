@@ -24,13 +24,42 @@ async function run() {
       .sort((a, b) => a.localeCompare(b));
 
     for (const file of files) {
-      const filePath = path.join(migrationsDir, file);
-      const sql = fs.readFileSync(filePath, 'utf8');
+  console.log(`Applying migration: ${file}`);
 
-      console.log(`Applying migration: ${file}`);
-      await client.query(sql);
+  try {
+    const filePath = path.join(migrationsDir, file);
+    const sql = fs.readFileSync(filePath, 'utf8');
+
+    // إذا كانت بيانات التداخلات موجودة، لا تعيد تنفيذ الـ seed
+    if (file === '006_seed_drug_interactions.sql') {
+      const tableExists = await client.query(`
+        SELECT EXISTS (
+          SELECT 1
+          FROM information_schema.tables
+          WHERE table_name = 'drug_interactions'
+        );
+      `);
+
+      if (tableExists.rows[0].exists) {
+        const count = await client.query(
+          'SELECT COUNT(*) FROM drug_interactions'
+        );
+
+        if (Number(count.rows[0].count) > 0) {
+          console.log('✓ Skipping 006_seed_drug_interactions.sql (already seeded)');
+          continue;
+        }
+      }
     }
 
+    await client.query(sql);
+
+    console.log(`✓ ${file} completed`);
+  } catch (err) {
+    console.error(`✗ Failed in migration: ${file}`);
+    throw err;
+  }
+}
     console.log('SQL migrations completed successfully.');
   } catch (err) {
     if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.message?.includes('getaddrinfo')) {
