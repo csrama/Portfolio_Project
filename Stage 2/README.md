@@ -99,8 +99,6 @@ All team members contribute as Full Stack Developers throughout the project. The
 - Post-dose prompt asking user if taken.
 - Add dependents (children, spouse, elderly parents).
 - Separate page for each dependent.
-- Pill quantity tracking with low stock alert.
-- Family or caregiver monitoring dashboard.
 - Full tracking and analytics system for long-term missed medication patterns.
 
 ### 4.2 Out-of-Scope
