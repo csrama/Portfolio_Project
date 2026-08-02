@@ -32,7 +32,7 @@ const Map<String, String> _periodDisplayKeys = {
 
 const Map<String, String> _dayValueToKey = {
   'الأحد': 'weekday_sun',
-  'الأثنين': 'weekday_mon',
+  'الاثنين': 'weekday_mon',
   'الثلاثاء': 'weekday_tue',
   'الأربعاء': 'weekday_wed',
   'الخميس': 'weekday_thu',
@@ -65,6 +65,38 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, dynamic>> _searchResults = [];
   bool _isSearching = false;
+   List<dynamic> _interactions = [];
+  bool _checkingInteractions = false;
+  Future<void> _checkInteractions() async {
+  final auth = context.read<AuthProvider>();
+
+  if (_medications.length < 2) {
+    setState(() => _interactions = []);
+    return;
+  }
+
+  try {
+    setState(() => _checkingInteractions = true);
+
+    final response = await ApiService.postJson(
+      '/interactions/check',
+      token: auth.accessToken!,
+      body: {
+        'generic_names': _medications.map((e) => e.name).toList(),
+      },
+    );
+
+    setState(() {
+      _interactions = response['interactions'] ?? [];
+    });
+  } catch (e) {
+    debugPrint('Interaction error: $e');
+  } finally {
+    if (mounted) {
+      setState(() => _checkingInteractions = false);
+    }
+  }
+}
 
   @override
   void initState() {
@@ -124,11 +156,13 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
         }).toList();
         _isLoading = false;
       });
+      await _checkInteractions();
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
         _errorMessage = Strings.tr(context, 'failed_load_medications');
+        
       });
     }
   }
@@ -519,7 +553,36 @@ class _DependentDashboardScreenState extends State<DependentDashboardScreen> {
                           else
                             ..._medications.map(
                               (med) => _buildMedicationCard(med),
+                              
                             ),
+                            if (_checkingInteractions)
+  const Padding(
+    padding: EdgeInsets.all(16),
+    child: Center(
+      child: CircularProgressIndicator(),
+    ),
+  ),
+
+if (_interactions.isNotEmpty)
+  ..._interactions.map(
+    (interaction) => Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      color: Colors.red.shade50,
+      child: ListTile(
+        leading: const Icon(
+          Icons.warning_amber_rounded,
+          color: Colors.red,
+        ),
+        title: Text(
+          '${interaction['drug1']} × ${interaction['drug2']}',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          '${interaction['severity']}\n${interaction['description']}',
+        ),
+      ),
+    ),
+  ),
                           const SizedBox(height: 16),
                           GestureDetector(
                             onTap: () => _openAddMedicationSheet(),
@@ -654,7 +717,7 @@ class _AddDependentMedicationSheetState
 
   static const List<String> _allDays = [
     'الأحد',
-    'الأثنين',
+    'الاثنين',
     'الثلاثاء',
     'الأربعاء',
     'الخميس',

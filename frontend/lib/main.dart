@@ -193,11 +193,16 @@ class _AuthGateState extends State<_AuthGate> {
         }
         if (snapshot.data == true && !snapshot.hasError) {
           final user = context.read<AuthProvider>().user;
-          return HomeScreen(
-            userName:
-                user?['name'] as String? ?? Strings.tr(context, 'default_user'),
-            photoUrl: user?['photo'] as String?,
-          );
+
+final userName =
+    user?['full_name'] ??
+    user?['name'] ??
+    Strings.tr(context, 'default_user');
+
+return HomeScreen(
+  userName: userName,
+  photoUrl: user?['photo'] as String?,
+);
         }
         return const SplashScreen();
       },

@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import '../../repositories/auth_repository.dart';
 import '../../services/google_auth_service.dart';
 import 'package:http/http.dart' as http;
@@ -22,6 +22,7 @@ import '../profile/profile_screen.dart';
 import 'dependents_screen.dart';
 import 'dependent_dashboard_screen.dart';
 import 'link_requests_screen.dart';
+import 'dart:async';
 
 const Map<String, String> _relationshipLabels = {
   'spouse': 'spouse',
@@ -58,7 +59,7 @@ String _medicineDisplayName(Map<String, dynamic> medicine, String langCode) {
 
 const Map<String, String> _dayValueToKey = {
   'الأحد': 'weekday_sun',
-  'الأثنين': 'weekday_mon',
+  'الاثنين': 'weekday_mon',
   'الثلاثاء': 'weekday_tue',
   'الأربعاء': 'weekday_wed',
   'الخميس': 'weekday_thu',
@@ -116,6 +117,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+ Timer? _autoRefreshTimer;
+ bool _isRefreshing = false;
   int _selectedIndex = 0;
   final List<MedicationItem> _medications = [];
   final Set<String> _takenMedications = {};
@@ -142,6 +145,30 @@ class _HomeScreenState extends State<HomeScreen> {
         context.read<DependentProvider>().fetchDependents(auth.accessToken!);
       }
     });
+
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 20), (timer) {
+      _refreshPage();
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoRefreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshPage() async {
+    await _loadMedications();
+    await _loadTakenMedications();
+
+    final auth = context.read<AuthProvider>();
+    if (auth.accessToken != null) {
+      await context.read<DependentProvider>().fetchDependents(auth.accessToken!);
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
@@ -593,6 +620,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final depService = context.read<DependentService>();
 
       List<dynamic> rawList;
+      debugPrint("Current user token exists");
+  debugPrint("Selected dependent: ${selectedDep?.id}");
 
       if (selectedDep != null) {
         rawList = await depService.getDependentMedications(
@@ -2807,7 +2836,7 @@ class _AddMedicationSheetState extends State<_AddMedicationSheet> {
 
   static const List<String> _allDays = [
     'الأحد',
-    'الأثنين',
+    'الاثنين',
     'الثلاثاء',
     'الأربعاء',
     'الخميس',
