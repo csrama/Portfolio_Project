@@ -40,7 +40,7 @@ describe('auth endpoints', () => {
     expect(secondRegistration.body).toEqual({ error: 'User already exists' });
   });
 
-  it('normalizes email casing and uses the general_user default type', async () => {
+it('normalizes email casing and uses the dependent default type', async () => {
     const mixedCaseEmail = `mixed-case-${Date.now()}@Example.com`;
     const response = await request(server)
       .post('/auth/register')
@@ -48,7 +48,7 @@ describe('auth endpoints', () => {
 
     expect(response.status).toBe(201);
     expect(response.body.user.email).toBe(mixedCaseEmail.toLowerCase());
-    expect(response.body.user.user_type).toBe('general_user');
+    expect(response.body.user.user_type).toBe('dependent');
   });
 
   it('logs in and returns token + refreshToken', async () => {
@@ -87,15 +87,11 @@ describe('auth endpoints', () => {
     if (pgPool) {
       try {
         await pgPool.query('DELETE FROM users WHERE email = $1', ['test-user@example.com']);
-      } catch (error) {
-        // Ignore cleanup errors when the database is unavailable.
-      }
+      } catch (error) 
 
       try {
         await pgPool.end();
-      } catch (error) {
-        // Ignore cleanup errors when the database is unavailable.
-      }
+      } catch (error) 
     }
 
     if (server && typeof server.close === 'function') {

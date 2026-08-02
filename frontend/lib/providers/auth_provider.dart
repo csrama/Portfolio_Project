@@ -1,5 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -16,23 +15,22 @@ class AuthProvider extends ChangeNotifier {
   String? get refreshToken => _refreshToken;
   Map<String, dynamic>? get user => _user;
 
-  /// Reads the current session. Wrapped in try/catch + timeout because
-  /// flutter_secure_storage can hang or throw on Flutter Web where the
-  /// underlying platform channels are not fully implemented.
   Future<bool> checkLoginStatus() async {
     try {
-      _accessToken = await _authService
-          .getAccessToken()
-          .timeout(const Duration(seconds: 3), onTimeout: () => null);
-      _refreshToken = await _authService
-          .getRefreshToken()
-          .timeout(const Duration(seconds: 3), onTimeout: () => null);
-      _user = await _authService
-          .getUserData()
-          .timeout(const Duration(seconds: 3), onTimeout: () => null);
+      _accessToken = await _authService.getAccessToken().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => null,
+      );
+      _refreshToken = await _authService.getRefreshToken().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => null,
+      );
+      _user = await _authService.getUserData().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => null,
+      );
       _isLoggedIn = _accessToken != null;
     } catch (e) {
-      // On web / unsupported platforms, treat as logged out instead of hanging.
       if (kDebugMode) {
         debugPrint('checkLoginStatus failed: $e');
       }
@@ -45,8 +43,11 @@ class AuthProvider extends ChangeNotifier {
     return _isLoggedIn;
   }
 
-  Future<bool> login(String accessToken, String refreshToken,
-      Map<String, dynamic> user) async {
+  Future<bool> login(
+    String accessToken,
+    String refreshToken,
+    Map<String, dynamic> user,
+  ) async {
     try {
       await _authService.saveTokens(accessToken, refreshToken);
       await _authService.saveUserData(user);
@@ -57,8 +58,6 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      // Even if secure storage fails on web, still mark the session as
-      // logged-in in memory so the user can use the app.
       _accessToken = accessToken;
       _refreshToken = refreshToken;
       _user = user;
@@ -72,7 +71,6 @@ class AuthProvider extends ChangeNotifier {
     try {
       await _authService.logout();
     } catch (_) {
-      // Fallback: always clear local state.
       await _authService.clearTokens();
       await _authService.clearUserData();
     }

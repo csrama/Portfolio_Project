@@ -1,10 +1,64 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'
+    show
+        Alignment,
+        BorderRadius,
+        BorderSide,
+        BoxDecoration,
+        BuildContext,
+        Center,
+        CircularProgressIndicator,
+        Color,
+        Colors,
+        Column,
+        Container,
+        CrossAxisAlignment,
+        Directionality,
+        Divider,
+        DropdownButtonFormField,
+        DropdownMenuItem,
+        EdgeInsets,
+        ElevatedButton,
+        Expanded,
+        FontWeight,
+        Icon,
+        Icons,
+        InputDecoration,
+        LinearGradient,
+        MainAxisAlignment,
+        MaterialPageRoute,
+        Navigator,
+        OutlineInputBorder,
+        OutlinedButton,
+        Padding,
+        RoundedRectangleBorder,
+        Row,
+        SafeArea,
+        Scaffold,
+        ScaffoldMessenger,
+        SingleChildScrollView,
+        SizedBox,
+        SnackBar,
+        State,
+        StatefulWidget,
+        Text,
+        TextAlign,
+        TextButton,
+        TextDirection,
+        TextEditingController,
+        TextField,
+        TextInputType,
+        TextStyle,
+        Theme,
+        VoidCallback,
+        Widget;
 import '../dashboard/home_screen.dart';
 import '../../services/auth_service.dart';
 import '../../services/google_auth_service.dart';
-import '../../services/api_service.dart'; 
+import '../../services/api_service.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/app_settings_provider.dart';
+import '../../i18n/strings.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -37,9 +91,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     if (email.isEmpty || name.isEmpty || password.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('أدخل اسمًا صالحًا وبريدًا وكلمة مرور 6 أحرف على الأقل'),
-        ),
+        SnackBar(content: Text(Strings.tr(context, 'signup_error'))),
       );
       return;
     }
@@ -61,14 +113,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final user = result['user'] as Map<String, dynamic>?;
 
       if (token == null || user == null) {
-        throw Exception('بيانات غير مكتملة من الخادم');
+        throw Exception(Strings.tr(context, 'incomplete_data'));
       }
 
-      await context.read<AuthProvider>().login(
-            token,
-            refreshToken ?? '',
-            user,
-          );
+      await context.read<AuthProvider>().login(token, refreshToken ?? '', user);
 
       if (!mounted) return;
       final isOffline = result['mode'] == 'offline';
@@ -76,8 +124,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         SnackBar(
           content: Text(
             isOffline
-                ? 'تم إنشاء الحساب محليًا بدون اتصال بالإنترنت'
-                : 'تم إنشاء الحساب بنجاح: ${user['full_name']}',
+                ? Strings.tr(context, 'account_created_offline')
+                : '${Strings.tr(context, 'account_created')}: ${user['full_name']}',
           ),
         ),
       );
@@ -94,9 +142,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     } catch (e) {
       if (!mounted) return;
       final message = e.toString().contains('409')
-          ? 'هذا البريد مستخدم بالفعل'
-          : 'فشل إنشاء الحساب، جرّب بريدًا آخر';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+          ? Strings.tr(context, 'email_exists')
+          : Strings.tr(context, 'signup_error');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -110,7 +160,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('أدخل البريد وكلمة المرور')),
+        SnackBar(content: Text(Strings.tr(context, 'login_error'))),
       );
       return;
     }
@@ -127,14 +177,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final user = result['user'] as Map<String, dynamic>?;
 
       if (token == null || user == null) {
-        throw Exception('بيانات غير مكتملة من الخادم');
+        throw Exception(Strings.tr(context, 'incomplete_data'));
       }
 
-      await context.read<AuthProvider>().login(
-            token,
-            refreshToken ?? '',
-            user,
-          );
+      await context.read<AuthProvider>().login(token, refreshToken ?? '', user);
 
       if (!mounted) return;
 
@@ -150,9 +196,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     } catch (e) {
       if (!mounted) return;
       final message = e.toString().contains('401')
-          ? 'البريد أو كلمة المرور غير صحيحة'
-          : 'فشل تسجيل الدخول. تأكد من الاتصال بالإنترنت';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+          ? Strings.tr(context, 'invalid_credentials')
+          : Strings.tr(context, 'login_error');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -161,9 +209,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('قريباً')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(Strings.tr(context, 'done'))));
   }
 
   Future<void> _signInWithGoogle(BuildContext context) async {
@@ -178,7 +226,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       if (authResult == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إلغاء تسجيل الدخول أو فشل الإعداد')),
+          SnackBar(
+            content: Text(Strings.tr(context, 'google_signin_cancelled')),
+          ),
         );
         setState(() => _isLoading = false);
         return;
@@ -190,10 +240,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       if (token != null && user != null) {
         await context.read<AuthProvider>().login(
-              token,
-              refreshToken ?? '',
-              user,
-            );
+          token,
+          refreshToken ?? '',
+          user,
+        );
 
         if (!mounted) return;
 
@@ -201,20 +251,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           context,
           MaterialPageRoute(
             builder: (_) => HomeScreen(
-              userName: user['full_name']?.toString() ?? user['name']?.toString(),
+              userName:
+                  user['full_name']?.toString() ?? user['name']?.toString(),
               photoUrl: user['picture']?.toString(),
             ),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('بيانات تسجيل الدخول غير مكتملة')),
+          SnackBar(
+            content: Text(Strings.tr(context, 'google_signin_incomplete')),
+          ),
         );
       }
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('حدث خطأ أثناء تسجيل الدخول: $e')),
+        SnackBar(
+          content: Text('${Strings.tr(context, 'google_signin_error')}: $e'),
+        ),
       );
     } finally {
       if (mounted) {
@@ -225,8 +280,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final settings = context.watch<AppSettingsProvider>();
+    final isRtl = settings.languageCode == 'ar';
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Container(
@@ -248,57 +306,65 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 32,
+                ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Title
                     Text(
-                      _isSignUp ? 'انشاء حساب جديد' : 'تسجيل الدخول',
+                      _isSignUp
+                          ? Strings.tr(context, 'signup_title')
+                          : Strings.tr(context, 'login_title'),
                       textAlign: TextAlign.right,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF0E3C30),
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       _isSignUp
-                          ? 'ادخل بياناتك لإنشاء حساب جديد'
-                          : 'أدخل بريدك الالكتروني لتسجيل الدخول',
+                          ? Strings.tr(context, 'signup_subtitle')
+                          : Strings.tr(context, 'login_subtitle'),
                       textAlign: TextAlign.right,
-                      style: const TextStyle(fontSize: 14, color: Color(0xFF2D6A4F)),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.7,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 24),
 
-                    // Name field (sign up only)
                     if (_isSignUp) ...[
                       _buildTextField(
                         controller: _nameController,
-                        hint: 'الاسم الكامل',
+                        hint: Strings.tr(context, 'full_name'),
                         keyboardType: TextInputType.name,
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         initialValue: _userType,
                         decoration: InputDecoration(
-                          labelText: 'نوع الحساب',
+                          labelText: Strings.tr(context, 'account_type'),
                           filled: true,
                           fillColor: Colors.white.withValues(alpha: 0.85),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                        items: const [
+                        items: [
                           DropdownMenuItem(
                             value: 'general_user',
-                            child: Text('مستخدم'),
+                            child: Text(Strings.tr(context, 'general_user')),
                           ),
                           DropdownMenuItem(
                             value: 'caregiver',
-                            child: Text('مقدم رعاية'),
+                            child: Text(Strings.tr(context, 'caregiver')),
                           ),
                         ],
                         onChanged: (value) {
@@ -310,23 +376,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       const SizedBox(height: 12),
                     ],
 
-                    // Email field
                     _buildTextField(
                       controller: _emailController,
-                      hint: 'email@gmail.com',
+                      hint: Strings.tr(context, 'email_label'),
                       keyboardType: TextInputType.emailAddress,
                     ),
                     const SizedBox(height: 12),
 
-                    // Password field
                     _buildTextField(
                       controller: _passwordController,
-                      hint: 'كلمة المرور',
+                      hint: Strings.tr(context, 'password_label'),
                       obscure: true,
                     ),
                     const SizedBox(height: 20),
 
-                    // Main button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -357,7 +420,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 ),
                               )
                             : Text(
-                                _isSignUp ? 'إنشاء حساب' : 'استمر',
+                                _isSignUp
+                                    ? Strings.tr(context, 'signup')
+                                    : Strings.tr(context, 'login'),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 17,
@@ -367,7 +432,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                     ),
 
-                    // Toggle login/signup
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -377,62 +441,102 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               ? null
                               : () => setState(() => _isSignUp = !_isSignUp),
                           child: Text(
-                            _isSignUp ? 'تسجيل الدخول' : 'إنشاء حساب جديد',
-                            style: const TextStyle(
-                              color: Color(0xFF085041),
+                            _isSignUp
+                                ? Strings.tr(context, 'login')
+                                : Strings.tr(context, 'signup'),
+                            style: TextStyle(
+                              color: theme.colorScheme.primary,
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                         Text(
-                          _isSignUp ? 'لديك حساب؟' : 'ليس لديك حساب؟',
-                          style: const TextStyle(color: Color(0xFF2D6A4F), fontSize: 14),
-                        ),
-                      ],
-                    ),
-
-                    // Divider
-                    const SizedBox(height: 16),
-                    Row(
-                      children: const [
-                        Expanded(child: Divider(color: Color(0xFF2D6A4F), thickness: 0.5)),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            'أو',
-                            style: TextStyle(color: Color(0xFF2D6A4F), fontSize: 14),
+                          _isSignUp
+                              ? Strings.tr(context, 'already_have_account')
+                              : Strings.tr(context, 'dont_have_account'),
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.7,
+                            ),
+                            fontSize: 14,
                           ),
                         ),
-                        Expanded(child: Divider(color: Color(0xFF2D6A4F), thickness: 0.5)),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Divider(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.3,
+                            ),
+                            thickness: 0.5,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            Strings.tr(context, 'or'),
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.7,
+                              ),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Divider(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.3,
+                            ),
+                            thickness: 0.5,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
 
-                    // Google button
                     _buildSocialButton(
-                      label: 'Sign up with Google',
-                      icon: const Icon(Icons.g_mobiledata, size: 24, color: Colors.black87),
-                      onPressed: _isLoading ? null : () => _signInWithGoogle(context),
+                      label: Strings.tr(context, 'sign_up_with_google'),
+                      icon: const Icon(
+                        Icons.g_mobiledata,
+                        size: 24,
+                        color: Colors.black87,
+                      ),
+                      onPressed: _isLoading
+                          ? null
+                          : () => _signInWithGoogle(context),
                     ),
                     const SizedBox(height: 10),
 
-                    // Apple button
                     _buildSocialButton(
-                      label: 'Sign up with Apple',
-                      icon: const Icon(Icons.apple, size: 22, color: Colors.black87),
-                      onPressed: _isLoading ? null : () => _showComingSoon(context),
+                      label: Strings.tr(context, 'sign_up_with_apple'),
+                      icon: const Icon(
+                        Icons.apple,
+                        size: 22,
+                        color: Colors.black87,
+                      ),
+                      onPressed: _isLoading
+                          ? null
+                          : () => _showComingSoon(context),
                     ),
 
-                    // Terms
                     const SizedBox(height: 20),
-                    const Text(
-                      'عند الضغط على متابعة، أنت توافق على شروط الخدمة وسياسة الخصوصية',
+                    Text(
+                      Strings.tr(context, 'terms_text'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Color(0xFF2D6A4F), fontSize: 12),
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.7,
+                        ),
+                        fontSize: 12,
+                      ),
                     ),
 
-                    // Guest
                     const SizedBox(height: 16),
                     TextButton(
                       onPressed: _isLoading
@@ -441,14 +545,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const HomeScreen(userName: null),
+                                  builder: (_) =>
+                                      const HomeScreen(userName: null),
                                 ),
                               );
                             },
-                      child: const Text(
-                        'الاستمرار كضيف',
+                      child: Text(
+                        Strings.tr(context, 'guest_continue'),
                         style: TextStyle(
-                          color: Color(0xFF085041),
+                          color: theme.colorScheme.primary,
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
@@ -470,18 +575,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     TextInputType keyboardType = TextInputType.text,
     bool obscure = false,
   }) {
+    final theme = Theme.of(context);
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscure,
       textAlign: TextAlign.right,
-      style: const TextStyle(color: Color(0xFF0E3C30)),
+      style: TextStyle(color: theme.colorScheme.onSurface),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFF7AAE95), fontSize: 14),
+        hintStyle: TextStyle(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+          fontSize: 14,
+        ),
         filled: true,
         fillColor: Colors.white.withValues(alpha: 0.85),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,

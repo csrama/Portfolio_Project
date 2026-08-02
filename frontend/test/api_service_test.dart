@@ -5,7 +5,7 @@ void main() {
   test('builds the backend URL correctly', () {
     expect(
        ApiService.buildUrl('/auth/register'),
-  'https://portfolioproject-production-2b3b.up.railway.app/auth/register',
+  'https://dawai-app.up.railway.app/auth/register',
     );
   });
 }

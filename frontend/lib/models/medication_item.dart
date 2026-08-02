@@ -1,9 +1,3 @@
-// lib/models/medication_item.dart
-//
-// موديل الدواء المشترك — تم فصله من home_screen.dart عشان
-// يستخدم من أكثر من شاشة (home_screen + dependent_dashboard_screen)
-// بدون تكرار الكود.
-
 import 'package:flutter/material.dart';
 
 enum MedicationType { drops, cream, injection, bottle, tablets, capsule }
@@ -58,9 +52,6 @@ class MedicationItem {
     return '$hour:$minute $period';
   }
 
-  /// يحوّل الدواء إلى Map جاهزة للإرسال للـ API.
-  /// [dependentId] لو null => الدواء يُحفظ للمستخدم نفسه.
-  /// لو فيه قيمة => الدواء يُحفظ للتابع صاحب هذا الـ id.
   Map<String, dynamic> toApiJson({String? dependentId}) {
     return {
       if (dependentId != null) 'dependent_id': dependentId,

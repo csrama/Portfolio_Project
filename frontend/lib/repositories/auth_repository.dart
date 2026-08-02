@@ -1,13 +1,10 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Persists the logged-in session locally so the app remembers the user
-/// between restarts, and provides a single place to clear everything on
-/// sign out (used for both email/password and Google sessions).
 class AuthRepository {
   static const _tokenKey = 'auth_token';
   static const _userNameKey = 'auth_user_name';
   static const _photoUrlKey = 'auth_photo_url';
-  static const _providerKey = 'auth_provider'; // 'email' | 'google'
+  static const _providerKey = 'auth_provider';
 
   Future<void> saveSession({
     String? token,
@@ -48,13 +45,11 @@ class AuthRepository {
     return prefs.getString(_providerKey);
   }
 
-  /// True if there is a saved session (email token OR a google session).
   Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.containsKey(_tokenKey) || prefs.containsKey(_providerKey);
   }
 
-  /// Clears everything stored locally. Call this on logout.
   Future<void> clearSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);

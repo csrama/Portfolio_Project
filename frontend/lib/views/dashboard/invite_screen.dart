@@ -5,6 +5,7 @@ import '../../services/dependent_service.dart';
 import '../../services/api_service.dart';
 import '../onboarding/onboarding_screen.dart';
 import 'home_screen.dart';
+import '../../i18n/strings.dart';
 
 class InviteScreen extends StatefulWidget {
   final String token;
@@ -48,10 +49,10 @@ class _InviteScreenState extends State<InviteScreen> {
       if (!mounted) return;
       setState(() {
         _error = e.toString().contains('401')
-            ? 'رابط الدعوة غير صالح أو منتهي الصلاحية'
+            ? Strings.tr(context, 'invite_invalid')
             : e.toString().contains('410')
-                ? 'انتهت صلاحية الدعوة'
-                : 'تعذر تحميل معلومات الدعوة';
+                ? Strings.tr(context, 'invite_expired')
+                : Strings.tr(context, 'invite_load_failed');
         _isLoading = false;
       });
     }
@@ -68,7 +69,6 @@ class _InviteScreenState extends State<InviteScreen> {
       final token = authProvider.accessToken;
 
       if (token == null) {
-        // User is not logged in, redirect to login
         if (!mounted) return;
         final loggedIn = await Navigator.push<bool>(
           context,
@@ -78,7 +78,6 @@ class _InviteScreenState extends State<InviteScreen> {
         );
 
         if (loggedIn == true && mounted) {
-          // Retry accept after login
           await _acceptInvite();
         } else {
           setState(() => _isProcessing = false);
@@ -95,19 +94,21 @@ class _InviteScreenState extends State<InviteScreen> {
         setState(() {
           _accepted = true;
           _isProcessing = false;
-          _statusMessage = 'تم قبول الدعوة بنجاح! ';
+          _statusMessage = Strings.tr(context, 'invite_accepted');
         });
       } else {
         setState(() {
           _isProcessing = false;
-          _statusMessage = response['error'] ?? 'فشل قبول الدعوة';
+          _statusMessage =
+              response['error']?.toString() ??
+              Strings.tr(context, 'invite_accept_failed');
         });
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isProcessing = false;
-        _statusMessage = 'حدث خطأ: ${e.toString()}';
+        _statusMessage = '${Strings.tr(context, 'invite_error')}${e.toString()}';
       });
     }
   }
@@ -139,16 +140,16 @@ class _InviteScreenState extends State<InviteScreen> {
 
   Widget _buildContent() {
     if (_isLoading) {
-      return const Column(
+      return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
+          const CircularProgressIndicator(
             color: Color(0xFF085041),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
-            'جاري تحميل معلومات الدعوة...',
-            style: TextStyle(fontSize: 16, color: Color(0xFF085041)),
+            Strings.tr(context, 'invite_loading'),
+            style: const TextStyle(fontSize: 16, color: Color(0xFF085041)),
           ),
         ],
       );
@@ -180,9 +181,9 @@ class _InviteScreenState extends State<InviteScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text(
-                'إعادة المحاولة',
-                style: TextStyle(color: Colors.white),
+              child: Text(
+                Strings.tr(context, 'retry'),
+                style: const TextStyle(color: Colors.white),
               ),
             ),
           ],
@@ -203,7 +204,7 @@ class _InviteScreenState extends State<InviteScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              _statusMessage ?? 'تم قبول الدعوة بنجاح ',
+              _statusMessage ?? Strings.tr(context, 'invite_accepted'),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 20,
@@ -212,10 +213,10 @@ class _InviteScreenState extends State<InviteScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'يمكنك الآن متابعة أدويتك من قبل مقدم الرعاية',
+            Text(
+              Strings.tr(context, 'invite_can_track'),
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.black54),
+              style: const TextStyle(fontSize: 16, color: Colors.black54),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -230,9 +231,9 @@ class _InviteScreenState extends State<InviteScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text(
-                'الذهاب للرئيسية',
-                style: TextStyle(
+              child: Text(
+                Strings.tr(context, 'invite_go_home'),
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -245,16 +246,16 @@ class _InviteScreenState extends State<InviteScreen> {
     }
 
     if (_isProcessing) {
-      return const Column(
+      return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
+          const CircularProgressIndicator(
             color: Color(0xFF085041),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
-            'جاري معالجة الطلب...',
-            style: TextStyle(fontSize: 16),
+            Strings.tr(context, 'invite_processing'),
+            style: const TextStyle(fontSize: 16),
           ),
         ],
       );
@@ -286,9 +287,9 @@ class _InviteScreenState extends State<InviteScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text(
-                'حاول مرة أخرى',
-                style: TextStyle(color: Colors.white),
+              child: Text(
+                Strings.tr(context, 'invite_retry'),
+                style: const TextStyle(color: Colors.white),
               ),
             ),
           ],
@@ -296,7 +297,6 @@ class _InviteScreenState extends State<InviteScreen> {
       );
     }
 
-    // Show invite details
     final dependentName = _inviteInfo?['dependent_name'] ?? '';
     final relationship = _inviteInfo?['relationship'] ?? '';
     final caregiverName = _inviteInfo?['caregiver_name'] ?? '';
@@ -304,22 +304,22 @@ class _InviteScreenState extends State<InviteScreen> {
     String relationshipLabel = '';
     switch (relationship) {
       case 'spouse':
-        relationshipLabel = 'زوج/زوجة';
+        relationshipLabel = Strings.tr(context, 'spouse');
         break;
       case 'child':
-        relationshipLabel = 'ابن/ابنة';
+        relationshipLabel = Strings.tr(context, 'child');
         break;
       case 'parent':
-        relationshipLabel = 'أب/أم';
+        relationshipLabel = Strings.tr(context, 'parent');
         break;
       case 'sibling':
-        relationshipLabel = 'أخ/أخت';
+        relationshipLabel = Strings.tr(context, 'sibling');
         break;
       case 'other':
-        relationshipLabel = 'أخرى';
+        relationshipLabel = Strings.tr(context, 'other');
         break;
       default:
-        relationshipLabel = relationship;
+        relationshipLabel = relationship.toString();
     }
 
     final isLoggedIn = context.read<AuthProvider>().isLoggedIn;
@@ -329,7 +329,6 @@ class _InviteScreenState extends State<InviteScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Icon
           Container(
             width: 80,
             height: 80,
@@ -345,9 +344,9 @@ class _InviteScreenState extends State<InviteScreen> {
           ),
           const SizedBox(height: 24),
 
-          const Text(
-            'دعوة للانضمام',
-            style: TextStyle(
+          Text(
+            Strings.tr(context, 'invite_title'),
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Color(0xFF085041),
@@ -365,25 +364,25 @@ class _InviteScreenState extends State<InviteScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (caregiverName.isNotEmpty) ...[
+                if (caregiverName.toString().isNotEmpty) ...[
                   _buildInfoRow(
-                    'مقدم الرعاية',
-                    caregiverName,
+                    Strings.tr(context, 'invite_caregiver'),
+                    caregiverName.toString(),
                     Icons.person,
                   ),
                   const SizedBox(height: 12),
                 ],
-                if (dependentName.isNotEmpty) ...[
+                if (dependentName.toString().isNotEmpty) ...[
                   _buildInfoRow(
-                    'اسم التابع',
-                    dependentName,
+                    Strings.tr(context, 'invite_dependent_name'),
+                    dependentName.toString(),
                     Icons.person_outline,
                   ),
                   const SizedBox(height: 12),
                 ],
                 if (relationshipLabel.isNotEmpty)
                   _buildInfoRow(
-                    'صلة القرابة',
+                    Strings.tr(context, 'relationship_label'),
                     relationshipLabel,
                     Icons.family_restroom,
                   ),
@@ -393,7 +392,7 @@ class _InviteScreenState extends State<InviteScreen> {
           const SizedBox(height: 24),
 
           Text(
-            'هل ترغب في قبول الدعوة؟',
+            Strings.tr(context, 'invite_accept_question'),
             textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: FontWeight.bold,
@@ -417,9 +416,9 @@ class _InviteScreenState extends State<InviteScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'رفض',
-                      style: TextStyle(
+                    child: Text(
+                      Strings.tr(context, 'reject'),
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -438,9 +437,9 @@ class _InviteScreenState extends State<InviteScreen> {
                       ),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      'قبول الدعوة',
-                      style: TextStyle(
+                    child: Text(
+                      Strings.tr(context, 'accept_invite'),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -451,7 +450,6 @@ class _InviteScreenState extends State<InviteScreen> {
               ],
             ),
           ] else ...[
-            // Login prompt for non-logged-in user
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -463,7 +461,6 @@ class _InviteScreenState extends State<InviteScreen> {
                     ),
                   );
                   if (loggedIn == true && mounted) {
-                    // User logged in, show the accept UI again
                     setState(() {});
                   }
                 },
@@ -475,9 +472,9 @@ class _InviteScreenState extends State<InviteScreen> {
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'تسجيل الدخول لقبول الدعوة',
-                  style: TextStyle(
+                child: Text(
+                  Strings.tr(context, 'login_to_accept'),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -488,9 +485,9 @@ class _InviteScreenState extends State<InviteScreen> {
             const SizedBox(height: 12),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'العودة',
-                style: TextStyle(
+              child: Text(
+                Strings.tr(context, 'back'),
+                style: const TextStyle(
                   color: Color(0xFF085041),
                   fontSize: 14,
                 ),

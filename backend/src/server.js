@@ -3,6 +3,8 @@ console.log("JWT_SECRET =", process.env.JWT_SECRET);
 const { Hono } = require('hono');
 const { cors } = require('hono/cors');
 const { serve } = require('@hono/node-server');
+const fs = require('fs');
+const path = require('path');
 const authRoutes = require('./routes/auth');
 const medicationRoutes = require('./routes/medications');
 const scheduleRoutes = require('./routes/schedules');
@@ -14,6 +16,17 @@ const dependentRoutes = require('./routes/dependents');
 const medicineRoutes = require('./routes/medicines');
 const { errorHandler } = require('./middleware/errorHandler');
 
+if (process.env.DATABASE_URL) {
+  console.log('Detected DATABASE_URL, attempting auto-migration...');
+  try {
+    const { execSync } = require('child_process');
+    const output = execSync('node scripts/runSqlMigrations.js', { encoding: 'utf-8' });
+    console.log('Migration output:', output);
+  } catch (err) {
+    console.error('Auto-migration failed:', err.message);
+  }
+}
+
 const { readFileSync } = require('fs');
 const { resolve } = require('path');
 
@@ -22,7 +35,39 @@ const PORT = Number(process.env.PORT || (require.main === module ? 3000 : 0));
 
 app.use('*', cors());
 
-// Serve the invite HTML page at /invite
+
+
+app.get('/', (c) => {
+  try {
+    const html = readFileSync(
+      resolve(__dirname, '../public/index.html'),
+      'utf8'
+    );
+
+    return c.html(html);
+  } catch (e) {
+    console.error(e);
+    return c.text('Landing page not found', 404);
+  }
+}
+);
+
+app.get('/app_icon.png', (c) => {
+  try {
+    const image = readFileSync(
+      resolve(__dirname, '../public/app_icon.png')
+    );
+
+    return c.body(image, 200, {
+      'Content-Type': 'image/png',
+    });
+  } catch (e) {
+    return c.text('Image not found', 404);
+  }
+}
+);
+
+
 app.get('/invite', async (c) => {
   try {
     const html = readFileSync(resolve(__dirname, '../public/invite.html'), 'utf-8');
@@ -53,4 +98,3 @@ const server = serve({ fetch: app.fetch, port: PORT }, () => {
 
 module.exports = server;
 module.exports.app = app;
-

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../dashboard/home_screen.dart';
 import '../onboarding/onboarding_screen.dart';
+import '../../i18n/strings.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -19,44 +20,48 @@ class _SplashScreenState extends State<SplashScreen> {
   int _currentPage = 0;
   late Timer _timer;
 
-  static final _pages = [
-    _SplashPage(
-      title: 'دوائي',
-      child: Image.asset(
-        'assets/app_icon.png',
-        width: 120,
-        height: 120,
-      ),
-    ),
-    _SplashPage(
-      child: Text(
-        'مرحبا بك في تطبيق دوائي',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 26,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1D9E75),
+  static const int _pageCount = 3;
+
+  List<_SplashPage> _buildPages(BuildContext context) {
+    return [
+      _SplashPage(
+        title: Strings.tr(context, 'splash_title1'),
+        child: Image.asset(
+          'assets/app_icon.png',
+          width: 120,
+          height: 120,
         ),
       ),
-    ),
-    _SplashPage(
-      child: Text(
-        'حيث أن دوائك في وقته',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 26,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1D9E75),
+      _SplashPage(
+        child: Text(
+          Strings.tr(context, 'splash_welcome'),
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1D9E75),
+          ),
         ),
       ),
-    ),
-  ];
+      _SplashPage(
+        child: Text(
+          Strings.tr(context, 'splash_meds'),
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1D9E75),
+          ),
+        ),
+      ),
+    ];
+  }
 
   @override
   void initState() {
     super.initState();
     _timer = Timer.periodic(const Duration(seconds: 2), (timer) async {
-      if (_currentPage < _pages.length - 1) {
+      if (_currentPage < _pageCount - 1) {
         _currentPage++;
         _controller.animateToPage(
           _currentPage,
@@ -115,8 +120,8 @@ class _SplashScreenState extends State<SplashScreen> {
           body: PageView.builder(
             controller: _controller,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _pages.length,
-            itemBuilder: (context, index) => _pages[index],
+            itemCount: _pageCount,
+            itemBuilder: (context, index) => _buildPages(context)[index],
           ),
         ),
       ),

@@ -5,10 +5,10 @@ import 'package:http/http.dart' as http;
 class ApiService {
   static String get _baseUrl {
     if (kIsWeb) {
-      return 'https://portfolioproject-production-2b3b.up.railway.app';
-    } else {
-      // للـ Android (محاكي)
-      return 'https://portfolioproject-production-2b3b.up.railway.app';
+      return 'https://dawai-app.up.railway.app';
+    }
+     else {
+      return 'https://dawai-app.up.railway.app';
     }
   }
 
@@ -122,28 +122,29 @@ class ApiService {
   }
 
   static Future<dynamic> getJsonDynamic(
-    String path, {
-    String? token,
-  }) async {
-    final url = buildUrl(path);
-    print('GET: $url');
+  String path, {
+  String? token,
+}) async {
+  final url = buildUrl(path);
+  print('GET: $url');
 
-    final response = await http.get(
-      Uri.parse(url),
-      headers: {if (token != null) 'Authorization': 'Bearer $token'},
-    );
+  final response = await http.get(
+    Uri.parse(url),
+    headers: {if (token != null) 'Authorization': 'Bearer $token'},
+  );
 
-    print('Status: ${response.statusCode}');
+  print('Status: ${response.statusCode}');
+  print('Response: ${response.body}');
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      if (response.body.isEmpty) {
-        return {};
-      }
-      return jsonDecode(response.body);
+  if (response.statusCode >= 200 && response.statusCode < 300) {
+    if (response.body.isEmpty) {
+      return null;
     }
-
-    throw Exception('Request failed: ${response.statusCode} ${response.body}');
+    return jsonDecode(response.body);
   }
+
+  throw Exception('Request failed: ${response.statusCode} ${response.body}');
+}
 
   static Future<Map<String, dynamic>> deleteJson(
     String path, {

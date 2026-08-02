@@ -13,6 +13,7 @@ import 'views/splash/splash_screen.dart';
 import 'services/notification_service.dart';
 import 'package:app_links/app_links.dart';
 import 'views/dashboard/invite_screen.dart';
+import 'i18n/strings.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,13 +44,11 @@ Future<void> _handleDeepLinks() async {
     try {
       final appLinks = AppLinks();
       
-      // getInitialLink() returns Uri? in app_links v6.4.1
       final initialLink = await appLinks.getInitialLink();
       if (initialLink != null) {
         _handleUri(initialLink);
       }
 
-      // uriLinkStream emits Uri objects in app_links v6.4.1
       appLinks.uriLinkStream.listen((uri) {
         _handleUri(uri);
       });
@@ -195,7 +194,8 @@ class _AuthGateState extends State<_AuthGate> {
         if (snapshot.data == true && !snapshot.hasError) {
           final user = context.read<AuthProvider>().user;
           return HomeScreen(
-            userName: user?['name'] as String? ?? 'مستخدم',
+            userName:
+                user?['name'] as String? ?? Strings.tr(context, 'default_user'),
             photoUrl: user?['photo'] as String?,
           );
         }

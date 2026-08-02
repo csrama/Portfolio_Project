@@ -51,7 +51,7 @@ async function createOrGetUser({ email, full_name, provider }) {
     email,
     full_name: full_name || `${provider} user`,
     password_hash: '',
-    user_type: 'general_user'
+    user_type: 'dependent'
   });
 }
 
