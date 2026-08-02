@@ -1773,122 +1773,126 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 24),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  GestureDetector(
-                    onTap: () async {
-                      final changed = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const DependentsScreen(),
-                        ),
-                      );
-                      if (changed == true) _loadMedications();
-                    },
-                    child: Text(
-                      Strings.tr(context, 'add_dependents'),
-                      style: TextStyle(
-                        color: _Colors.darkGreenText(context),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () async {
-                      final changed = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const DependentsScreen(),
-                        ),
-                      );
-                      if (changed == true) _loadMedications();
-                    },
-                    child: Text(
-                      Strings.tr(context, 'view_all'),
-                      style: TextStyle(
-                        color: _Colors.darkGreenText(context),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                      Strings.tr(context, 'dependents_added'),
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: _Colors.textPrimary(context),
-                      ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (dependentsList.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: _Colors.surfaceMuted(context),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.people_outline,
-                        color: _Colors.textSecondary(context),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        Strings.tr(context, 'no_dependents_added_yet'),
+              if (depProvider.selectedDependent == null) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: () async {
+                        final changed = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const DependentsScreen(),
+                          ),
+                        );
+                        if (changed == true) _loadMedications();
+                      },
+                      child: Text(
+                        Strings.tr(context, 'add_dependents'),
                         style: TextStyle(
-                          color: _Colors.textSecondary(context),
-                          fontSize: 14,
+                          color: _Colors.darkGreenText(context),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ],
-                  ),
-                )
-              else
-                ...dependentsList.map((dep) => _buildDependentCard(dep)),
-              const SizedBox(height: 16),
-              GestureDetector(
-                onTap: () async {
-                  final changed = await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const DependentsScreen()),
-                  );
-                  if (changed == true) _loadMedications();
-                },
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    color: _Colors.surface(context),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _Colors.darkGreenText(context),
-                      width: 1.5,
                     ),
-                  ),
+                    GestureDetector(
+                      onTap: () async {
+                        final changed = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const DependentsScreen(),
+                          ),
+                        );
+                        if (changed == true) _loadMedications();
+                      },
+                      child: Text(
+                        Strings.tr(context, 'view_all'),
+                        style: TextStyle(
+                          color: _Colors.darkGreenText(context),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
                   child: Text(
-                    Strings.tr(context, 'add_dependent_button'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: _Colors.darkGreenText(context),
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
+                        Strings.tr(context, 'dependents_added'),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: _Colors.textPrimary(context),
+                        ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (dependentsList.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: _Colors.surfaceMuted(context),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.people_outline,
+                          color: _Colors.textSecondary(context),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          Strings.tr(context, 'no_dependents_added_yet'),
+                          style: TextStyle(
+                            color: _Colors.textSecondary(context),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  ...dependentsList.map((dep) => _buildDependentCard(dep)),
+                const SizedBox(height: 16),
+                GestureDetector(
+                  onTap: () async {
+                    final changed = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const DependentsScreen(),
+                      ),
+                    );
+                    if (changed == true) _loadMedications();
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: _Colors.surface(context),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _Colors.darkGreenText(context),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Text(
+                      Strings.tr(context, 'add_dependent_button'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _Colors.darkGreenText(context),
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
+              ],
             ],
           ),
         ),
