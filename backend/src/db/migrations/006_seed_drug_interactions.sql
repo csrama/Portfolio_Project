@@ -62,4 +62,6 @@ INSERT INTO drug_interactions (ingredient_a, ingredient_b, severity, description
 ('diltiazem', 'simvastatin', 'moderate', 'Diltiazem inhibits statin metabolism, raising myopathy risk at higher statin doses.', ''),
 ('phenelzine', 'tramadol', 'contraindicated', 'MAOIs combined with tramadol can cause life-threatening serotonin syndrome.', ''),
 ('trimethoprim-sulfamethoxazole', 'warfarin', 'major', 'This antibiotic combination markedly increases INR and bleeding risk.', ''),
-('metformin', 'prednisone', 'moderate', 'Corticosteroids can raise blood glucose, reducing metformin effectiveness.', '');
+('metformin', 'prednisone', 'moderate', 'Corticosteroids can raise blood glucose, reducing metformin effectiveness.', '')
+ON CONFLICT (ingredient_a, ingredient_b)
+DO NOTHING;
