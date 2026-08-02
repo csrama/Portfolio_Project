@@ -307,8 +307,4 @@ Connecting the Flutter frontend to the Node.js backend API was challenging, espe
 
 ---
 
-> **The team successfully delivered a functional MVP that addresses the real-world problem of medication management for elderly patients, while learning valuable lessons about collaboration, technology, and project management.**
-
----
-
-*End of Reflections* 📚✨
+*End of Reflections* 
