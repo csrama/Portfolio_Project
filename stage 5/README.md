@@ -1,3 +1,5 @@
+
+
 #  Team Reflections - Challenges & Lessons Learned
 
 ##  Most Prominent Challenges
@@ -287,6 +289,10 @@ Connecting the Flutter frontend to the Node.js backend API was challenging, espe
 | Time Constraints | MVP prioritization, efficient learning |
 | Design Revisions | Clear design justification, early feedback |
 | Team Communication | Regular check-ins, clear protocols |
+
+
+
+
 | System Integration | Continuous testing, collaboration |
 | Git Conflicts | Better branching strategy, careful merging |
 | Project Structure | Study architecture, follow patterns |
@@ -310,6 +316,9 @@ Connecting the Flutter frontend to the Node.js backend API was challenging, espe
 
 - 🔗 **Landing Page:** [dawai-app.up.railway.app](https://dawai-app.up.railway.app/)
 
+
+📹 **Project Demo Video:** 
+[Click here to watch the video](https://youtu.be/0Wsu7HAPfCM)
 
 
 *End of Reflections* 
