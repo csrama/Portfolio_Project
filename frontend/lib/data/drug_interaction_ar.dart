@@ -218,35 +218,42 @@ final Map<String, InteractionArText> kInteractionTextAr = {
   ),
 };
 
-
+// ...existing code...
 List<String> extractKnownIngredients(String text) {
   final normalized = text.trim().toLowerCase();
   if (normalized.isEmpty) return [];
 
- 
   final keys = kIngredientNamesAr.keys.toList()
     ..sort((a, b) => b.length.compareTo(a.length));
 
-  final found = <String>[];
+  final found = <String>{};
   for (final key in keys) {
     if (normalized.contains(key)) {
       found.add(key);
     }
   }
-  return found;
+  return found.toList();
 }
+
 String ingredientNameAr(String englishName) {
   final key = englishName.trim().toLowerCase();
   return kIngredientNamesAr[key] ?? englishName;
 }
+
 InteractionArText? interactionTextAr(String ingredientA, String ingredientB) {
   final a = ingredientA.trim().toLowerCase();
   final b = ingredientB.trim().toLowerCase();
-  return kInteractionTextAr['$a|$b'];
+
+  if (a.isEmpty || b.isEmpty) return null;
+
+  final pair1 = '$a|$b';
+  final pair2 = '$b|$a';
+
+  return kInteractionTextAr[pair1] ?? kInteractionTextAr[pair2];
 }
 
 int severityRank(String severity) {
-  switch (severity) {
+  switch (severity.trim().toLowerCase()) {
     case 'contraindicated':
       return 3;
     case 'major':

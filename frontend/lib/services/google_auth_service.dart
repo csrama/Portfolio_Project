@@ -5,14 +5,17 @@ import 'api_service.dart';
 import 'auth_service.dart';
 
 class GoogleAuthService {
-  static const _webClientId = '760699279835-8dh4u6up1b7jhrt1jblo6vopv9589767.apps.googleusercontent.com';
+  static const _webClientId =
+      '760699279835-8dh4u6up1b7jhrt1jblo6vopv9589767.apps.googleusercontent.com';
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId: kIsWeb ? _webClientId : null,
     scopes: ['email', 'profile'],
   );
 
-  Future<Map<String, dynamic>?> signInWithBackend({required AuthService authService}) async {
+  Future<Map<String, dynamic>?> signInWithBackend({
+    required AuthService authService,
+  }) async {
     try {
       await _googleSignIn.signOut();
       final account = await _googleSignIn.signIn();
@@ -35,10 +38,17 @@ class GoogleAuthService {
 
         await authService.persistSession(
           accessToken: result['token']?.toString() ?? 'google-token',
-          refreshToken: result['refreshToken']?.toString() ?? 'google-refresh-token',
+          refreshToken:
+              result['refreshToken']?.toString() ?? 'google-refresh-token',
           user: {
-            'email': (result['user']?['email'] ?? account.email).toString().toLowerCase(),
-            'full_name': (result['user']?['full_name'] ?? account.displayName ?? account.email).toString(),
+            'email': (result['user']?['email'] ?? account.email)
+                .toString()
+                .toLowerCase(),
+            'full_name':
+                (result['user']?['full_name'] ??
+                        account.displayName ??
+                        account.email)
+                    .toString(),
             'picture': account.photoUrl,
             'provider': 'google',
           },
@@ -49,7 +59,7 @@ class GoogleAuthService {
         final fallbackUserName = account.displayName?.trim().isNotEmpty == true
             ? account.displayName!.trim()
             : 'Google User';
-        
+
         await authService.persistSession(
           accessToken: 'offline-token',
           refreshToken: 'offline-refresh-token',
@@ -73,7 +83,6 @@ class GoogleAuthService {
         };
       }
     } catch (e) {
-      print('Google Sign-In Error: $e');
       return null;
     }
   }
